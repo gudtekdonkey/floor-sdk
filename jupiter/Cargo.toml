@@ -1,0 +1,70 @@
+# `floor-sale-amm`: the `jupiter-amm-interface` adapter for FLOOR launch sales (the bonding sale
+# that precedes a launch's Carpenter pool).
+#
+# This is its own Cargo workspace, not a member of `../rust`, with its own `Cargo.lock`. It is the
+# only crate in this repository that links Solana crates (`solana-pubkey`, `solana-instruction`,
+# `solana-account`, through the interface), and the router interface's dependency graph is kept apart
+# from the network-free crates under `../rust/crates`.
+#
+# `jupiter-amm-interface` is a git dependency pinned to a commit, never the crates.io release: the
+# trait on that commit (`AccountProvider`, `Swap::Placeholder`, `AmmError`, a required
+# `get_accounts_len`) is not the trait any published version carries. Moving the pin moves the trait.
+[workspace]
+
+[package]
+name = "floor-sale-amm"
+version = "0.1.0"
+edition = "2021"
+description = "FLOOR launch sales (Solana): a jupiter-amm-interface `Amm` over floor-quote's sale quote: buys, and sell-backs paid as wSOL."
+license = "Apache-2.0"
+repository = "https://github.com/gudtekdonkey/floor-sdk"
+publish = false
+
+[lib]
+doctest = false
+
+[dependencies]
+jupiter-amm-interface = { git = "https://github.com/jup-ag/jupiter-amm-interface", rev = "95bd18485e580625a39eb92a0c0ad2061579daad" }
+
+# The quoter: this repository's crates, by path.
+# `floor-math` is not a direct dependency: every amount comes from `floor_quote::sale_buy`, and
+# `tests/conformance.rs` fails if it appears here outside `[dev-dependencies]`.
+floor-types = { path = "../rust/crates/floor-types" }
+floor-quote = { path = "../rust/crates/floor-quote" }
+
+# `curve25519` provides `find_program_address` on host builds.
+solana-pubkey = { version = "4", features = ["curve25519"] }
+solana-instruction = "3"
+solana-account = "4"
+rust_decimal = "1"
+
+[features]
+# Emit `Swap::FloorSale { is_buy }` instead of `Swap::Placeholder`. Needs an interface carrying
+# `upstream/swap-variant.patch`; `upstream/check.sh` builds and tests that way without touching this
+# manifest or `Cargo.lock`. It does not compile against the pinned upstream commit.
+upstream-variant = []
+
+[dev-dependencies]
+# Golden vectors are generated from the sale arithmetic directly, independent of the quoter.
+floor-math = { path = "../rust/crates/floor-math" }
+serde_json = "1"
+solana-clock = "3"
+sha2 = "0.10"
+bincode = "1.3"
+bytemuck = "1"
+# tests/devnet_simulate.rs: the opt-in devnet simulation (the same `ureq` and `base64` the kit uses).
+ureq = { version = "2", features = ["json"] }
+base64 = "0.22"
+# Jupiter's parity kit (tests/parity.rs): replays a launch snapshot through `Amm::quote` and the
+# program's own `buy` in LiteSVM. Same repository and commit as the interface, so the `Amm` trait
+# unifies. Keep `solana-clock` at 3.1.x in the lockfile: LiteSVM 0.14 needs wincode 0.5.
+jupiter-amm-test-kit = { git = "https://github.com/jup-ag/jupiter-amm-interface", rev = "95bd18485e580625a39eb92a0c0ad2061579daad" }
+# The custody tests (tests/custody.rs) drive LiteSVM directly, at the versions the kit resolves.
+litesvm = "0.14.0"
+solana-keypair = "3"
+solana-signer = "3"
+solana-transaction = { version = "4", features = ["wincode"] }
+solana-compute-budget-interface = "3"
+
+[profile.release]
+overflow-checks = true

@@ -1,0 +1,31 @@
+--- a/interface/src/swap.rs
++++ b/interface/src/swap.rs
+@@ -184,6 +184,28 @@
+     Placeholder {
+         data: Option<Vec<u8>>,
+     },
++    /// FLOOR launch sale (`floor_launch`): a launch's fixed-price sale, before the launch's pool
++    /// exists, in either direction. The signer must be the user in both.
++    ///
++    /// `is_buy == true` (quote mint -> launch token): `buy` takes its input as native SOL from the
++    /// signing wallet (a System transfer), so the router unwraps `in_amount` of the route's wSOL to the
++    /// user before the swap, as for the other native-SOL bonding curves. The tokens are delivered into
++    /// the signer's own Token-2022 associated token account, which must be the route's destination;
++    /// the mint is paused (Token-2022 `Pausable`) until the sale ends, so a buy is the last hop of a
++    /// route and its output is never an intermediate. Accounts: `buy`'s 13. Instruction data:
++    /// discriminator, `lamports_in` = the input amount, `min_tokens`, `max_graduation_lamports` = 0.
++    ///
++    /// `is_buy == false` (launch token -> wSOL): `sell_back_wsol` takes the tokens from the signer's
++    /// own Token-2022 associated token account (the only account the paused token can leave), so a
++    /// sell is the FIRST hop of a route and its input is never an intermediate; it pays
++    /// `floor(tokens * price / 2^64)` less the sale's platform fee (both fixed for the sale's life)
++    /// into the signer's SPL Token wSOL account and syncs it, so the route can continue from that
++    /// account. Accounts: 13 (11 named, the wSOL account, SPL Token), or 17 on a launch with a
++    /// holder-rewards hook (a 4-account tail). Instruction data: discriminator, `tokens` = the input
++    /// amount.
++    FloorSale {
++        is_buy: bool,
++    },
+ }
+ 
+ #[derive(Clone, PartialEq, Eq, Debug)]

@@ -1,0 +1,28 @@
+# FLOOR's public Rust crates: the mechanism's types and math, and the FLOOR hook's quoter for
+# Carpenter's quoter. Normal dependencies: borsh 1.x, bytemuck and uint =0.9.5 (through
+# carpenter-clmm-math) from crates.io, plus the sibling crates and the Carpenter crates; no Solana
+# crate, no other git source.
+#
+# The Carpenter crates come from `carpenter-sdk` at the release commit with the same version (v0.1.0).
+# carpenter-sdk's own Jupiter adapter patches this source back to its local crates, so both
+# repositories build against ONE `carpenter-quote`.
+[workspace]
+members = ["crates/*"]
+# The wasm build is its own workspace (a size-tuned release profile); see its Cargo.toml.
+exclude = ["crates/floor-quote-wasm"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/gudtekdonkey/floor-sdk"
+
+[workspace.dependencies]
+carpenter-types = { git = "https://github.com/gudtekdonkey/carpenter-sdk", rev = "6996086514a27c348189f150916fedaa8536c5b5" }
+carpenter-clmm-math = { git = "https://github.com/gudtekdonkey/carpenter-sdk", rev = "6996086514a27c348189f150916fedaa8536c5b5" }
+carpenter-quote = { git = "https://github.com/gudtekdonkey/carpenter-sdk", rev = "6996086514a27c348189f150916fedaa8536c5b5" }
+floor-types = { path = "crates/floor-types" }
+floor-math = { path = "crates/floor-math" }
+
+[profile.release]
+overflow-checks = true

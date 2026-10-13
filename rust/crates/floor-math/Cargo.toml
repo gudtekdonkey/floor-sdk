@@ -1,0 +1,17 @@
+[package]
+name = "floor-math"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license = "Apache-2.0"
+publish = false
+description = "FLOOR's mechanism math (skim ramp, fees, positions, floor solve, staircase, modes, sale, holders); no Solana dependency"
+
+[lib]
+doctest = false
+
+[dependencies]
+# The Q64.64 tick / amount math and the U256 / U512 mul-div.
+carpenter-clmm-math = { workspace = true }
+# Only `Zeroable` / `Pod` and the cast functions; no derive feature, so no proc-macro crates.
+bytemuck = { version = "1", default-features = false }

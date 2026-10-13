@@ -1,0 +1,1 @@
+{ "extends": "../../tsconfig.base.json", "compilerOptions": { "rootDir": "src", "outDir": "dist", "paths": { "@floor/sdk": ["../sdk/dist/index.d.ts"] } }, "include": ["src"], "exclude": ["src/**/*.test.ts"] }

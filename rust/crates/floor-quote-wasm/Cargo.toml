@@ -1,0 +1,39 @@
+# The wasm build of FLOOR's quoter: floor-quote (and through it carpenter-quote's walk with the
+# FLOOR hook's `HookQuoter`) behind wasm-bindgen, for `@floor/sdk-solana`'s `initQuote`.
+#
+# Its own workspace: it builds for wasm32-unknown-unknown with a size-tuned release profile that
+# the library crates must not share. Build it with `scripts/build-wasm.sh` from the repository root,
+# which pins the toolchain, checks the wasm-bindgen CLI version against the crate's and writes
+# `rust/target/wasm-dist/`. `wasm-bindgen` is pinned EQUAL to that CLI (0.2.128): the CLI and the
+# crate share a schema.
+[workspace]
+
+[package]
+name = "floor-quote-wasm"
+version = "0.1.0"
+edition = "2021"
+description = "FLOOR's hook quoter for Carpenter pools, compiled to wasm for @floor/sdk-solana."
+license = "Apache-2.0"
+repository = "https://github.com/gudtekdonkey/floor-sdk"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+doctest = false
+
+[dependencies]
+floor-quote = { path = "../floor-quote" }
+wasm-bindgen = "=0.2.128"
+
+# Host tests only: zeroed layouts for hand-built accounts.
+[dev-dependencies]
+bytemuck = { version = "1", default-features = false }
+
+# The 400,000-byte budget is met on size flags alone (no wasm-opt).
+[profile.release]
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
+overflow-checks = true

@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "types": ["node"],
+    "customConditions": ["carpenter-src"],
+    "paths": { "@floor/sdk": ["../sdk/src/index.ts"] }
+  },
+  "include": ["src", "test", "vitest.config.ts"]
+}

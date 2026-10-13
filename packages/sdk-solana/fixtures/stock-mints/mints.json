@@ -1,0 +1,728 @@
+{
+  "mints": [
+    {
+      "build": {
+        "finalLen": 650,
+        "fixedLen": 509,
+        "instructions": [
+          {
+            "accounts": [
+              {
+                "pubkey": "CaF1bz1E5KwZfsnm18n9WQU3vu3VrW7pudixqc8BERAV",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "1b0013a783ec09c92e510aa8e3722071afeac2b325e296950bbf3b634527930c893b010000000000000000000000000000000000000000000000000000000000000000",
+            "name": "ConfidentialTransferExtension::InitializeMint",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "CaF1bz1E5KwZfsnm18n9WQU3vu3VrW7pudixqc8BERAV",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "1c0001",
+            "name": "DefaultAccountStateExtension::Initialize",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "CaF1bz1E5KwZfsnm18n9WQU3vu3VrW7pudixqc8BERAV",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "2325557497e41612e743607a5b328f2015c8f6f5dec6bbfde952cfebe3778a992f",
+            "name": "InitializePermanentDelegate",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "CaF1bz1E5KwZfsnm18n9WQU3vu3VrW7pudixqc8BERAV",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "24007f59b1619669168c87393d11a367b0d4a85009da6f8d7ff982ff66b459cd59720000000000000000000000000000000000000000000000000000000000000000",
+            "name": "TransferHookExtension::Initialize(program_id=None)",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "CaF1bz1E5KwZfsnm18n9WQU3vu3VrW7pudixqc8BERAV",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "270044d4fdc512450dd3cb7e305e5943f7e280656cf725cf4016ae642b0a0719b1b4abf49082f44c2dcc4fbe79c104b47b142d26262dd1488142e50316b5bc491f4e",
+            "name": "MetadataPointerExtension::Initialize",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "CaF1bz1E5KwZfsnm18n9WQU3vu3VrW7pudixqc8BERAV",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "2b00978925122c53d730e052d5e4178a5dd2db9a835a5e317da8b20118c508be6e5439454772f90ff03f",
+            "name": "ScaledUiAmountExtension::Initialize",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "CaF1bz1E5KwZfsnm18n9WQU3vu3VrW7pudixqc8BERAV",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "2c009640bd480173d8c6e7335b9f961f9b3460fe8d9825b46c82f6c35549f6d1a98e",
+            "name": "PausableExtension::Initialize",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "CaF1bz1E5KwZfsnm18n9WQU3vu3VrW7pudixqc8BERAV",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "1408bb5abb9f60085fd6a32141531199ee7ac54f39f9fbd797c5bc56c9a020a33c1201ac8d5c66ebcd306663e8b5c72d74555b8bf0f45d4c7e249818bc5da98c3716b2",
+            "name": "InitializeMint2",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "CaF1bz1E5KwZfsnm18n9WQU3vu3VrW7pudixqc8BERAV",
+                "signer": false,
+                "writable": true
+              },
+              {
+                "pubkey": "7rjdJYbrvV5no1ES8LNkvseAAs32chE8GxGFYwVxMxMq",
+                "signer": false,
+                "writable": false
+              },
+              {
+                "pubkey": "CaF1bz1E5KwZfsnm18n9WQU3vu3VrW7pudixqc8BERAV",
+                "signer": false,
+                "writable": false
+              },
+              {
+                "pubkey": "DcMV5aMTSgqnJDYhST53MhbYRzcYMeL4GqV1pTu8N3xV",
+                "signer": true,
+                "writable": false
+              }
+            ],
+            "dataHex": "d2e11ea258b84d8d0c0000005350353030207853746f636b04000000535059782900000068747470733a2f2f666978747572652e696e76616c69642f7873746f636b732f535059782e6a736f6e",
+            "name": "TokenMetadata::Initialize",
+            "signerRoles": [
+              "mint-authority"
+            ],
+            "tx": 1
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "CaF1bz1E5KwZfsnm18n9WQU3vu3VrW7pudixqc8BERAV",
+                "signer": false,
+                "writable": true
+              },
+              {
+                "pubkey": "BCXrXcBgqMaDBznZk4resd1WQ7nN8hM1ga8JzMUWVY7D",
+                "signer": true,
+                "writable": false
+              }
+            ],
+            "dataHex": "2b018c4aea043411f03f008d270000000000",
+            "name": "ScaledUiAmountExtension::UpdateMultiplier",
+            "signerRoles": [
+              "scaled-ui-authority"
+            ],
+            "tx": 2
+          }
+        ],
+        "keySeeds": "sha256(\"<label>:<role>\") as the 32-byte ed25519 private key; the mint is the \"mint\" role",
+        "lamports": 5414880,
+        "scaledUiEffectiveTimestamp": 2592000
+      },
+      "confidentialTransferMint": {
+        "auditorElGamalPubkey": null,
+        "authority": "2Kiu4iTtDnxSoRvUHd1oZAzvA9QNFTmj72RjKyDXxCSE",
+        "autoApproveNewAccounts": true
+      },
+      "d19Mirror": "refused: freeze_authority is Some",
+      "dataHex": "01000000bb5abb9f60085fd6a32141531199ee7ac54f39f9fbd797c5bc56c9a020a33c120000000000000000080101000000ac8d5c66ebcd306663e8b5c72d74555b8bf0f45d4c7e249818bc5da98c3716b20000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010400410013a783ec09c92e510aa8e3722071afeac2b325e296950bbf3b634527930c893b01000000000000000000000000000000000000000000000000000000000000000006000100010c00200025557497e41612e743607a5b328f2015c8f6f5dec6bbfde952cfebe3778a992f0e0040007f59b1619669168c87393d11a367b0d4a85009da6f8d7ff982ff66b459cd597200000000000000000000000000000000000000000000000000000000000000001200400044d4fdc512450dd3cb7e305e5943f7e280656cf725cf4016ae642b0a0719b1b4abf49082f44c2dcc4fbe79c104b47b142d26262dd1488142e50316b5bc491f4e19003800978925122c53d730e052d5e4178a5dd2db9a835a5e317da8b20118c508be6e5439454772f90ff03f008d2700000000008c4aea043411f03f1a0021009640bd480173d8c6e7335b9f961f9b3460fe8d9825b46c82f6c35549f6d1a98e001300890065e3c749a344fd4ee8642f4bc91613e929dc1aa167c1a2917c438fc296cebd84abf49082f44c2dcc4fbe79c104b47b142d26262dd1488142e50316b5bc491f4e0c0000005350353030207853746f636b04000000535059782900000068747470733a2f2f666978747572652e696e76616c69642f7873746f636b732f535059782e6a736f6e00000000",
+      "decimals": 8,
+      "defaultAccountState": 1,
+      "extensions": [
+        "4(65) ConfidentialTransferMint",
+        "6(1) DefaultAccountState",
+        "12(32) PermanentDelegate",
+        "14(64) TransferHook",
+        "18(64) MetadataPointer",
+        "25(56) ScaledUiAmount",
+        "26(33) Pausable",
+        "19(137) TokenMetadata"
+      ],
+      "freezeAuthority": "Cca9NbkV2V4AkNLgqem9wxbVpqhrkx2HSNF32Qw7tYXs",
+      "label": "backed-xstock-8dp",
+      "len": 650,
+      "metadataPointer": {
+        "authority": "5dh6THzefzcPfegVdrnRhcCZTAZUgBcXiKEcFirDhyE3",
+        "metadataAddress": "CaF1bz1E5KwZfsnm18n9WQU3vu3VrW7pudixqc8BERAV"
+      },
+      "mint": "CaF1bz1E5KwZfsnm18n9WQU3vu3VrW7pudixqc8BERAV",
+      "mintAuthority": "DcMV5aMTSgqnJDYhST53MhbYRzcYMeL4GqV1pTu8N3xV",
+      "owner": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+      "pausable": {
+        "authority": "B7XQovUqqKdJ38W2oCzPeVzwGbG4exFm2YV9SW9wbiZT",
+        "paused": false
+      },
+      "permanentDelegate": "3WjfQ7hpo28BpBa5NjjH1J7meq49QxxdmUvqpBRhBA9C",
+      "provenance": "Backed xStocks, Solana mainnet, surveyed 2026-09-22: SPYx XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W, AAPLx XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp",
+      "scaledUiAmount": {
+        "authority": "BCXrXcBgqMaDBznZk4resd1WQ7nN8hM1ga8JzMUWVY7D",
+        "multiplier": 1.0039,
+        "newMultiplier": 1.0042,
+        "newMultiplierEffectiveTimestamp": 2592000
+      },
+      "supply": 0,
+      "tokenMetadata": {
+        "mint": "CaF1bz1E5KwZfsnm18n9WQU3vu3VrW7pudixqc8BERAV",
+        "name": "SP500 xStock",
+        "symbol": "SPYx",
+        "updateAuthority": "7rjdJYbrvV5no1ES8LNkvseAAs32chE8GxGFYwVxMxMq",
+        "uri": "https://fixture.invalid/xstocks/SPYx.json"
+      },
+      "transferHook": {
+        "authority": "9a86whYE1bH1pfMgZAx9vtwaPV7wXwo2GPMMytnb6mLm",
+        "programId": null
+      }
+    },
+    {
+      "build": {
+        "finalLen": 650,
+        "fixedLen": 509,
+        "instructions": [
+          {
+            "accounts": [
+              {
+                "pubkey": "FrHjzV1dBsQFjcrUtGGWut8mVZYRFtte1bhZYwCz8utX",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "1b00dce92e216ad4e8a2fe3488f617795c70dbb1540767bbb91abbecd4ad643fb940010000000000000000000000000000000000000000000000000000000000000000",
+            "name": "ConfidentialTransferExtension::InitializeMint",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "FrHjzV1dBsQFjcrUtGGWut8mVZYRFtte1bhZYwCz8utX",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "1c0001",
+            "name": "DefaultAccountStateExtension::Initialize",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "FrHjzV1dBsQFjcrUtGGWut8mVZYRFtte1bhZYwCz8utX",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "23cc1e5430c6d5fe09c4a602b031e7c4a7eba2e070bbe71e9dfa7b86391b6de027",
+            "name": "InitializePermanentDelegate",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "FrHjzV1dBsQFjcrUtGGWut8mVZYRFtte1bhZYwCz8utX",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "24003dc6f23c6d81fc9e416a812101883e9c173af1cdcd2bcb4706d30f6d0c5dc5a7e5864d2a59a7d0b58b71a559881fd764e95aa80d50bd6bebfb9528caaffa062b",
+            "name": "TransferHookExtension::Initialize(program_id=Some)",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "FrHjzV1dBsQFjcrUtGGWut8mVZYRFtte1bhZYwCz8utX",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "27005aa03de3d4e1a27880e244b4b0191021dec4df1c55270f62129cfd1758bcb234dca40187c20c082d0c8051d0301660f857aa3a43ea4b27efd1c9f352ec990384",
+            "name": "MetadataPointerExtension::Initialize",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "FrHjzV1dBsQFjcrUtGGWut8mVZYRFtte1bhZYwCz8utX",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "2b00a0ecadb3075c2fe6c70e37073903ece46af74b9af298b9304ccbac1a0c692eac39454772f90ff03f",
+            "name": "ScaledUiAmountExtension::Initialize",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "FrHjzV1dBsQFjcrUtGGWut8mVZYRFtte1bhZYwCz8utX",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "2c009b405894e12dbb96542c6f934dcdcf62eb2e13e47a559c0363ae75e1bd38130b",
+            "name": "PausableExtension::Initialize",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "FrHjzV1dBsQFjcrUtGGWut8mVZYRFtte1bhZYwCz8utX",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "14082cacc365dba0a903e08e443f48ab652e5c09f286ce37fee04b344211123c722c014b64007e057a2eff2e98221004776d32197f67655173e5e73e58df001c5e030b",
+            "name": "InitializeMint2",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "FrHjzV1dBsQFjcrUtGGWut8mVZYRFtte1bhZYwCz8utX",
+                "signer": false,
+                "writable": true
+              },
+              {
+                "pubkey": "C1CSFZwzYAo5D7EN1kTPS4Gx5L4WQvfHTPV35EX14yk4",
+                "signer": false,
+                "writable": false
+              },
+              {
+                "pubkey": "FrHjzV1dBsQFjcrUtGGWut8mVZYRFtte1bhZYwCz8utX",
+                "signer": false,
+                "writable": false
+              },
+              {
+                "pubkey": "41PjRV2LB3RPN6zNLHvE2Gk5jpbU4MLghbqLVExZzSzw",
+                "signer": true,
+                "writable": false
+              }
+            ],
+            "dataHex": "d2e11ea258b84d8d0c0000005350353030207853746f636b04000000535059782900000068747470733a2f2f666978747572652e696e76616c69642f7873746f636b732f535059782e6a736f6e",
+            "name": "TokenMetadata::Initialize",
+            "signerRoles": [
+              "mint-authority"
+            ],
+            "tx": 1
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "FrHjzV1dBsQFjcrUtGGWut8mVZYRFtte1bhZYwCz8utX",
+                "signer": false,
+                "writable": true
+              },
+              {
+                "pubkey": "BqBYydrqRtSU1oQbxg4CA2ToDRgBJoXzat5QnChAmCeF",
+                "signer": true,
+                "writable": false
+              }
+            ],
+            "dataHex": "2b018c4aea043411f03f008d270000000000",
+            "name": "ScaledUiAmountExtension::UpdateMultiplier",
+            "signerRoles": [
+              "scaled-ui-authority"
+            ],
+            "tx": 2
+          }
+        ],
+        "keySeeds": "sha256(\"<label>:<role>\") as the 32-byte ed25519 private key; the mint is the \"mint\" role",
+        "lamports": 5414880,
+        "scaledUiEffectiveTimestamp": 2592000
+      },
+      "confidentialTransferMint": {
+        "auditorElGamalPubkey": null,
+        "authority": "FsLvKNuSfK4NKcaB5PUoegqeZarAs5fAyZn8Eud9gx55",
+        "autoApproveNewAccounts": true
+      },
+      "d19Mirror": "refused: freeze_authority is Some",
+      "dataHex": "010000002cacc365dba0a903e08e443f48ab652e5c09f286ce37fee04b344211123c722c00000000000000000801010000004b64007e057a2eff2e98221004776d32197f67655173e5e73e58df001c5e030b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000104004100dce92e216ad4e8a2fe3488f617795c70dbb1540767bbb91abbecd4ad643fb94001000000000000000000000000000000000000000000000000000000000000000006000100010c002000cc1e5430c6d5fe09c4a602b031e7c4a7eba2e070bbe71e9dfa7b86391b6de0270e0040003dc6f23c6d81fc9e416a812101883e9c173af1cdcd2bcb4706d30f6d0c5dc5a7e5864d2a59a7d0b58b71a559881fd764e95aa80d50bd6bebfb9528caaffa062b120040005aa03de3d4e1a27880e244b4b0191021dec4df1c55270f62129cfd1758bcb234dca40187c20c082d0c8051d0301660f857aa3a43ea4b27efd1c9f352ec99038419003800a0ecadb3075c2fe6c70e37073903ece46af74b9af298b9304ccbac1a0c692eac39454772f90ff03f008d2700000000008c4aea043411f03f1a0021009b405894e12dbb96542c6f934dcdcf62eb2e13e47a559c0363ae75e1bd38130b0013008900a37d7c777f24a000afd39aa7c6f06fc8d5afabce4ce37899b555d0098969fe19dca40187c20c082d0c8051d0301660f857aa3a43ea4b27efd1c9f352ec9903840c0000005350353030207853746f636b04000000535059782900000068747470733a2f2f666978747572652e696e76616c69642f7873746f636b732f535059782e6a736f6e00000000",
+      "decimals": 8,
+      "defaultAccountState": 1,
+      "extensions": [
+        "4(65) ConfidentialTransferMint",
+        "6(1) DefaultAccountState",
+        "12(32) PermanentDelegate",
+        "14(64) TransferHook",
+        "18(64) MetadataPointer",
+        "25(56) ScaledUiAmount",
+        "26(33) Pausable",
+        "19(137) TokenMetadata"
+      ],
+      "freezeAuthority": "65J28jRktxyuKSaxuXC3KvSgKwXV2gijSC33usoS1Env",
+      "label": "backed-xstock-8dp-hook-armed",
+      "len": 650,
+      "metadataPointer": {
+        "authority": "76mQs2EtFHJ58Lesh5DDQb9R6rYhAgh4346feg9wigWX",
+        "metadataAddress": "FrHjzV1dBsQFjcrUtGGWut8mVZYRFtte1bhZYwCz8utX"
+      },
+      "mint": "FrHjzV1dBsQFjcrUtGGWut8mVZYRFtte1bhZYwCz8utX",
+      "mintAuthority": "41PjRV2LB3RPN6zNLHvE2Gk5jpbU4MLghbqLVExZzSzw",
+      "owner": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+      "pausable": {
+        "authority": "BT36s6ynqzAEGYf8nK83xXN3LSuJNvxBbYcTw93hCvcr",
+        "paused": false
+      },
+      "permanentDelegate": "EjnzcdKJv4UKTWv5aveavXA7hJR1fsWeSzRYJoGxWF98",
+      "provenance": "Backed xStocks, Solana mainnet, surveyed 2026-09-22: SPYx XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W, AAPLx XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp",
+      "scaledUiAmount": {
+        "authority": "BqBYydrqRtSU1oQbxg4CA2ToDRgBJoXzat5QnChAmCeF",
+        "multiplier": 1.0039,
+        "newMultiplier": 1.0042,
+        "newMultiplierEffectiveTimestamp": 2592000
+      },
+      "supply": 0,
+      "tokenMetadata": {
+        "mint": "FrHjzV1dBsQFjcrUtGGWut8mVZYRFtte1bhZYwCz8utX",
+        "name": "SP500 xStock",
+        "symbol": "SPYx",
+        "updateAuthority": "C1CSFZwzYAo5D7EN1kTPS4Gx5L4WQvfHTPV35EX14yk4",
+        "uri": "https://fixture.invalid/xstocks/SPYx.json"
+      },
+      "transferHook": {
+        "authority": "5A9pUqwSZ483qgEuEkCbQekXxnFgRzyRYP6TPuiRSENA",
+        "programId": "GSy96nWSsidk6WGizbgZ3UFPNPaeLPwXiFM1YfW3rdF8"
+      }
+    },
+    {
+      "build": {
+        "finalLen": 449,
+        "fixedLen": 312,
+        "instructions": [
+          {
+            "accounts": [
+              {
+                "pubkey": "FzC31kZ6F7uTpbcLsidea1UDjSqg8hZSf6HiTHSZje3b",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "1c0001",
+            "name": "DefaultAccountStateExtension::Initialize",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "FzC31kZ6F7uTpbcLsidea1UDjSqg8hZSf6HiTHSZje3b",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "2344679f9aa87b703d7e965ae39b296b342cced819d2af7475d882320645bec9bb",
+            "name": "InitializePermanentDelegate",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "FzC31kZ6F7uTpbcLsidea1UDjSqg8hZSf6HiTHSZje3b",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "27003d5880b76d61c77c25fa43c91baaf69e7caf83f407ce5b6ce9b24d64c9b63577deaa3337a8b93d82964b3d2deddecf6b1290b546a43fca711dae86f198c121fa",
+            "name": "MetadataPointerExtension::Initialize",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "FzC31kZ6F7uTpbcLsidea1UDjSqg8hZSf6HiTHSZje3b",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "2c0044679f9aa87b703d7e965ae39b296b342cced819d2af7475d882320645bec9bb",
+            "name": "PausableExtension::Initialize",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "FzC31kZ6F7uTpbcLsidea1UDjSqg8hZSf6HiTHSZje3b",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "1406342613683e5fb2e163a60c657854cc6d80a2b2b30849bcd88e2d2460029673c80144679f9aa87b703d7e965ae39b296b342cced819d2af7475d882320645bec9bb",
+            "name": "InitializeMint2",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "FzC31kZ6F7uTpbcLsidea1UDjSqg8hZSf6HiTHSZje3b",
+                "signer": false,
+                "writable": true
+              },
+              {
+                "pubkey": "8SBB3mJhF2esQvQmJeL5U9BS3ob86pB2duYZamfYUaSg",
+                "signer": false,
+                "writable": false
+              },
+              {
+                "pubkey": "FzC31kZ6F7uTpbcLsidea1UDjSqg8hZSf6HiTHSZje3b",
+                "signer": false,
+                "writable": false
+              },
+              {
+                "pubkey": "4WZsjZqoRLGZcgDmj8HyQVa2ivNP7bTS6MDUK5qm3AsZ",
+                "signer": true,
+                "writable": false
+              }
+            ],
+            "dataHex": "d2e11ea258b84d8d05000000476f50726f050000004750524f782b00000068747470733a2f2f666978747572652e696e76616c69642f6261636b7061636b2f4750524f782e6a736f6e",
+            "name": "TokenMetadata::Initialize",
+            "signerRoles": [
+              "mint-authority"
+            ],
+            "tx": 1
+          }
+        ],
+        "keySeeds": "sha256(\"<label>:<role>\") as the 32-byte ed25519 private key; the mint is the \"mint\" role",
+        "lamports": 4015920,
+        "scaledUiEffectiveTimestamp": null
+      },
+      "confidentialTransferMint": null,
+      "d19Mirror": "refused: freeze_authority is Some",
+      "dataHex": "01000000342613683e5fb2e163a60c657854cc6d80a2b2b30849bcd88e2d2460029673c8000000000000000006010100000044679f9aa87b703d7e965ae39b296b342cced819d2af7475d882320645bec9bb00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000106000100010c00200044679f9aa87b703d7e965ae39b296b342cced819d2af7475d882320645bec9bb120040003d5880b76d61c77c25fa43c91baaf69e7caf83f407ce5b6ce9b24d64c9b63577deaa3337a8b93d82964b3d2deddecf6b1290b546a43fca711dae86f198c121fa1a00210044679f9aa87b703d7e965ae39b296b342cced819d2af7475d882320645bec9bb00130085006e74d4e564f261a1fc0de2ede8df140e7dbbada8e97ed8b0cc0eab16edbbf7dddeaa3337a8b93d82964b3d2deddecf6b1290b546a43fca711dae86f198c121fa05000000476f50726f050000004750524f782b00000068747470733a2f2f666978747572652e696e76616c69642f6261636b7061636b2f4750524f782e6a736f6e00000000",
+      "decimals": 6,
+      "defaultAccountState": 1,
+      "extensions": [
+        "6(1) DefaultAccountState",
+        "12(32) PermanentDelegate",
+        "18(64) MetadataPointer",
+        "26(33) Pausable",
+        "19(133) TokenMetadata"
+      ],
+      "freezeAuthority": "5c2NNpbZzkTk7ah5AuksNjttLeRGUpieXjbN28Uf3Xte",
+      "label": "backpack-securities-6dp",
+      "len": 449,
+      "metadataPointer": {
+        "authority": "58U9EJwQEurDj5MJaKXudPqYiEWTpu68BX1THDnFTRgr",
+        "metadataAddress": "FzC31kZ6F7uTpbcLsidea1UDjSqg8hZSf6HiTHSZje3b"
+      },
+      "mint": "FzC31kZ6F7uTpbcLsidea1UDjSqg8hZSf6HiTHSZje3b",
+      "mintAuthority": "4WZsjZqoRLGZcgDmj8HyQVa2ivNP7bTS6MDUK5qm3AsZ",
+      "owner": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+      "pausable": {
+        "authority": "5c2NNpbZzkTk7ah5AuksNjttLeRGUpieXjbN28Uf3Xte",
+        "paused": false
+      },
+      "permanentDelegate": "5c2NNpbZzkTk7ah5AuksNjttLeRGUpieXjbN28Uf3Xte",
+      "provenance": "Backpack Securities: 6 decimals, and freeze authority == permanent delegate == pause authority (ONE shared key) across all its mints. The extension set beside those three is this fixture's choice, not a measurement.",
+      "scaledUiAmount": null,
+      "supply": 0,
+      "tokenMetadata": {
+        "mint": "FzC31kZ6F7uTpbcLsidea1UDjSqg8hZSf6HiTHSZje3b",
+        "name": "GoPro",
+        "symbol": "GPROx",
+        "updateAuthority": "8SBB3mJhF2esQvQmJeL5U9BS3ob86pB2duYZamfYUaSg",
+        "uri": "https://fixture.invalid/backpack/GPROx.json"
+      },
+      "transferHook": null
+    },
+    {
+      "build": {
+        "finalLen": 392,
+        "fixedLen": 234,
+        "instructions": [
+          {
+            "accounts": [
+              {
+                "pubkey": "5wWGdSDmSbn3Z29dTJMkF6Py2STsyGrEhmkUrt2g4bUG",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "27000507129fe71141861596c43cf21f7c4eb4253c216570236ea0a9e54cb5d123da496534db3407a15ab9fa92e48c4f5bd7abaa8f2135aba72950f0fc9817c7a0bd",
+            "name": "MetadataPointerExtension::Initialize",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "5wWGdSDmSbn3Z29dTJMkF6Py2STsyGrEhmkUrt2g4bUG",
+                "signer": false,
+                "writable": true
+              }
+            ],
+            "dataHex": "140606f7d4b44e2c7de676ad13b08e8ed6e54140b49068f4540b1c0204594c9eb98400",
+            "name": "InitializeMint2",
+            "signerRoles": [],
+            "tx": 0
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "5wWGdSDmSbn3Z29dTJMkF6Py2STsyGrEhmkUrt2g4bUG",
+                "signer": false,
+                "writable": true
+              },
+              {
+                "pubkey": "GAFPfX5oNqxKx8dhhCdY8goJ1aXzgXDrnKsqfQ5kZaLe",
+                "signer": false,
+                "writable": false
+              },
+              {
+                "pubkey": "5wWGdSDmSbn3Z29dTJMkF6Py2STsyGrEhmkUrt2g4bUG",
+                "signer": false,
+                "writable": false
+              },
+              {
+                "pubkey": "UCdVC5c2bTBQuttdWvuDMXnbLYAxM2d6cmjRHtm7NP5",
+                "signer": true,
+                "writable": false
+              }
+            ],
+            "dataHex": "d2e11ea258b84d8d1c00000020476f50726f202d204261636b7061636b2053656375726974696573040000004750524f2a00000068747470733a2f2f666978747572652e696e76616c69642f696d706f73746f722f6770726f2e6a736f6e",
+            "name": "TokenMetadata::Initialize",
+            "signerRoles": [
+              "mint-authority"
+            ],
+            "tx": 1
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "5wWGdSDmSbn3Z29dTJMkF6Py2STsyGrEhmkUrt2g4bUG",
+                "signer": false,
+                "writable": true
+              },
+              {
+                "pubkey": "GAFPfX5oNqxKx8dhhCdY8goJ1aXzgXDrnKsqfQ5kZaLe",
+                "signer": true,
+                "writable": false
+              }
+            ],
+            "dataHex": "d7e4a6e45464567b0000000000000000000000000000000000000000000000000000000000000000",
+            "name": "TokenMetadata::UpdateAuthority(None)",
+            "signerRoles": [
+              "metadata-update-authority"
+            ],
+            "tx": 2
+          },
+          {
+            "accounts": [
+              {
+                "pubkey": "5wWGdSDmSbn3Z29dTJMkF6Py2STsyGrEhmkUrt2g4bUG",
+                "signer": false,
+                "writable": true
+              },
+              {
+                "pubkey": "UCdVC5c2bTBQuttdWvuDMXnbLYAxM2d6cmjRHtm7NP5",
+                "signer": true,
+                "writable": false
+              }
+            ],
+            "dataHex": "060000",
+            "name": "SetAuthority(MintTokens, None)",
+            "signerRoles": [
+              "mint-authority"
+            ],
+            "tx": 3
+          }
+        ],
+        "keySeeds": "sha256(\"<label>:<role>\") as the 32-byte ed25519 private key; the mint is the \"mint\" role",
+        "lamports": 3619200,
+        "scaledUiEffectiveTimestamp": null
+      },
+      "confidentialTransferMint": null,
+      "d19Mirror": "accepted",
+      "dataHex": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000601000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001120040000507129fe71141861596c43cf21f7c4eb4253c216570236ea0a9e54cb5d123da496534db3407a15ab9fa92e48c4f5bd7abaa8f2135aba72950f0fc9817c7a0bd13009a000000000000000000000000000000000000000000000000000000000000000000496534db3407a15ab9fa92e48c4f5bd7abaa8f2135aba72950f0fc9817c7a0bd1c00000020476f50726f202d204261636b7061636b2053656375726974696573040000004750524f2a00000068747470733a2f2f666978747572652e696e76616c69642f696d706f73746f722f6770726f2e6a736f6e00000000",
+      "decimals": 6,
+      "defaultAccountState": null,
+      "extensions": [
+        "18(64) MetadataPointer",
+        "19(154) TokenMetadata"
+      ],
+      "freezeAuthority": null,
+      "label": "impostor-pump",
+      "len": 392,
+      "metadataPointer": {
+        "authority": "LdJ2twK52FUJhj3huHxiw1HfGfWgBDSyS8h9jrvQtam",
+        "metadataAddress": "5wWGdSDmSbn3Z29dTJMkF6Py2STsyGrEhmkUrt2g4bUG"
+      },
+      "mint": "5wWGdSDmSbn3Z29dTJMkF6Py2STsyGrEhmkUrt2g4bUG",
+      "mintAuthority": null,
+      "owner": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+      "pausable": null,
+      "permanentDelegate": null,
+      "provenance": "The impersonation shape. A live mainnet example: AjdE84dGqhbqDYhh8Pm8oCRMCTpUGQ4oDaRBF5vwpump, on-chain name \" GoPro - Backpack Securities\" with a LEADING SPACE.",
+      "scaledUiAmount": null,
+      "supply": 0,
+      "tokenMetadata": {
+        "mint": "5wWGdSDmSbn3Z29dTJMkF6Py2STsyGrEhmkUrt2g4bUG",
+        "name": " GoPro - Backpack Securities",
+        "symbol": "GPRO",
+        "updateAuthority": null,
+        "uri": "https://fixture.invalid/impostor/gpro.json"
+      },
+      "transferHook": null
+    }
+  ],
+  "note": "Mints written by the PINNED mainnet Token-2022 under LiteSVM and read back. dataHex is the account data exactly as the program left it, so a suite in another crate set can load these bytes without running this one. The impostor's name is an impersonation string, recorded for a refusal test only.",
+  "schema": "carpenter/stock-mint-fixture/v1",
+  "tokenProgram": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+  "tokenProgramSha256": "0999dbf708971e723b08d1caafc988826a59c6001ed6dc02260da07defbe1469",
+  "writtenBy": "tests/tests/stock_mint_fixture.rs (FLOOR_WRITE_STOCK_MINTS=1)"
+}

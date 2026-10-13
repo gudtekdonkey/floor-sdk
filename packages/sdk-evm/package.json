@@ -1,0 +1,34 @@
+{
+  "name": "@floor/sdk-evm",
+  "version": "0.1.0",
+  "description": "FLOOR on EVM: ABIs, per-chain deployments, viem reads, quotes and unsigned trade builders for FLOOR launches.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gudtekdonkey/floor-sdk.git",
+    "directory": "packages/sdk-evm"
+  },
+  "homepage": "https://github.com/gudtekdonkey/floor-sdk/tree/main/packages/sdk-evm#readme",
+  "bugs": {
+    "url": "https://github.com/gudtekdonkey/floor-sdk/issues"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist", "LICENSE"],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "npm run build --prefix ../sdk && tsc -p tsconfig.build.json",
+    "prepack": "npm run build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@floor/sdk": "^0.1.0",
+    "viem": "^2.56.3"
+  }
+}

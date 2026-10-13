@@ -1,0 +1,22 @@
+[package]
+name = "floor-quote"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+description = "FLOOR's hook quoter for Carpenter: replays floor_hook's swap callbacks off-chain (HookQuoter), plus the launch sale, holder-reward and referral quotes."
+license = "Apache-2.0"
+publish = false
+
+[lib]
+doctest = false
+
+# No Solana crate. The swap walk is carpenter-quote's; this crate supplies FLOOR's callbacks through
+# carpenter-quote's `HookQuoter` and computes with floor-math, the same math the hook program runs.
+[dependencies]
+carpenter-quote = { workspace = true }
+floor-types = { workspace = true }
+floor-math = { workspace = true }
+bytemuck = { version = "1", features = ["derive", "min_const_generics"] }
+
+[dev-dependencies]
+serde_json = "1"

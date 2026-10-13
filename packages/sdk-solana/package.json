@@ -1,0 +1,69 @@
+{
+  "name": "@floor/sdk-solana",
+  "version": "0.1.0",
+  "description": "FLOOR on Solana: the floor_hook / floor_launch / floor_holders / floor_vesting IDLs and Codama clients, account layouts, PDAs and events, sale buy / sell-back and graduated-pool trade builders, the quoter, sendSolanaTransactions, and createSolanaAdapter for @floor/sdk. Built on @carpenter/sdk.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gudtekdonkey/floor-sdk.git",
+    "directory": "packages/sdk-solana"
+  },
+  "homepage": "https://github.com/gudtekdonkey/floor-sdk/tree/main/packages/sdk-solana#readme",
+  "bugs": {
+    "url": "https://github.com/gudtekdonkey/floor-sdk/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "floor-src": "./src/index.ts",
+      "import": "./dist/index.js"
+    },
+    "./quote/wasm": {
+      "types": "./dist/quote/wasm.d.ts",
+      "import": "./dist/quote/wasm.js"
+    },
+    "./floor_quote_bg.wasm": "./wasm/floor_quote_bg.wasm",
+    "./deployments.json": "./deployments.json",
+    "./idl/*.json": "./idl/*.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "idl",
+    "wasm",
+    "deployments.json",
+    "LICENSE",
+    "NOTICE",
+    "THIRD_PARTY.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "npm run build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "generate": "node scripts/sync-idls.mjs && node scripts/codama.mjs",
+    "sync-wasm": "node scripts/sync-wasm.mjs",
+    "build-wasm": "bash ../../scripts/build-wasm.sh && node scripts/sync-wasm.mjs",
+    "check-wasm": "bash ../../scripts/build-wasm.sh --check"
+  },
+  "dependencies": {
+    "@carpenter/sdk": "^0.1.0",
+    "@floor/sdk": "^0.1.0"
+  },
+  "peerDependencies": {
+    "@solana/kit": "^8.3.0"
+  },
+  "devDependencies": {
+    "@codama/nodes-from-anchor": "1.5.5",
+    "@codama/renderers-js": "2.4.0",
+    "@types/node": "24.13.4",
+    "codama": "1.10.2"
+  }
+}

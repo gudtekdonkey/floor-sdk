@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "types": [],
+    "customConditions": [
+      "carpenter-src"
+    ]
+  },
+  "include": [
+    "src"
+  ]
+}

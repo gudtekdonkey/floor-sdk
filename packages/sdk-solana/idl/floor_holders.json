@@ -1,0 +1,1458 @@
+{
+  "address": "2EUkJXSwCdRAuhesw2D9FXyGfbi6Kw2yZDyQUnCwc7te",
+  "metadata": {
+    "name": "floor_holders",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "FLOOR on Solana: the keyless holder-rewards tally, a Token-2022 transfer hook on hooked launches"
+  },
+  "instructions": [
+    {
+      "name": "authorize_claim",
+      "discriminator": [
+        7,
+        168,
+        241,
+        195,
+        41,
+        85,
+        16,
+        181
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "holder_book",
+          "writable": true
+        },
+        {
+          "name": "floor_pool",
+          "writable": true
+        },
+        {
+          "name": "token_account"
+        },
+        {
+          "name": "record",
+          "writable": true
+        },
+        {
+          "name": "destination",
+          "writable": true
+        },
+        {
+          "name": "holders_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  111,
+                  108,
+                  100,
+                  101,
+                  114,
+                  115,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "floor_hook",
+          "address": "9uXLyyZginMWdUeu22kp7XV7cpV8183xfsVqUxKi5Viy"
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "vault0",
+          "writable": true
+        },
+        {
+          "name": "quote_mint"
+        },
+        {
+          "name": "quote_token_program"
+        },
+        {
+          "name": "carpenter_amm",
+          "address": "DdeiDx4ncHo9DXGZm1GrPe7mFKv7kNU3yx95uQEV2APA"
+        },
+        {
+          "name": "hook_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  111,
+                  111,
+                  107,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                132,
+                82,
+                2,
+                21,
+                189,
+                64,
+                53,
+                236,
+                151,
+                14,
+                216,
+                63,
+                254,
+                189,
+                160,
+                51,
+                203,
+                253,
+                199,
+                159,
+                102,
+                236,
+                30,
+                202,
+                145,
+                219,
+                195,
+                38,
+                58,
+                59,
+                2,
+                34
+              ]
+            }
+          }
+        },
+        {
+          "name": "amm_event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                187,
+                175,
+                202,
+                187,
+                57,
+                132,
+                21,
+                196,
+                5,
+                126,
+                236,
+                168,
+                207,
+                126,
+                245,
+                178,
+                222,
+                205,
+                100,
+                95,
+                182,
+                104,
+                45,
+                225,
+                184,
+                213,
+                234,
+                151,
+                195,
+                112,
+                62,
+                17
+              ]
+            }
+          }
+        },
+        {
+          "name": "hook_event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                132,
+                82,
+                2,
+                21,
+                189,
+                64,
+                53,
+                236,
+                151,
+                14,
+                216,
+                63,
+                254,
+                189,
+                160,
+                51,
+                203,
+                253,
+                199,
+                159,
+                102,
+                236,
+                30,
+                202,
+                145,
+                219,
+                195,
+                38,
+                58,
+                59,
+                2,
+                34
+              ]
+            }
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "claim",
+      "discriminator": [
+        62,
+        198,
+        214,
+        193,
+        213,
+        159,
+        108,
+        210
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "holder_book",
+          "writable": true
+        },
+        {
+          "name": "floor_pool",
+          "writable": true
+        },
+        {
+          "name": "token_account"
+        },
+        {
+          "name": "record",
+          "writable": true
+        },
+        {
+          "name": "destination",
+          "writable": true
+        },
+        {
+          "name": "holders_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  111,
+                  108,
+                  100,
+                  101,
+                  114,
+                  115,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "floor_hook",
+          "address": "9uXLyyZginMWdUeu22kp7XV7cpV8183xfsVqUxKi5Viy"
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "vault0",
+          "writable": true
+        },
+        {
+          "name": "quote_mint"
+        },
+        {
+          "name": "quote_token_program"
+        },
+        {
+          "name": "carpenter_amm",
+          "address": "DdeiDx4ncHo9DXGZm1GrPe7mFKv7kNU3yx95uQEV2APA"
+        },
+        {
+          "name": "hook_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  111,
+                  111,
+                  107,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                132,
+                82,
+                2,
+                21,
+                189,
+                64,
+                53,
+                236,
+                151,
+                14,
+                216,
+                63,
+                254,
+                189,
+                160,
+                51,
+                203,
+                253,
+                199,
+                159,
+                102,
+                236,
+                30,
+                202,
+                145,
+                219,
+                195,
+                38,
+                58,
+                59,
+                2,
+                34
+              ]
+            }
+          }
+        },
+        {
+          "name": "amm_event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                187,
+                175,
+                202,
+                187,
+                57,
+                132,
+                21,
+                196,
+                5,
+                126,
+                236,
+                168,
+                207,
+                126,
+                245,
+                178,
+                222,
+                205,
+                100,
+                95,
+                182,
+                104,
+                45,
+                225,
+                184,
+                213,
+                234,
+                151,
+                195,
+                112,
+                62,
+                17
+              ]
+            }
+          }
+        },
+        {
+          "name": "hook_event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                132,
+                82,
+                2,
+                21,
+                189,
+                64,
+                53,
+                236,
+                151,
+                14,
+                216,
+                63,
+                254,
+                189,
+                160,
+                51,
+                203,
+                253,
+                199,
+                159,
+                102,
+                236,
+                30,
+                202,
+                145,
+                219,
+                195,
+                38,
+                58,
+                59,
+                2,
+                34
+              ]
+            }
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_record",
+      "discriminator": [
+        111,
+        192,
+        122,
+        188,
+        38,
+        234,
+        242,
+        249
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "holder_book",
+          "writable": true
+        },
+        {
+          "name": "floor_pool"
+        },
+        {
+          "name": "token_account"
+        },
+        {
+          "name": "record",
+          "writable": true
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "execute",
+      "discriminator": [
+        105,
+        37,
+        101,
+        197,
+        75,
+        251,
+        102,
+        26
+      ],
+      "accounts": [
+        {
+          "name": "source"
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "destination"
+        },
+        {
+          "name": "authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "init_launch",
+      "discriminator": [
+        75,
+        162,
+        31,
+        198,
+        192,
+        109,
+        36,
+        169
+      ],
+      "accounts": [
+        {
+          "name": "lock_authority",
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "quote_mint"
+        },
+        {
+          "name": "floor_pool"
+        },
+        {
+          "name": "holder_book",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "extra_account_metas",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "claims_registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  108,
+                  97,
+                  105,
+                  109,
+                  115,
+                  95,
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "claims_table",
+          "writable": true
+        },
+        {
+          "name": "claims_alt_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  108,
+                  97,
+                  105,
+                  109,
+                  115,
+                  95,
+                  97,
+                  108,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "alt_program",
+          "address": "AddressLookupTab1e1111111111111111111111111"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "hooked",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "initialize_claims_registry",
+      "discriminator": [
+        100,
+        149,
+        120,
+        121,
+        174,
+        196,
+        31,
+        31
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "claims_registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  108,
+                  97,
+                  105,
+                  109,
+                  115,
+                  95,
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "open_record",
+      "discriminator": [
+        9,
+        245,
+        244,
+        116,
+        110,
+        216,
+        54,
+        158
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "holder_book",
+          "writable": true
+        },
+        {
+          "name": "floor_pool"
+        },
+        {
+          "name": "token_account"
+        },
+        {
+          "name": "record",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "rotate_claims_table",
+      "discriminator": [
+        78,
+        254,
+        119,
+        206,
+        38,
+        21,
+        63,
+        222
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "claims_registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  108,
+                  97,
+                  105,
+                  109,
+                  115,
+                  95,
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "claims_alt_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  108,
+                  97,
+                  105,
+                  109,
+                  115,
+                  95,
+                  97,
+                  108,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "new_table",
+          "writable": true
+        },
+        {
+          "name": "alt_program",
+          "address": "AddressLookupTab1e1111111111111111111111111"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "recent_slot",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "sync",
+      "discriminator": [
+        4,
+        219,
+        40,
+        164,
+        21,
+        157,
+        189,
+        88
+      ],
+      "accounts": [
+        {
+          "name": "mint"
+        },
+        {
+          "name": "holder_book",
+          "writable": true
+        },
+        {
+          "name": "floor_pool"
+        },
+        {
+          "name": "token_account"
+        },
+        {
+          "name": "record",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "touch",
+      "discriminator": [
+        80,
+        157,
+        106,
+        220,
+        181,
+        72,
+        101,
+        81
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "holder_book",
+          "writable": true
+        },
+        {
+          "name": "floor_pool"
+        },
+        {
+          "name": "token_account"
+        },
+        {
+          "name": "record",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    }
+  ],
+  "events": [
+    {
+      "name": "ClaimsTableExtended",
+      "discriminator": [
+        48,
+        152,
+        152,
+        51,
+        196,
+        185,
+        114,
+        124
+      ]
+    },
+    {
+      "name": "ClaimsTableRotated",
+      "discriminator": [
+        250,
+        66,
+        36,
+        218,
+        69,
+        255,
+        21,
+        252
+      ]
+    },
+    {
+      "name": "HolderClaimed",
+      "discriminator": [
+        135,
+        192,
+        236,
+        75,
+        181,
+        166,
+        203,
+        87
+      ]
+    },
+    {
+      "name": "LaunchHooked",
+      "discriminator": [
+        43,
+        10,
+        196,
+        165,
+        174,
+        85,
+        247,
+        241
+      ]
+    },
+    {
+      "name": "RecordClosed",
+      "discriminator": [
+        99,
+        152,
+        89,
+        8,
+        23,
+        79,
+        153,
+        2
+      ]
+    },
+    {
+      "name": "RecordOpened",
+      "discriminator": [
+        99,
+        226,
+        191,
+        99,
+        102,
+        248,
+        208,
+        176
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 8000,
+      "name": "NotLaunchAuthority",
+      "msg": "init_launch must be signed by floor_launch's lock authority"
+    },
+    {
+      "code": 8001,
+      "name": "WrongMint",
+      "msg": "the account belongs to a different mint"
+    },
+    {
+      "code": 8002,
+      "name": "WrongPool",
+      "msg": "the floor pool is not this launch's"
+    },
+    {
+      "code": 8003,
+      "name": "NotTransferring",
+      "msg": "execute may only run inside a Token-2022 transfer"
+    },
+    {
+      "code": 8004,
+      "name": "MissingExtraAccounts",
+      "msg": "execute needs the nine accounts the extra-account list names"
+    },
+    {
+      "code": 8005,
+      "name": "NotAssociatedTokenAccount",
+      "msg": "not the owner's Token-2022 associated token account for this mint"
+    },
+    {
+      "code": 8006,
+      "name": "OwnerOffCurve",
+      "msg": "an off-curve (program-owned) owner cannot open a holder record"
+    },
+    {
+      "code": 8007,
+      "name": "RecordExists",
+      "msg": "this token account already has a holder record"
+    },
+    {
+      "code": 8008,
+      "name": "NoRecord",
+      "msg": "no holder record for this token account"
+    },
+    {
+      "code": 8009,
+      "name": "NotRecordOwner",
+      "msg": "signer is not the owner of this holder record"
+    },
+    {
+      "code": 8010,
+      "name": "RecordNotEmpty",
+      "msg": "the record still holds a balance or is still owed"
+    },
+    {
+      "code": 8011,
+      "name": "NotHooked",
+      "msg": "this launch is not hooked: it has no holder rewards"
+    },
+    {
+      "code": 8012,
+      "name": "WrongDestination",
+      "msg": "destination must be the record owner's account of the pool's quote"
+    },
+    {
+      "code": 8013,
+      "name": "ClaimsTableNotFull",
+      "msg": "the current claims lookup table still has room"
+    },
+    {
+      "code": 8014,
+      "name": "MathOverflow",
+      "msg": "arithmetic overflow"
+    },
+    {
+      "code": 8015,
+      "name": "InvalidPayoutAuthorization",
+      "msg": "invalid atomic holder payout authorization"
+    }
+  ],
+  "types": [
+    {
+      "name": "ClaimsTableExtended",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "table",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "floor_pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "added",
+            "type": "u8"
+          },
+          {
+            "name": "len",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ClaimsTableRotated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "table",
+            "type": "pubkey"
+          },
+          {
+            "name": "tables",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "HolderClaimed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "record",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "destination",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LaunchHooked",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "floor_pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "holder_book",
+            "type": "pubkey"
+          },
+          {
+            "name": "extra_account_metas",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RecordClosed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "record",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "refund_lamports",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RecordOpened",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "record",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "payer",
+            "type": "pubkey"
+          },
+          {
+            "name": "shares",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "CLAIMS_ALT_AUTHORITY_SEED",
+      "type": "bytes",
+      "value": "[99, 108, 97, 105, 109, 115, 95, 97, 108, 116, 95, 97, 117, 116, 104, 111, 114, 105, 116, 121]"
+    },
+    {
+      "name": "CLAIMS_REGISTRY_SEED",
+      "type": "bytes",
+      "value": "[99, 108, 97, 105, 109, 115, 95, 114, 101, 103, 105, 115, 116, 114, 121]"
+    },
+    {
+      "name": "EXTRA_ACCOUNT_METAS_SEED",
+      "type": "bytes",
+      "value": "[101, 120, 116, 114, 97, 45, 97, 99, 99, 111, 117, 110, 116, 45, 109, 101, 116, 97, 115]"
+    },
+    {
+      "name": "HOLDERS_AUTHORITY_SEED",
+      "type": "bytes",
+      "value": "[104, 111, 108, 100, 101, 114, 115, 95, 97, 117, 116, 104, 111, 114, 105, 116, 121]"
+    },
+    {
+      "name": "HOLDER_BOOK_SEED",
+      "type": "bytes",
+      "value": "[104, 111, 108, 100, 101, 114, 95, 98, 111, 111, 107]"
+    },
+    {
+      "name": "HOLDER_RECORD_SEED",
+      "type": "bytes",
+      "value": "[104, 111, 108, 100, 101, 114]"
+    }
+  ]
+}

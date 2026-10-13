@@ -1,0 +1,16 @@
+[package]
+name = "floor-types"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+description = "FLOOR on Carpenter (Solana): the mechanism's account layouts, seeds, constants and program ids, over carpenter-types. No Solana dependency."
+license = "Apache-2.0"
+publish = false
+
+# Normal dependencies: carpenter-types, borsh 1.x and bytemuck only. Keys are [u8; 32].
+# The arrow is `floor-types → carpenter-types`, never back: the AMM's seeds, layouts, constants and
+# the hook interface live there and are re-exported here under the paths FLOOR code spells.
+[dependencies]
+carpenter-types = { workspace = true }
+borsh = { version = "1.5.7", features = ["derive"] }
+bytemuck = { version = "1", features = ["derive", "min_const_generics"] }
