@@ -8,6 +8,7 @@ repository, at the same path, and opened as a pull request there.
 | [`DefiLlama-Adapters/projects/floor-launchpad/index.js`](DefiLlama-Adapters/projects/floor-launchpad/index.js) | [DefiLlama/DefiLlama-Adapters](https://github.com/DefiLlama/DefiLlama-Adapters) | TVL: Ethereum, Base, BSC, Robinhood Chain, Arc, Solana |
 | [`dimension-adapters/dexs/floor-launchpad/index.ts`](dimension-adapters/dexs/floor-launchpad/index.ts) | [DefiLlama/dimension-adapters](https://github.com/DefiLlama/dimension-adapters) | Volume, fees and revenue: Ethereum, Base, BSC, Robinhood Chain, Arc |
 | [`dimension-adapters/dexs/floor-launchpad-solana/index.ts`](dimension-adapters/dexs/floor-launchpad-solana/index.ts) | [DefiLlama/dimension-adapters](https://github.com/DefiLlama/dimension-adapters) | Volume, fees and revenue: Solana |
+| [`DefiLlama-Adapters/projects/treasury/floor-launchpad.js`](DefiLlama-Adapters/projects/treasury/floor-launchpad.js) | DefiLlama-Adapters | Treasury: the platform and team treasuries, EVM and Solana |
 | [`PR-tvl.md`](PR-tvl.md), [`PR-volume.md`](PR-volume.md) | the two pull request bodies | |
 
 ## What they count
