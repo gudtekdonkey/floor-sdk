@@ -1,6 +1,6 @@
 # Reading FLOOR's EVM events
 
-How FLOOR's events on EVM chains become launches, pools and trades. `@floor/sdk-evm`'s `decodeFloorLog` decodes every event
+How FLOOR's events on EVM chains become launches, pools and trades. `@floorsupply/sdk-evm`'s `decodeFloorLog` decodes every event
 named here; the addresses are in its `deployments.ts`.
 
 ## Launches and pools

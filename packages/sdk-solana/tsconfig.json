@@ -6,7 +6,7 @@
     "rewriteRelativeImportExtensions": true,
     "types": ["node"],
     "customConditions": ["carpenter-src"],
-    "paths": { "@floor/sdk": ["../sdk/src/index.ts"] }
+    "paths": { "@floorsupply/sdk": ["../sdk/src/index.ts"] }
   },
   "include": ["src", "test", "vitest.config.ts"]
 }

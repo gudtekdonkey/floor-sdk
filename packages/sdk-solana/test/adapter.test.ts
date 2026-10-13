@@ -27,7 +27,7 @@ import {
   WSOL_MINT,
 } from '@carpenter/sdk';
 import { getBase64Encoder, getCompiledTransactionMessageDecoder, getTransactionDecoder } from '@solana/kit';
-import { solanaRef, type LaunchRef } from '@floor/sdk';
+import { solanaRef, type LaunchRef } from '@floorsupply/sdk';
 import type { Address } from '@solana/kit';
 
 import { createSolanaAdapter, SolanaAdapterError, swapToQuote, TRADER_LINK_DEADLINE_MARGIN_SECONDS, type SolanaAdapterRpc } from '../src/adapter.ts';

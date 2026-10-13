@@ -1,6 +1,6 @@
-# @floor/sdk-solana
+# @floorsupply/sdk-solana
 
-FLOOR on Solana: read FLOOR launches, quote trades and build unsigned trade transactions. It implements `@floor/sdk`'s
+FLOOR on Solana: read FLOOR launches, quote trades and build unsigned trade transactions. It implements `@floorsupply/sdk`'s
 `FloorChainAdapter` (`createSolanaAdapter`), so the same `FloorClient` serves Solana and EVM launches.
 
 FLOOR runs as four Solana programs — `floor_hook` (an approved hook of the Carpenter AMM), `floor_launch` (the bonding
@@ -39,7 +39,7 @@ errors are otherwise complete. `IDL_SHA256` is the hash of these files as shippe
 ## Install
 
 ```sh
-npm install @floor/sdk @floor/sdk-solana @solana/kit
+npm install @floorsupply/sdk @floorsupply/sdk-solana @solana/kit
 ```
 
 `@carpenter/sdk` (`^0.1.0`) is installed with it. `@solana/kit` is a peer dependency (`^8.3.0`). The quoter wasm is
@@ -48,9 +48,9 @@ shipped in the package (`wasm/`), so installing needs no Rust toolchain.
 ## Example
 
 ```ts
-import { FloorClient, solanaRef } from '@floor/sdk';
-import { createSolanaAdapter, sendSolanaTransactions } from '@floor/sdk-solana';
-import { initQuote } from '@floor/sdk-solana/quote/wasm';
+import { FloorClient, solanaRef } from '@floorsupply/sdk';
+import { createSolanaAdapter, sendSolanaTransactions } from '@floorsupply/sdk-solana';
+import { initQuote } from '@floorsupply/sdk-solana/quote/wasm';
 import { createSolanaRpc } from '@solana/kit';
 
 const rpc = createSolanaRpc('https://api.mainnet-beta.solana.com');
@@ -144,11 +144,11 @@ From the repository root, with [`carpenter-sdk`](https://github.com/gudtekdonkey
 
 ```sh
 npm install
-npm run generate -w @floor/sdk-solana     # idl/ + deployments.json → src/generated/ (Codama clients)
-npm run build-wasm -w @floor/sdk-solana   # the quoter wasm, from source → wasm/
-npm run typecheck -w @floor/sdk-solana
-npm test -w @floor/sdk-solana
-npm pack -w @floor/sdk-solana             # builds dist/ first (prepack)
+npm run generate -w @floorsupply/sdk-solana     # idl/ + deployments.json → src/generated/ (Codama clients)
+npm run build-wasm -w @floorsupply/sdk-solana   # the quoter wasm, from source → wasm/
+npm run typecheck -w @floorsupply/sdk-solana
+npm test -w @floorsupply/sdk-solana
+npm pack -w @floorsupply/sdk-solana             # builds dist/ first (prepack)
 ```
 
 Some tests compare the SDK with the Rust program source; they run when `FLOOR_PROGRAM_SOURCE` names a checkout of it and

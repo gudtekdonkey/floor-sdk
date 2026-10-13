@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createWalletClient, custom, type Hex } from 'viem';
 import { sendEvmCalls, FloorEvmError } from '../src/index.js';
-import type { UnsignedTx } from '@floor/sdk';
+import type { UnsignedTx } from '@floorsupply/sdk';
 
 const CHAIN = 11155111;
 const ME = '0x9999999999999999999999999999999999999999' as const;

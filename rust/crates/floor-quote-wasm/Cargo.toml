@@ -1,5 +1,5 @@
 # The wasm build of FLOOR's quoter: floor-quote (and through it carpenter-quote's walk with the
-# FLOOR hook's `HookQuoter`) behind wasm-bindgen, for `@floor/sdk-solana`'s `initQuote`.
+# FLOOR hook's `HookQuoter`) behind wasm-bindgen, for `@floorsupply/sdk-solana`'s `initQuote`.
 #
 # Its own workspace: it builds for wasm32-unknown-unknown with a size-tuned release profile that
 # the library crates must not share. Build it with `scripts/build-wasm.sh` from the repository root,
@@ -12,7 +12,7 @@
 name = "floor-quote-wasm"
 version = "0.1.0"
 edition = "2021"
-description = "FLOOR's hook quoter for Carpenter pools, compiled to wasm for @floor/sdk-solana."
+description = "FLOOR's hook quoter for Carpenter pools, compiled to wasm for @floorsupply/sdk-solana."
 license = "Apache-2.0"
 repository = "https://github.com/gudtekdonkey/floor-sdk"
 publish = false

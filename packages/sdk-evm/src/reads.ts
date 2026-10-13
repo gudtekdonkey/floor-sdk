@@ -12,7 +12,7 @@
  *    BOUNDED newest-first scan (`maxRegistryScan`), remembering every entry it has seen.
  */
 import { BaseError, ContractFunctionRevertedError, decodeFunctionResult, encodeFunctionData, getAddress, zeroAddress, zeroHash, type Address, type ContractFunctionReturnType, type Hex, type PublicClient } from 'viem';
-import type { Launch } from '@floor/sdk';
+import type { Launch } from '@floorsupply/sdk';
 import { HOOK_ABI, LAUNCH_ABI, POOL_ABI, POOL_STATE_ABI, POOL_STATE_WORDS, REGISTRY_ABI, TOKEN_ABI, FACTORY_ABI, WALLET_SCAN_ABI } from './abi/index.js';
 import { EVM_NETWORKS, setHasTeamFee, type Deployment } from './deployments.js';
 import { FloorEvmError } from './errors.js';

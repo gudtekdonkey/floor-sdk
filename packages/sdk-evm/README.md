@@ -1,7 +1,7 @@
-# @floor/sdk-evm
+# @floorsupply/sdk-evm
 
 FLOOR on EVM chains: the ABIs, where the contracts are on each chain, and [viem](https://viem.sh) code to read FLOOR
-launches, quote trades and build unsigned trade transactions. It implements `@floor/sdk`'s `FloorChainAdapter`, so the
+launches, quote trades and build unsigned trade transactions. It implements `@floorsupply/sdk`'s `FloorChainAdapter`, so the
 same `FloorClient` serves EVM and Solana launches.
 
 `buildTrade` never signs: it returns `{ family: 'evm', chainId, calls }` — every call the action needs, in order (any
@@ -11,16 +11,16 @@ allows.
 ## Install
 
 ```sh
-npm install @floor/sdk @floor/sdk-evm viem
+npm install @floorsupply/sdk @floorsupply/sdk-evm viem
 ```
 
-`@floor/sdk` and `viem` (^2.56.3) are peer dependencies.
+`@floorsupply/sdk` and `viem` (^2.56.3) are peer dependencies.
 
 ## Example
 
 ```ts
-import { FloorClient, evmRef } from '@floor/sdk';
-import { createEvmAdapter, sendEvmCalls } from '@floor/sdk-evm';
+import { FloorClient, evmRef } from '@floorsupply/sdk';
+import { createEvmAdapter, sendEvmCalls } from '@floorsupply/sdk-evm';
 
 const evm = createEvmAdapter({ chains: [11155111], rpcUrls: { 11155111: 'https://your-sepolia-rpc' } });
 const floor = new FloorClient([evm]);
@@ -126,7 +126,7 @@ createEvmAdapter({ chains: [31337], rpcUrls: { 31337: 'http://127.0.0.1:8545' },
   marks a sell after which the hook re-places its bid.
 - **Events** (`events.ts`): `decodeFloorLog` / `decodeFloorLogs` decode any log of any contract whose ABI is here, by its
   first topic (`FLOOR_EVENTS`, one layout per selector), and refuse a log whose topics or data do not fit the layout.
-  `floorEventTopics(name)` gives an event's selectors for an `eth_getLogs` filter. The twin of `@floor/sdk-solana`'s
+  `floorEventTopics(name)` gives an event's selectors for an `eth_getLogs` filter. The twin of `@floorsupply/sdk-solana`'s
   `events.ts`. What the events mean as trades: [`docs/evm-events.md`](../../docs/evm-events.md).
 
 ## What it does not cover
@@ -134,7 +134,7 @@ createEvmAdapter({ chains: [31337], rpcUrls: { 31337: 'http://127.0.0.1:8545' },
 - Creating launches, claims (creator fees, holder rewards, referrals), vesting, team steps, the zap (paying a stock-quoted
   sale in ETH) and multi-hop routes: the ABIs are here, the builders are not.
 - History, charts and indexer reads.
-- Solana: see `@floor/sdk-solana`.
+- Solana: see `@floorsupply/sdk-solana`.
 
 ## Limits worth knowing
 

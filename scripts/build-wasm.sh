@@ -6,7 +6,7 @@
 #   bash scripts/build-wasm.sh --check    # build, then require the wasm's sha256 to equal the committed one
 #                                         # (packages/sdk-solana/wasm/SHA256SUMS)
 #
-# Then `npm run sync-wasm -w @floor/sdk-solana` copies the output into the package (the package's
+# Then `npm run sync-wasm -w @floorsupply/sdk-solana` copies the output into the package (the package's
 # `build-wasm` script runs both).
 #
 # Needs: the Rust toolchain named in rust/rust-toolchain.toml with the wasm32-unknown-unknown target,

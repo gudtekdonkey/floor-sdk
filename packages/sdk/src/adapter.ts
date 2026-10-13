@@ -2,7 +2,7 @@ import type { ChainRef } from './chain.js';
 import type { Launch, LaunchRef, Quote, Side, TradeParams, UnsignedTx, Amount } from './types.js';
 
 /**
- * What a chain package implements. `@floor/sdk-evm` and `@floor/sdk-solana` each export one factory
+ * What a chain package implements. `@floorsupply/sdk-evm` and `@floorsupply/sdk-solana` each export one factory
  * that returns this. Reads are network calls; `build*` returns an unsigned transaction and never signs.
  */
 export interface FloorChainAdapter {

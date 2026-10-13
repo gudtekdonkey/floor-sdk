@@ -134,11 +134,11 @@ export function joinDeployment(carpenter: CarpenterClusterDeployment, floor: Flo
 export function deploymentFor(clusterKey: string, file: DeploymentsFile = DEPLOYMENTS, carpenterFile: CarpenterDeploymentsFile = CARPENTER_DEPLOYMENTS): ClusterDeployment {
   const row = file.clusters[clusterKey];
   if (!row) {
-    throw new Error(`@floor/sdk-solana: no deployment for cluster "${clusterKey}" (known: ${Object.keys(file.clusters).join(', ')})`);
+    throw new Error(`@floorsupply/sdk-solana: no deployment for cluster "${clusterKey}" (known: ${Object.keys(file.clusters).join(', ')})`);
   }
   const amm = carpenterFile.clusters[clusterKey];
   if (!amm) {
-    throw new Error(`@floor/sdk-solana: @carpenter/sdk has no deployment for cluster "${clusterKey}" (known: ${Object.keys(carpenterFile.clusters).join(', ')})`);
+    throw new Error(`@floorsupply/sdk-solana: @carpenter/sdk has no deployment for cluster "${clusterKey}" (known: ${Object.keys(carpenterFile.clusters).join(', ')})`);
   }
   return joinDeployment(amm, row);
 }

@@ -1,7 +1,7 @@
 /**
- * `@floor/sdk-solana`: FLOOR on Solana — the `floor_hook` / `floor_launch` / `floor_holders` / `floor_vesting` IDLs and
+ * `@floorsupply/sdk-solana`: FLOOR on Solana — the `floor_hook` / `floor_launch` / `floor_holders` / `floor_vesting` IDLs and
  * their Codama clients, FLOOR's layouts, PDAs and events, the read helpers (`stateView`), the sale buy / sell-back and
- * graduated-pool trade builders, the quoter, and `createSolanaAdapter` — the `@floor/sdk` `FloorChainAdapter`.
+ * graduated-pool trade builders, the quoter, and `createSolanaAdapter` — the `@floorsupply/sdk` `FloorChainAdapter`.
  * Built on `@carpenter/sdk` (the AMM), whose one-prompt sender it re-exports.
  */
 

@@ -1,5 +1,5 @@
 {
-  "name": "@floor/sdk-evm",
+  "name": "@floorsupply/sdk-evm",
   "version": "0.1.0",
   "description": "FLOOR on EVM: ABIs, per-chain deployments, viem reads, quotes and unsigned trade builders for FLOOR launches.",
   "license": "Apache-2.0",
@@ -39,7 +39,7 @@
     "test": "vitest run"
   },
   "peerDependencies": {
-    "@floor/sdk": "^0.1.0",
+    "@floorsupply/sdk": "^0.1.0",
     "viem": "^2.56.3"
   }
 }

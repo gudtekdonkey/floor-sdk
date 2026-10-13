@@ -1,6 +1,6 @@
 /**
- * `@floor/sdk-evm` — FLOOR on EVM chains: ABIs, deployments, viem reads, quotes and unsigned trade builders.
- * `createEvmAdapter` implements `@floor/sdk`'s `FloorChainAdapter`; everything it is built from is exported beside it.
+ * `@floorsupply/sdk-evm` — FLOOR on EVM chains: ABIs, deployments, viem reads, quotes and unsigned trade builders.
+ * `createEvmAdapter` implements `@floorsupply/sdk`'s `FloorChainAdapter`; everything it is built from is exported beside it.
  */
 export * from './abi/index.js';
 export * from './deployments.js';

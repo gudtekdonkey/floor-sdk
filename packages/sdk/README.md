@@ -1,16 +1,16 @@
-# @floor/sdk
+# @floorsupply/sdk
 
 One API for FLOOR launches on every chain: chain-neutral types and `FloorClient`, which routes each call to the chain
 adapter that serves the launch's chain. The adapters are separate packages:
-[`@floor/sdk-evm`](https://github.com/gudtekdonkey/floor-sdk/tree/main/packages/sdk-evm) and
-[`@floor/sdk-solana`](https://github.com/gudtekdonkey/floor-sdk/tree/main/packages/sdk-solana).
+[`@floorsupply/sdk-evm`](https://github.com/gudtekdonkey/floor-sdk/tree/main/packages/sdk-evm) and
+[`@floorsupply/sdk-solana`](https://github.com/gudtekdonkey/floor-sdk/tree/main/packages/sdk-solana).
 
 ```sh
-npm install @floor/sdk @floor/sdk-solana @solana/kit
+npm install @floorsupply/sdk @floorsupply/sdk-solana @solana/kit
 ```
 
 ```ts
-import { FloorClient, solanaRef } from '@floor/sdk';
+import { FloorClient, solanaRef } from '@floorsupply/sdk';
 
 const floor = new FloorClient([solanaAdapter /*, evmAdapter */]);
 const { launches, cursor } = await floor.listLaunches(solanaRef('devnet'), { limit: 20 });

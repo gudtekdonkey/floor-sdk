@@ -119,7 +119,7 @@ export function sqrtPriceAtTick(tick: number): bigint {
 
 /**
  * The price at an ENGINE-FRAME tick (quote at currency0 for every pool, so a dearer token is a LOWER tick), as WHOLE quote
- * per WHOLE token scaled by 1e18 — the shape of `@floor/sdk` `Launch.floorPriceX18`. Rounded down.
+ * per WHOLE token scaled by 1e18 — the shape of `@floorsupply/sdk` `Launch.floorPriceX18`. Rounded down.
  *
  * `1.0001^-tick` is raw quote per raw token (`lib/pool.ts priceFromTick`); `sqrtPriceAtTick(t)² / 2^192 = 1.0001^t`, so
  * raw-per-raw = `2^192 / sqrtP²`, and whole-per-whole × 1e18 = raw-per-raw × 10^(tokenDecimals − quoteDecimals + 18).

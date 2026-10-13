@@ -1,1 +1,1 @@
-{ "extends": "../../tsconfig.base.json", "compilerOptions": { "noEmit": true, "paths": { "@floor/sdk": ["../sdk/src/index.ts"] } }, "include": ["src", "test"] }
+{ "extends": "../../tsconfig.base.json", "compilerOptions": { "noEmit": true, "paths": { "@floorsupply/sdk": ["../sdk/src/index.ts"] } }, "include": ["src", "test"] }

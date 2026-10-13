@@ -1,5 +1,5 @@
 /**
- * `createSolanaAdapter`: the `@floor/sdk` `FloorChainAdapter` for FLOOR launches on Solana clusters.
+ * `createSolanaAdapter`: the `@floorsupply/sdk` `FloorChainAdapter` for FLOOR launches on Solana clusters.
  *
  * - `getLaunch` / `listLaunches` read the `Launch` account (and, once graduated, its `FloorPool`) and the mint's
  *   Token-2022 metadata.
@@ -29,8 +29,8 @@
  * ⛔ Amounts are bigints in base units; a mint is never case-folded.
  */
 
-import type { Amount, ChainRef, FeePart, FloorChainAdapter, Launch as FloorLaunch, LaunchPhase, LaunchRef, Quote, Side, SolanaCluster, TradeParams, UnsignedTx } from '@floor/sdk';
-import { chainKey, solanaRef } from '@floor/sdk';
+import type { Amount, ChainRef, FeePart, FloorChainAdapter, Launch as FloorLaunch, LaunchPhase, LaunchRef, Quote, Side, SolanaCluster, TradeParams, UnsignedTx } from '@floorsupply/sdk';
+import { chainKey, solanaRef } from '@floorsupply/sdk';
 import {
   compileSendable,
   decodeLookupTable,
@@ -86,7 +86,7 @@ export interface SolanaClusterConfig {
 
 export interface SolanaAdapterOptions {
   readonly clusters: Partial<Record<SolanaCluster, SolanaClusterConfig>>;
-  /** The quoter over `floor_quote_bg.wasm` (`initQuote` from `@floor/sdk-solana/quote/wasm`, or `createQuoter(fns)`). */
+  /** The quoter over `floor_quote_bg.wasm` (`initQuote` from `@floorsupply/sdk-solana/quote/wasm`, or `createQuoter(fns)`). */
   readonly quoter: Quoter;
   /** The launch's own lookup table, by mint (the launchpad records it at creation). Required for sale trades only. */
   readonly launchTable?: (ref: LaunchRef) => Promise<string | null>;

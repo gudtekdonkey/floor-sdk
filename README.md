@@ -9,10 +9,10 @@ team steps and governance are not part of them; the ABIs and IDLs they ship are 
 
 | Path | What |
 |---|---|
-| [`packages/sdk`](packages/sdk) | `@floor/sdk`: chain-neutral types (`ChainRef`, `LaunchRef`, `Launch`, `Quote`, `UnsignedTx`), the `FloorChainAdapter` interface and `FloorClient`, which routes each call to the adapter for the launch's chain; the approved quote assets per chain (`APPROVED_QUOTE_TOKENS`, `isApprovedQuote`); the DEX adapter's pair model and event mapping (`dex`: GeckoTerminal / DEX Screener's integration API shape) |
-| [`packages/sdk-evm`](packages/sdk-evm) | `@floor/sdk-evm`: the EVM adapter (ABIs, per-chain deployments, reads and trade builders over viem) |
-| [`packages/sdk-solana`](packages/sdk-solana) | `@floor/sdk-solana`: the Solana adapter (the four programs' IDLs and Codama clients, layouts, PDAs, events, the sale buy / sell-back and graduated-pool trade builders, the quoter wasm), built on `@carpenter/sdk` |
-| [`rust/`](rust) | Rust crates: `floor-types` (layouts, seeds, constants), `floor-math` (the mechanism's math), `floor-quote` (the FLOOR hook's quoter for Carpenter's `HookQuoter`), `floor-quote-wasm` (the wasm build `@floor/sdk-solana` ships) |
+| [`packages/sdk`](packages/sdk) | `@floorsupply/sdk`: chain-neutral types (`ChainRef`, `LaunchRef`, `Launch`, `Quote`, `UnsignedTx`), the `FloorChainAdapter` interface and `FloorClient`, which routes each call to the adapter for the launch's chain; the approved quote assets per chain (`APPROVED_QUOTE_TOKENS`, `isApprovedQuote`); the DEX adapter's pair model and event mapping (`dex`: GeckoTerminal / DEX Screener's integration API shape) |
+| [`packages/sdk-evm`](packages/sdk-evm) | `@floorsupply/sdk-evm`: the EVM adapter (ABIs, per-chain deployments, reads and trade builders over viem) |
+| [`packages/sdk-solana`](packages/sdk-solana) | `@floorsupply/sdk-solana`: the Solana adapter (the four programs' IDLs and Codama clients, layouts, PDAs, events, the sale buy / sell-back and graduated-pool trade builders, the quoter wasm), built on `@carpenter/sdk` |
+| [`rust/`](rust) | Rust crates: `floor-types` (layouts, seeds, constants), `floor-math` (the mechanism's math), `floor-quote` (the FLOOR hook's quoter for Carpenter's `HookQuoter`), `floor-quote-wasm` (the wasm build `@floorsupply/sdk-solana` ships) |
 | [`jupiter/`](jupiter) | `floor-sale-amm`: a `jupiter-amm-interface` `Amm` for FLOOR bonding sales; its own Cargo workspace |
 | [`docs/evm-events.md`](docs/evm-events.md) | How FLOOR's EVM events become launches, pools, trades, the floor and candles |
 | [`integrations/velora/`](integrations/velora) | FLOOR hook pools in Velora's `paraswap-dex-lib` (TypeScript), Base and BSC: its files at their upstream paths and `upstream.patch` |
@@ -23,13 +23,13 @@ team steps and governance are not part of them; the ABIs and IDLs they ship are 
 ## Install
 
 ```sh
-npm install @floor/sdk @floor/sdk-solana @solana/kit   # Solana
-npm install @floor/sdk @floor/sdk-evm viem             # EVM
+npm install @floorsupply/sdk @floorsupply/sdk-solana @solana/kit   # Solana
+npm install @floorsupply/sdk @floorsupply/sdk-evm viem             # EVM
 ```
 
 ```ts
-import { FloorClient } from '@floor/sdk';
-import { createSolanaAdapter } from '@floor/sdk-solana';
+import { FloorClient } from '@floorsupply/sdk';
+import { createSolanaAdapter } from '@floorsupply/sdk-solana';
 
 const floor = new FloorClient([createSolanaAdapter({ clusters: { mainnet: { rpc } }, quoter })]);
 ```
@@ -48,13 +48,13 @@ FLOOR's site serves these; the SDK does not wrap them.
 
 ## EVM chains
 
-`@floor/sdk-evm` ships a FLOOR set for Ethereum (1), Base (8453), BSC (56), Robinhood Chain (4663) and Arc (5042), which
+`@floorsupply/sdk-evm` ships a FLOOR set for Ethereum (1), Base (8453), BSC (56), Robinhood Chain (4663) and Arc (5042), which
 share one set of contract addresses, and for the Sepolia test set (11155111). Other rows in its table carry Uniswap v4's
 contracts only and are refused by name. See [`packages/sdk-evm/README.md`](packages/sdk-evm/README.md).
 
 ## Required program version (Solana)
 
-`@floor/sdk-solana` and the Rust crates in this release build for the FLOOR program set whose hook callbacks take
+`@floorsupply/sdk-solana` and the Rust crates in this release build for the FLOOR program set whose hook callbacks take
 **four** accounts (`ApprovedHook.callback_accounts` = 4), whose bonding-sale sell-back is stateless and which has
 `sell_back_wsol`; the mainnet-beta and devnet programs this release lists are that set. On a cluster running an earlier set (one
 callback account), the Solana adapter refuses to build trades with `SolanaAdapterError('program_version')`, and sell-back
@@ -65,7 +65,7 @@ quotes are a lower bound of what the earlier program pays. See [`packages/sdk-so
 FLOOR's Solana side is a hook on Carpenter, and Carpenter's SDK is its own repository,
 [`carpenter-sdk`](https://github.com/gudtekdonkey/carpenter-sdk):
 
-- `@floor/sdk-solana` depends on `@carpenter/sdk` (npm, `^0.1.0`).
+- `@floorsupply/sdk-solana` depends on `@carpenter/sdk` (npm, `^0.1.0`).
 - `floor-types` and `floor-quote` depend on `carpenter-types`, `carpenter-clmm-math` and `carpenter-quote`;
   `floor-quote` implements `carpenter_quote::HookQuoter`. `carpenter-sdk`'s Jupiter adapter depends back on `floor-quote`.
 
@@ -140,9 +140,9 @@ Carpenter's row already added in `carpenter-sdk` (its README, "Adding a cluster"
 3. Regenerate and rebuild:
 
    ```sh
-   npm run generate -w @floor/sdk-solana        # validates deployments.json → src/generated/
-   npm run build-wasm -w @floor/sdk-solana      # the quoter wasm → packages/sdk-solana/wasm
-   npm run check-wasm -w @floor/sdk-solana      # a rebuild equals the committed wasm
+   npm run generate -w @floorsupply/sdk-solana        # validates deployments.json → src/generated/
+   npm run build-wasm -w @floorsupply/sdk-solana      # the quoter wasm → packages/sdk-solana/wasm
+   npm run check-wasm -w @floorsupply/sdk-solana      # a rebuild equals the committed wasm
    npm run typecheck && npm test && (cd rust && cargo test --workspace) && (cd jupiter && cargo test)
    ```
 

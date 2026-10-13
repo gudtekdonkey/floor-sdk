@@ -21,7 +21,7 @@
 import { BaseError, defineChain, numberToHex, type Account, type Address, type Chain, type Client, type Hex, type Transport } from 'viem';
 import { parseAccount } from 'viem/accounts';
 import { getChainId, sendCalls, sendTransaction, waitForCallsStatus, waitForTransactionReceipt } from 'viem/actions';
-import type { UnsignedTx } from '@floor/sdk';
+import type { UnsignedTx } from '@floorsupply/sdk';
 import { FloorEvmError } from './errors.js';
 
 /** How long `sendEvmCalls` waits for a batch's final status by default, ms. */
