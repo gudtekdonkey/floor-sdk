@@ -125,7 +125,9 @@ const fetch = async (options: FetchOptions) => {
     const quote = quotes[i];
     pools.set(poolIds[i].toLowerCase(), { quote, quoteIs0: BigInt(quote) < BigInt(l.token), hook: l.hook.toLowerCase() });
   });
-  const swaps = await options.getLogs({ target: poolManager, eventAbi: Swap });
+  // The PoolManager logs every v4 pool's swaps: ask only for FLOOR's, one pool id (the event's first indexed topic) at a time.
+  const floorIds = [...pools.keys()].filter((id) => BigInt(id) !== 0n);
+  const swaps = (await Promise.all(floorIds.map((id) => options.getLogs({ target: poolManager, eventAbi: Swap, extraTopics: [id] })))).flat();
   for (const s of swaps) {
     const pool = pools.get(String(s.id).toLowerCase());
     // A swap the hook sends itself (its `_nudge` at a ratchet) is the protocol's own action, not a trade.
