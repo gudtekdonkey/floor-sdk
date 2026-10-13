@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { encodeAccount, QuoteError } from '@carpenter/sdk';
+import { encodeAccount, QuoteError } from '@floorsupply/carpenter-sdk';
 
 import { LAUNCH_STATE_BONDING } from '../src/constants.ts';
 import { BUYER_POSITION, LAUNCH } from '../src/layouts.ts';

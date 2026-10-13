@@ -23,7 +23,7 @@ import {
   type AccountSource,
   type ClusterDeployment as CarpenterRow,
   CARPENTER_AMM_IDL,
-} from '@carpenter/sdk';
+} from '@floorsupply/carpenter-sdk';
 import { getProgramDerivedAddress, type Address, type Instruction } from '@solana/kit';
 
 import { validateDeployments } from '../scripts/validate-deployments.mjs';

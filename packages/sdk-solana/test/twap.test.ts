@@ -29,7 +29,7 @@ import {
 
 // the keeper's twin of `mech/ratchet.rs older_surplus_due` and the flag at byte 152.
 test('decodeFloorPoolTwap reads older_surplus_held at tail byte 152', async () => {
-  const { TWAP_OLDER_SURPLUS_HELD_OFFSET } = ({ ...(await import('@carpenter/sdk')), ...(await import('../src/index.ts')) });
+  const { TWAP_OLDER_SURPLUS_HELD_OFFSET } = ({ ...(await import('@floorsupply/carpenter-sdk')), ...(await import('../src/index.ts')) });
   assert.equal(TWAP_OLDER_SURPLUS_HELD_OFFSET, 152);
   const acct = new Uint8Array(FLOOR_POOL_ACCOUNT_LEN_WITH_TWAP);
   assert.equal(decodeFloorPoolTwap(acct)!.olderSurplusHeld, 0);
@@ -40,7 +40,7 @@ test('decodeFloorPoolTwap reads older_surplus_held at tail byte 152', async () =
 // THE GAP BUY SKIM's cache: `TwapOracle::cushion_top_set` @153, `cushion_top_tick` @156,
 // written by the ratchet only and carried through every oracle write.
 test('decodeFloorPoolTwap reads the cushion-top cache at tail bytes 153 / 156, and twapObserve keeps it', async () => {
-  const { TWAP_CUSHION_TOP_SET_OFFSET, TWAP_CUSHION_TOP_TICK_OFFSET, twapObserve } = ({ ...(await import('@carpenter/sdk')), ...(await import('../src/index.ts')) });
+  const { TWAP_CUSHION_TOP_SET_OFFSET, TWAP_CUSHION_TOP_TICK_OFFSET, twapObserve } = ({ ...(await import('@floorsupply/carpenter-sdk')), ...(await import('../src/index.ts')) });
   assert.equal(TWAP_CUSHION_TOP_SET_OFFSET, 153);
   assert.equal(TWAP_CUSHION_TOP_TICK_OFFSET, 156);
   const acct = new Uint8Array(FLOOR_POOL_ACCOUNT_LEN_WITH_TWAP);

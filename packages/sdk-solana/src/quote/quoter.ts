@@ -16,7 +16,7 @@
  * The quoter is advisory; `simulateTransaction` stays the final check before a wallet signs.
  */
 
-import { QuoteError } from '@carpenter/sdk';
+import { QuoteError } from '@floorsupply/carpenter-sdk';
 
 export { QuoteError };
 

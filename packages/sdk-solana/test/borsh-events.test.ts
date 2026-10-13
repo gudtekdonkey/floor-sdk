@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { test } from './node-test.ts';
 
-import {  BorshWriter, addressToBytes, bytesToBase64, anchorDiscriminator, EVENT_IX_TAG } from '@carpenter/sdk';
+import {  BorshWriter, addressToBytes, bytesToBase64, anchorDiscriminator, EVENT_IX_TAG } from '@floorsupply/carpenter-sdk';
 import {
   decodeEmitCpiData,
   decodeEventPayload,

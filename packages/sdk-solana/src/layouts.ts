@@ -1,5 +1,5 @@
 /**
- * FLOOR's accounts (`floor_hook`, `floor_launch`, `floor_holders`), decoded from their bytes on `@carpenter/sdk`'s codec
+ * FLOOR's accounts (`floor_hook`, `floor_launch`, `floor_holders`), decoded from their bytes on `@floorsupply/carpenter-sdk`'s codec
  * (`decodeAccount`, `encodeAccount`, `FieldKind`, `LayoutDef`).
  *
  * The field tables are transcriptions of the programs' `layout!` lists: STRUCT offsets, discriminator outside.
@@ -27,7 +27,7 @@ import {
   type LayoutDef,
   readField,
   snakeToCamel,
-} from '@carpenter/sdk';
+} from '@floorsupply/carpenter-sdk';
 
 /**
  * The all-zero pubkey, base58. ⛔ It is a VALID address, not an error value: the layouts that use
@@ -239,7 +239,7 @@ export const STAIR_STATE = def('StairState', 584, d(0xb8, 0x99, 0xc1, 0xde, 0x1a
   ['cushion_bottom_bps', 568, u16], ['pol_to_mcap_bps', 570, u16], ['cushion_ticks', 572, i32], ['swept_quote', 576, u64],
 ]);
 
-/** Every account layout, Carpenter's first (`@carpenter/sdk` `LAYOUTS`), then FLOOR's in the original order. */
+/** Every account layout, Carpenter's first (`@floorsupply/carpenter-sdk` `LAYOUTS`), then FLOOR's in the original order. */
 export const LAYOUTS: readonly LayoutDef[] = [
   ...CARPENTER_LAYOUTS,
   HOOK_CONFIG, FLOOR_POOL, LAUNCH_CONFIG, REGISTRY_ENTRY, LAUNCH, BUYER_POSITION, QUOTE_POLICY,

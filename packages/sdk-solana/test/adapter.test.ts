@@ -25,7 +25,7 @@ import {
   TICK_ARRAY_BITMAP,
   TOKEN_2022_PROGRAM_ID,
   WSOL_MINT,
-} from '@carpenter/sdk';
+} from '@floorsupply/carpenter-sdk';
 import { getBase64Encoder, getCompiledTransactionMessageDecoder, getTransactionDecoder } from '@solana/kit';
 import { solanaRef, type LaunchRef } from '@floorsupply/sdk';
 import type { Address } from '@solana/kit';

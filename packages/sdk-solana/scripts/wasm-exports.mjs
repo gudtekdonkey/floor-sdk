@@ -1,4 +1,4 @@
-// The wasm-bindgen exports the quoter wrapper calls (`QuoteFns`: `@carpenter/sdk`'s and this package's `src/quote/quoter.ts`).
+// The wasm-bindgen exports the quoter wrapper calls (`QuoteFns`: `@floorsupply/carpenter-sdk`'s and this package's `src/quote/quoter.ts`).
 // One list, read by `sync-wasm.mjs` (fails on a glue missing any) and by
 // `test/glue.test.ts` (fails when `QuoteFns` and this list drift).
 export const REQUIRED_EXPORTS = [

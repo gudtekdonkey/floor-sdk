@@ -20,6 +20,6 @@
     "@solana/kit": "^8.3.0"
   },
   "overrides": {
-    "@carpenter/sdk": "file:../carpenter-sdk/packages/sdk"
+    "@floorsupply/carpenter-sdk": "file:../carpenter-sdk/packages/sdk"
   }
 }

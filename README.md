@@ -11,7 +11,7 @@ team steps and governance are not part of them; the ABIs and IDLs they ship are 
 |---|---|
 | [`packages/sdk`](packages/sdk) | `@floorsupply/sdk`: chain-neutral types (`ChainRef`, `LaunchRef`, `Launch`, `Quote`, `UnsignedTx`), the `FloorChainAdapter` interface and `FloorClient`, which routes each call to the adapter for the launch's chain; the approved quote assets per chain (`APPROVED_QUOTE_TOKENS`, `isApprovedQuote`); the DEX adapter's pair model and event mapping (`dex`: GeckoTerminal / DEX Screener's integration API shape) |
 | [`packages/sdk-evm`](packages/sdk-evm) | `@floorsupply/sdk-evm`: the EVM adapter (ABIs, per-chain deployments, reads and trade builders over viem) |
-| [`packages/sdk-solana`](packages/sdk-solana) | `@floorsupply/sdk-solana`: the Solana adapter (the four programs' IDLs and Codama clients, layouts, PDAs, events, the sale buy / sell-back and graduated-pool trade builders, the quoter wasm), built on `@carpenter/sdk` |
+| [`packages/sdk-solana`](packages/sdk-solana) | `@floorsupply/sdk-solana`: the Solana adapter (the four programs' IDLs and Codama clients, layouts, PDAs, events, the sale buy / sell-back and graduated-pool trade builders, the quoter wasm), built on `@floorsupply/carpenter-sdk` |
 | [`rust/`](rust) | Rust crates: `floor-types` (layouts, seeds, constants), `floor-math` (the mechanism's math), `floor-quote` (the FLOOR hook's quoter for Carpenter's `HookQuoter`), `floor-quote-wasm` (the wasm build `@floorsupply/sdk-solana` ships) |
 | [`jupiter/`](jupiter) | `floor-sale-amm`: a `jupiter-amm-interface` `Amm` for FLOOR bonding sales; its own Cargo workspace |
 | [`docs/evm-events.md`](docs/evm-events.md) | How FLOOR's EVM events become launches, pools, trades, the floor and candles |
@@ -65,7 +65,7 @@ quotes are a lower bound of what the earlier program pays. See [`packages/sdk-so
 FLOOR's Solana side is a hook on Carpenter, and Carpenter's SDK is its own repository,
 [`carpenter-sdk`](https://github.com/gudtekdonkey/carpenter-sdk):
 
-- `@floorsupply/sdk-solana` depends on `@carpenter/sdk` (npm, `^0.1.0`).
+- `@floorsupply/sdk-solana` depends on `@floorsupply/carpenter-sdk` (npm, `^0.1.0`).
 - `floor-types` and `floor-quote` depend on `carpenter-types`, `carpenter-clmm-math` and `carpenter-quote`;
   `floor-quote` implements `carpenter_quote::HookQuoter`. `carpenter-sdk`'s Jupiter adapter depends back on `floor-quote`.
 
@@ -79,7 +79,7 @@ carpenter-quote = { git = "https://github.com/gudtekdonkey/carpenter-sdk", rev =
 floor-quote = { git = "https://github.com/gudtekdonkey/floor-sdk", rev = "<release commit>" }
 ```
 
-The npm packages are not on the registry yet: the root `package.json` overrides `@carpenter/sdk` with a
+The npm packages are not on the registry yet: the root `package.json` overrides `@floorsupply/carpenter-sdk` with a
 `carpenter-sdk` checkout beside this one, so the TypeScript build needs both repositories side by side.
 
 Both repositories must point at the same release: Cargo treats `carpenter-quote` from two sources as two crates, and

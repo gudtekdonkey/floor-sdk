@@ -5,17 +5,17 @@ FLOOR on Solana: read FLOOR launches, quote trades and build unsigned trade tran
 
 FLOOR runs as four Solana programs — `floor_hook` (an approved hook of the Carpenter AMM), `floor_launch` (the bonding
 sale and graduation), `floor_holders` (the holder tally, a Token-2022 transfer hook) and `floor_vesting` — on top of
-Carpenter (`carpenter_amm`). This package is built on [`@carpenter/sdk`](https://github.com/gudtekdonkey/carpenter-sdk/tree/main/packages/sdk) and adds:
+Carpenter (`carpenter_amm`). This package is built on [`@floorsupply/carpenter-sdk`](https://github.com/gudtekdonkey/carpenter-sdk/tree/main/packages/sdk) and adds:
 
 - the four programs' IDLs and [Codama](https://github.com/codama-idl/codama) clients (`floorHook`, `floorLaunch`,
   `floorHolders`, `floorVesting`);
 - FLOOR's account layouts, PDAs and event decoders, and read helpers (`stateView`, `getLaunch`, `listLaunches`);
 - the sale buy (with the graduation `prepare` step it needs) and sell-back, and swaps on graduated FLOOR pools;
 - the wasm quoter (`initQuote`): the sale's own arithmetic and the AMM walk with FLOOR's hook callbacks;
-- `createSolanaAdapter` and, re-exported from `@carpenter/sdk`, `sendSolanaTransactions`.
+- `createSolanaAdapter` and, re-exported from `@floorsupply/carpenter-sdk`, `sendSolanaTransactions`.
 
 Launch creation, claims, vesting, team steps, `$FLOOR`'s raise, liquidity and governance are not in this package
-(liquidity on any Carpenter pool is `@carpenter/sdk`'s `buildModifyLiquidity`; on a launch with holder rewards pass it
+(liquidity on any Carpenter pool is `@floorsupply/carpenter-sdk`'s `buildModifyLiquidity`; on a launch with holder rewards pass it
 this package's `transferHookAccounts`). The IDLs and generated clients are complete.
 
 ## Program version
@@ -42,7 +42,7 @@ errors are otherwise complete. `IDL_SHA256` is the hash of these files as shippe
 npm install @floorsupply/sdk @floorsupply/sdk-solana @solana/kit
 ```
 
-`@carpenter/sdk` (`^0.1.0`) is installed with it. `@solana/kit` is a peer dependency (`^8.3.0`). The quoter wasm is
+`@floorsupply/carpenter-sdk` (`^0.1.0`) is installed with it. `@solana/kit` is a peer dependency (`^8.3.0`). The quoter wasm is
 shipped in the package (`wasm/`), so installing needs no Rust toolchain.
 
 ## Example
@@ -140,7 +140,7 @@ removed from the build copy, so the output does not depend on where the checkout
 ## Develop
 
 From the repository root, with [`carpenter-sdk`](https://github.com/gudtekdonkey/carpenter-sdk) checked out beside it
-(the root `package.json` overrides `@carpenter/sdk` with that checkout for local development):
+(the root `package.json` overrides `@floorsupply/carpenter-sdk` with that checkout for local development):
 
 ```sh
 npm install

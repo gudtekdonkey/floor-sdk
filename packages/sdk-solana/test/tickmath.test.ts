@@ -22,7 +22,7 @@ import {
 
   isqrt,
 
-} from '@carpenter/sdk';
+} from '@floorsupply/carpenter-sdk';
 import { MAX_QUOTE_DECIMALS, openTick, tranchePriceX64 } from '../src/tickmath.ts';
 
 test('tranche_price_x64 and open_tick: 20k USD at 150 USD/SOL', () => {

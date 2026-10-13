@@ -8,7 +8,7 @@
  * - `buildTrade` returns EVERY transaction one trade needs, in send order, in ONE `UnsignedTx`: `[link?, prepare?, trade]`.
  *   `link` rides first when `traderLink` returns an attestation for a trader with no link yet (and the attestation is not
  *   about to expire); `prepare` rides in front of a sale buy while the launch's graduation accounts are not prepared.
- *   Sign the list in one wallet prompt and send it with `sendSolanaTransactions` (re-exported from `@carpenter/sdk`),
+ *   Sign the list in one wallet prompt and send it with `sendSolanaTransactions` (re-exported from `@floorsupply/carpenter-sdk`),
  *   which sends in order and STOPS at the first failure: a failed `link` step means the trade is not sent, and the caller
  *   builds the trade again (the rebuilt list carries no link once the trader is linked, or no attestation is served).
  * - `TradeParams.deadline` is not used: a Solana transaction expires with its recent blockhash (~60–90 s).
@@ -49,7 +49,7 @@ import {
   type LookupTableContents,
   type RawAccount,
   type SolanaRpc,
-} from '@carpenter/sdk';
+} from '@floorsupply/carpenter-sdk';
 import { address, getBase64EncodedWireTransaction, type Address, type GetLatestBlockhashApi, type Rpc } from '@solana/kit';
 
 import { FLOOR_CALLBACK_ACCOUNTS, LAUNCH_STATE_BONDING, LAUNCH_STATE_GRADUATED, TOKEN_DECIMALS } from './constants.ts';

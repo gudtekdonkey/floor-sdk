@@ -32,7 +32,7 @@ import {
 
   
 
-} from '@carpenter/sdk';
+} from '@floorsupply/carpenter-sdk';
 import {
   BUYER_POSITION,
   decodeFloorPool,

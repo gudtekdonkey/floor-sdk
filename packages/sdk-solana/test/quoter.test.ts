@@ -13,7 +13,7 @@ import {
 
   
 
-} from '@carpenter/sdk';
+} from '@floorsupply/carpenter-sdk';
 import { createQuoter, type QuoteFns } from '../src/quote/quoter.ts';
 
 const VERSION = '{"floor_quote_wasm":"0.1.0","hook_interface":1,"floor_hook_id":"22"}';

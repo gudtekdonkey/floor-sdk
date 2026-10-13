@@ -21,7 +21,7 @@ import {
   findAta,
   getSqrtPriceAtTick,
   getTickAtSqrtPrice,
-} from '@carpenter/sdk';
+} from '@floorsupply/carpenter-sdk';
 import { SALT_BID, SALT_SEED } from '../src/constants.ts';
 import { EVENT_NAMES, eventDiscriminator } from '../src/events.ts';
 import { LAYOUTS } from '../src/layouts.ts';

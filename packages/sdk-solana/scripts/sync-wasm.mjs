@@ -9,7 +9,7 @@
 // (`npm run build-wasm` runs both steps). The copies in `wasm/` are COMMITTED, so an install needs no Rust;
 // `npm run check-wasm` rebuilds from source and fails unless the result equals them byte for byte.
 // ⛔ Fails, never warns, when the wasm or its glue is missing, or when the glue does not export
-//    every function the wrapper calls (`QuoteFns`: `@carpenter/sdk`'s plus `src/quote/quoter.ts`'s four): a package that
+//    every function the wrapper calls (`QuoteFns`: `@floorsupply/carpenter-sdk`'s plus `src/quote/quoter.ts`'s four): a package that
 //    ships without its quoter, or with a renamed export, is the one thing this step must stop.
 // Env: FLOOR_WASM_DIR names the source directory (default: the repository's rust/target/wasm-dist).
 

@@ -1,6 +1,6 @@
 /**
  * Glue for the deployment rows and the quoter: a joined deployment row → `ProgramIds`, and an `AccountSource` → the
- * quoter's inputs for a FLOOR pool (a plain pool's read is `@carpenter/sdk`'s `readSwapQuoteAccounts`).
+ * quoter's inputs for a FLOOR pool (a plain pool's read is `@floorsupply/carpenter-sdk`'s `readSwapQuoteAccounts`).
  *
  * ⛔ The quoter takes RAW ACCOUNT BYTES (pool, bitmap, tick arrays, floor_pool, launch), never decoded structs: it
  *    decodes them itself with the same layouts the programs use, so a field cannot be mis-transcribed between a read and
@@ -24,7 +24,7 @@ import {
   initializedArrayStarts,
   tickArrayStartIndex,
   decodeMint,
-} from '@carpenter/sdk';
+} from '@floorsupply/carpenter-sdk';
 import { address, type Address } from '@solana/kit';
 
 import { DEFAULT_PROGRAM_IDS, findFloorPool, type ProgramIds } from './pda.ts';

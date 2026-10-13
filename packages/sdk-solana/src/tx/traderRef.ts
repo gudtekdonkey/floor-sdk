@@ -20,7 +20,7 @@ import {
   compileSendable,
   type LookupTableContents,
   type V0MessageArgs,
-} from '@carpenter/sdk';
+} from '@floorsupply/carpenter-sdk';
 import {
   findHookConfig,
   findLaunch,

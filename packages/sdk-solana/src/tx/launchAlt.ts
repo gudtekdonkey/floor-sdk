@@ -9,7 +9,7 @@
  */
 import {  type Address } from '@solana/kit';
 
-import type { LookupTableContents } from '@carpenter/sdk';
+import type { LookupTableContents } from '@floorsupply/carpenter-sdk';
 
 // ---- the consumers' guard ---------------------------------------------------------------------------------------------
 

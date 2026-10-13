@@ -13,7 +13,7 @@
 
 import type { Address } from '@solana/kit';
 
-import { bytesToAddress } from '@carpenter/sdk';
+import { bytesToAddress } from '@floorsupply/carpenter-sdk';
 import {
   FLOOR_POOL_ACCOUNT_LEN_WITH_PARTS,
   FLOOR_POOL_ACCOUNT_LEN_WITH_SLOTS,

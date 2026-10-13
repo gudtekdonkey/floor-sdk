@@ -38,7 +38,7 @@ import {
   buildInitializePool,
   findPool,
   sortMints,
-} from '@carpenter/sdk';
+} from '@floorsupply/carpenter-sdk';
 import { CU_LIMITS } from '../src/constants.ts';
 import { DEFAULT_PROGRAM_IDS, findFloorPool, findHookConfig, findTraderBucket } from '../src/pda.ts';
 // slot lists on the create wire and the pool's PayeeSlots tail.
@@ -91,7 +91,7 @@ function checkCommon(b: BuiltTransaction, cu: keyof typeof CU_LIMITS, disc: Uint
 }
 
 /**
- * A FLOOR pool's `initialize_pool` hook slice, as graduation's CPI passes it. `@carpenter/sdk`'s `buildInitializePool`
+ * A FLOOR pool's `initialize_pool` hook slice, as graduation's CPI passes it. `@floorsupply/carpenter-sdk`'s `buildInitializePool`
  * is hook-agnostic (a hooked pool takes its slice from the caller), so these cases hand it the FLOOR slice.
  */
 async function floorInitSlice(base: Address) {
@@ -353,7 +353,7 @@ test('the v0 message compiles, and the deployment + per-launch ALTs shrink a fin
   const lifetime = { blockhash: '11111111111111111111111111111111' as Blockhash, lastValidBlockHeight: 1n };
   const ids = DEFAULT_PROGRAM_IDS;
   // A deployment table: the programs, configs, event authorities and the wSOL PDAs every launch shares.
-  const { findAmmConfig, findApprovedHook, findMintExclusivity, findProgramData } = await import('@carpenter/sdk');
+  const { findAmmConfig, findApprovedHook, findMintExclusivity, findProgramData } = await import('@floorsupply/carpenter-sdk');
   const { findHookAuthority, findLaunchAuthority, findLaunchConfig, findLockAuthority, findMintAuthority } = await import('../src/pda.ts');
   const { findHoldersAuthority } = await import('../src/holders.ts');
   const pdas = await Promise.all([
@@ -387,8 +387,8 @@ test('the v0 message compiles, and the deployment + per-launch ALTs shrink a fin
 const ZERO32 = Array.from({ length: 32 }, () => 0);
 
 test('buildBuy: a Custom final buy (steps derived from its cap) carries every tick array prepare_graduation creates', async () => {
-  const { floorToSpacing, stairEdge, tickArrayStartIndex } = ({ ...(await import('@carpenter/sdk')), ...(await import('../src/index.ts')) });
-  const { ladderRange, polRange } = ({ ...(await import('@carpenter/sdk')), ...(await import('../src/index.ts')) });
+  const { floorToSpacing, stairEdge, tickArrayStartIndex } = ({ ...(await import('@floorsupply/carpenter-sdk')), ...(await import('../src/index.ts')) });
+  const { ladderRange, polRange } = ({ ...(await import('@floorsupply/carpenter-sdk')), ...(await import('../src/index.ts')) });
   const f = await fixtureLaunch();
   const s = 60;
   // Custom staircases at $25k, $200k and $1M caps: 15, 12 and 10 steps.

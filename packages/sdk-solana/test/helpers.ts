@@ -26,7 +26,7 @@ import {
   compareBytes,
   findAta,
   findPool,
-} from '@carpenter/sdk';
+} from '@floorsupply/carpenter-sdk';
 import {
   buyIx,
   linkTraderIx,
@@ -41,8 +41,8 @@ import {
 
 /** This package's root (`fixtures/`, `idl/`, `src/`). */
 export const SDK_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-/** `@carpenter/sdk`'s package root (its `idl/`, `src/`), found through the dependency itself. */
-export const CARPENTER_ROOT = dirname(createRequire(import.meta.url).resolve('@carpenter/sdk/deployments.json'));
+/** `@floorsupply/carpenter-sdk`'s package root (its `idl/`, `src/`), found through the dependency itself. */
+export const CARPENTER_ROOT = dirname(createRequire(import.meta.url).resolve('@floorsupply/carpenter-sdk/deployments.json'));
 /**
  * The program source checkout the parity suites read the Rust programs and crates from, named by `$FLOOR_PROGRAM_SOURCE`.
  * Without it those cases are skipped (`SOURCE_ONLY`, and the whole of `rust-parity.test.ts`), never passed vacuously.
@@ -837,7 +837,7 @@ export function stripTsComments(src: string): string {
   return out;
 }
 
-/** Both packages' encoders: `@carpenter/sdk`'s `carpenter_amm` file, then this package's. */
+/** Both packages' encoders: `@floorsupply/carpenter-sdk`'s `carpenter_amm` file, then this package's. */
 const instructionsSource = (): string =>
   stripTsComments(readFileSync(join(CARPENTER_ROOT, 'src/tx/instructions.ts'), 'utf8') + '\n' + readFileSync(join(SDK_ROOT, 'src/tx/instructions.ts'), 'utf8'));
 

@@ -42,14 +42,14 @@ function dropSelfReferentialPdas(idl, program) {
 }
 
 /**
- * The program ids that differ per cluster: every program of every row of this package's and `@carpenter/sdk`'s
+ * The program ids that differ per cluster: every program of every row of this package's and `@floorsupply/carpenter-sdk`'s
  * deployments.json. An IDL account fixed to one of them (another program's id, or a PDA under another program) would
  * render as a devnet constant inside the generated client; those accounts are made caller-supplied instead, so a client
  * on any cluster passes that cluster's addresses.
  */
 function clusterProgramIds() {
   const require = createRequire(import.meta.url);
-  const files = [join(pkg, 'deployments.json'), require.resolve('@carpenter/sdk/deployments.json')];
+  const files = [join(pkg, 'deployments.json'), require.resolve('@floorsupply/carpenter-sdk/deployments.json')];
   const ids = new Set();
   for (const f of files) {
     for (const row of Object.values(JSON.parse(readFileSync(f, 'utf8')).clusters)) for (const id of Object.values(row.programs)) ids.add(id);

@@ -5,7 +5,7 @@ import { test } from './node-test.ts';
 
 import { AccountRole, type Address,  } from '@solana/kit';
 
-import { addressToBytes, WSOL_MINT, decodeLookupTable } from '@carpenter/sdk';
+import { addressToBytes, WSOL_MINT, decodeLookupTable } from '@floorsupply/carpenter-sdk';
 import {
   DEFAULT_PROGRAM_IDS,
   findHookConfig,

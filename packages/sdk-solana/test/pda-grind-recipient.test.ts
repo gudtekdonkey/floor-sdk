@@ -30,7 +30,7 @@ import {
   setComputeUnitLimitIx,
   syncNativeIx,
   systemTransferIx,
-} from '@carpenter/sdk';
+} from '@floorsupply/carpenter-sdk';
 import { FLOOR_LAUNCH_PROGRAM_ID, SEEDS } from '../src/constants.ts';
 import { findRegistryEntry } from '../src/pda.ts';
 import { addr } from './helpers.ts';

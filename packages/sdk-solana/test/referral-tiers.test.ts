@@ -9,7 +9,7 @@ import { test } from './node-test.ts';
 
 import type { Address } from '@solana/kit';
 
-import { SYSTEM_PROGRAM_ID, encodeAccount } from '@carpenter/sdk';
+import { SYSTEM_PROGRAM_ID, encodeAccount } from '@floorsupply/carpenter-sdk';
 import { decodeFloorPool, FLOOR_POOL, referralTierDuesOf } from '../src/layouts.ts';
 import { addr } from './helpers.ts';
 
