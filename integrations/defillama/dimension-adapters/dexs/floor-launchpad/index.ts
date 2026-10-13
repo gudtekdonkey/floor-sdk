@@ -33,6 +33,10 @@ const PAGE = 200;
 const Bought = 'event Bought(address indexed who, uint256 tokens, uint256 ethSpent, uint256 soldTotal, uint256 raisedTotal)';
 const SoldBack = 'event SoldBack(address indexed who, uint256 tokens, uint256 ethReturned, uint256 soldTotal, uint256 raisedTotal)';
 const TeamFeeCharged = 'event TeamFeeCharged(address indexed who, uint256 fee, bool sellBack)';
+// The deployer's team buy emits only these (never Bought / SoldBack): its cost plus the FLOOR Platform fee it pays, and on a
+// sell-back the cost, the deployer's gross share before the fee.
+const TeamBought = 'event TeamBought(address indexed buyer, uint256 stepTokens, uint256 walletTokens, uint64 cliffs, uint256 cost, uint256 fee)';
+const TeamBuySoldBack = 'event TeamBuySoldBack(address indexed buyer, uint256 tokens, uint256 cost, uint256 fee)';
 // Pool trades: the Uniswap v4 PoolManager's Swap, for FLOOR's pool ids only.
 const Swap = 'event Swap(bytes32 indexed id, address indexed sender, int128 amount0, int128 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick, uint24 fee)';
 
@@ -73,9 +77,13 @@ const fetch = async (options: FetchOptions) => {
   const bought = await options.getLogs({ targets: sales, eventAbi: Bought, entireLog: true, parseLog: true });
   const soldBack = await options.getLogs({ targets: sales, eventAbi: SoldBack, entireLog: true, parseLog: true });
   const teamFees = await options.getLogs({ targets: sales, eventAbi: TeamFeeCharged, entireLog: true, parseLog: true });
+  const teamBought = await options.getLogs({ targets: sales, eventAbi: TeamBought, entireLog: true, parseLog: true });
+  const teamSoldBack = await options.getLogs({ targets: sales, eventAbi: TeamBuySoldBack, entireLog: true, parseLog: true });
   for (const l of bought) addQuote(options.chain, dailyVolume, quoteOf.get(l.address.toLowerCase())!, l.args.ethSpent, 'Sale buys');
   for (const l of teamFees) if (!l.args.sellBack) addQuote(options.chain, dailyVolume, quoteOf.get(l.address.toLowerCase())!, l.args.fee, 'Sale buys');
   for (const l of soldBack) addQuote(options.chain, dailyVolume, quoteOf.get(l.address.toLowerCase())!, l.args.ethReturned, 'Sale sell-backs');
+  for (const l of teamBought) addQuote(options.chain, dailyVolume, quoteOf.get(l.address.toLowerCase())!, BigInt(l.args.cost) + BigInt(l.args.fee), 'Sale buys');
+  for (const l of teamSoldBack) addQuote(options.chain, dailyVolume, quoteOf.get(l.address.toLowerCase())!, l.args.cost, 'Sale sell-backs');
 
   // Pool phase: one side of each swap, the quote side. Currencies are sorted by address, so the quote is currency0 when its
   // address is the lower one (always for a native-quoted pool, whose currency0 is address(0)).
@@ -105,12 +113,12 @@ const adapter: SimpleAdapter = {
   // Graduated pools are Uniswap v4 pools, so their swaps are also in Uniswap v4's volume.
   doublecounted: true,
   methodology: {
-    Volume: "Every trade on a FLOOR launch quoted in the chain's native asset or a quote asset FLOOR lists, in that asset: buys (with the FLOOR Platform fee) and sell-backs on each launch's sale, read from its Bought / TeamFeeCharged / SoldBack events, then the quote side of every Uniswap v4 Swap on a graduated launch's pool.",
+    Volume: "Every trade on a FLOOR launch quoted in the chain's native asset or a quote asset FLOOR lists, in that asset: buys (with the FLOOR Platform fee) and sell-backs on each launch's sale, read from its Bought / TeamFeeCharged / SoldBack events and the deployer's TeamBought / TeamBuySoldBack, then the quote side of every Uniswap v4 Swap on a graduated launch's pool.",
   },
   breakdownMethodology: {
     Volume: {
-      'Sale buys': 'Bought.ethSpent plus the FLOOR Platform fee TeamFeeCharged reports for the buy.',
-      'Sale sell-backs': 'SoldBack.ethReturned, the seller\'s gross share before the fee.',
+      'Sale buys': 'Bought.ethSpent plus the FLOOR Platform fee TeamFeeCharged reports for the buy, and the team buy\'s TeamBought.cost + fee.',
+      'Sale sell-backs': 'SoldBack.ethReturned, the seller\'s gross share before the fee, and the team buy\'s TeamBuySoldBack.cost.',
       'Pool swaps': 'The absolute quote-side amount of each PoolManager Swap whose pool id is a FLOOR launch\'s.',
     },
   },

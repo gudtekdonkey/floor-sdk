@@ -21,7 +21,8 @@ const TEAM_BUY_SOLD_BACK = '0x' + TAG + '8652ae3a099b6b1c';
 // 1-based positions in the instruction data (16 header bytes first).
 // Carpenter Swapped: pool 17 · trader 49 · zero_for_one 81 · amount_in 82 (u64) · amount_out 90 (u64).
 // floor_launch Bought / SoldBack: launch 17 · buyer 49 · tokens 81 · cost / payout 89 (u64).
-// TeamBought: launch 17 · creator 49 · tokens 81 · step_tokens 89 · wallet_tokens 97 · cost 105 (u64).
+// TeamBought: launch 17 · creator 49 · tokens 81 · step_tokens 89 · wallet_tokens 97 · cost 105 · fee 113 (u64); counted
+// as cost + fee, the team buy's gross.
 // TeamBuySoldBack: launch 17 · creator 49 · tokens 81 · cost 89 (u64).
 const u64At = (pos: number) => `bytearray_to_uint256(bytearray_reverse(bytearray_substring(data, ${pos}, 8)))`;
 const QUERY = `
@@ -42,7 +43,7 @@ const QUERY = `
     IF(bytearray_substring(data, 1, 16) IN (${BOUGHT}, ${TEAM_BOUGHT}), 'buy', 'sell') AS kind,
     to_base58(bytearray_substring(data, 17, 32)) AS account,
     NULL AS zero_for_one,
-    CAST(SUM(IF(bytearray_substring(data, 1, 16) = ${TEAM_BOUGHT}, ${u64At(105)}, ${u64At(89)})) AS VARCHAR) AS amount_in,
+    CAST(SUM(IF(bytearray_substring(data, 1, 16) = ${TEAM_BOUGHT}, ${u64At(105)} + ${u64At(113)}, ${u64At(89)})) AS VARCHAR) AS amount_in,
     NULL AS amount_out
   FROM solana.instruction_calls
   WHERE executing_account = '${FLOOR_LAUNCH}'
@@ -133,7 +134,7 @@ const adapter: SimpleAdapter = {
   },
   breakdownMethodology: {
     Volume: {
-      'Sale buys': 'floor_launch Bought.cost and TeamBought.cost.',
+      'Sale buys': 'floor_launch Bought.cost, and TeamBought.cost + fee.',
       'Sale sell-backs': 'floor_launch SoldBack.payout and TeamBuySoldBack.cost.',
       'Pool swaps': 'The quote-side amount of each carpenter_amm Swapped event on a FLOOR launch\'s pool.',
     },
