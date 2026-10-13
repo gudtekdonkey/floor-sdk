@@ -34,6 +34,15 @@ const floor = new FloorClient([createSolanaAdapter({ clusters: { mainnet: { rpc 
 Amounts are bigints in base units. A quote lists the trader's whole take or the call throws. The Solana programs are
 upgradeable through a timelock on mainnet-beta (a 10-minute delay that can only be raised, proposed by the deployer key) and by the deployer key directly on devnet, and pausable by the deployer key; the EVM contracts are upgradeable and pausable by their deployer key. No security audit has been completed.
 
+## Public endpoints
+
+FLOOR's site serves these; the SDK does not wrap them.
+
+| URL | What |
+|---|---|
+| [`https://floor.supply/api/v1/openapi.json`](https://floor.supply/api/v1/openapi.json) | The partner API's OpenAPI spec (the API is `https://floor.supply/api/v1`) |
+| `https://floor.supply/api/tokens/<chainId>` | A [token list](https://tokenlists.org) of the chain's FLOOR launches, e.g. `https://floor.supply/api/tokens/8453` for Base. A chain with no listed launch answers 404. |
+
 ## EVM chains
 
 `@floor/sdk-evm` ships a FLOOR set for Ethereum (1), Base (8453), BSC (56), Robinhood Chain (4663) and Arc (5042), which
