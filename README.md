@@ -9,7 +9,7 @@ team steps and governance are not part of them; the ABIs and IDLs they ship are 
 
 | Path | What |
 |---|---|
-| [`packages/sdk`](packages/sdk) | `@floor/sdk`: chain-neutral types (`ChainRef`, `LaunchRef`, `Launch`, `Quote`, `UnsignedTx`), the `FloorChainAdapter` interface and `FloorClient`, which routes each call to the adapter for the launch's chain |
+| [`packages/sdk`](packages/sdk) | `@floor/sdk`: chain-neutral types (`ChainRef`, `LaunchRef`, `Launch`, `Quote`, `UnsignedTx`), the `FloorChainAdapter` interface and `FloorClient`, which routes each call to the adapter for the launch's chain; the approved quote assets per chain (`APPROVED_QUOTE_TOKENS`, `isApprovedQuote`); the DEX adapter's pair model and event mapping (`dex`: GeckoTerminal / DEX Screener's integration API shape) |
 | [`packages/sdk-evm`](packages/sdk-evm) | `@floor/sdk-evm`: the EVM adapter (ABIs, per-chain deployments, reads and trade builders over viem) |
 | [`packages/sdk-solana`](packages/sdk-solana) | `@floor/sdk-solana`: the Solana adapter (the four programs' IDLs and Codama clients, layouts, PDAs, events, the sale buy / sell-back and graduated-pool trade builders, the quoter wasm), built on `@carpenter/sdk` |
 | [`rust/`](rust) | Rust crates: `floor-types` (layouts, seeds, constants), `floor-math` (the mechanism's math), `floor-quote` (the FLOOR hook's quoter for Carpenter's `HookQuoter`), `floor-quote-wasm` (the wasm build `@floor/sdk-solana` ships) |
