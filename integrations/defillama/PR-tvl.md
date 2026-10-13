@@ -5,13 +5,13 @@ FLOOR
 https://x.com/floordotsupply
 
 ##### List of audit links if any:
-TODO
+
 
 ##### Website Link:
 https://floor.supply
 
 ##### Logo (High resolution, will be shown with rounded borders):
-TODO: the F mark, Floor Orange on black
+https://floor.supply/icons/icon-512.png
 
 ##### Current TVL:
 About $2.0k on 2026-10-13 (Ethereum $1.13k, BSC $389, Robinhood Chain $209, Arc $183, Solana $52, Base $47), the adapter's own output
@@ -59,6 +59,10 @@ Launch tokens and quote already paid out of the protocol (to the platform treasu
 Checked against the chain on 2026-10-13: on each EVM chain the quote in the pool equals the hook's seed + bid + cushion positions to the wei, and the custody vault's balance equals `vaultEth` plus every owed fee in the hook's `poolState`.
 
 ##### Github org/user (Optional, if your code is open source, we can track activity):
+gudtekdonkey
 
 ##### Does this project have a referral program?
-Yes. A launch can name up to three referrers, paid from the creator's fee.
+Yes, three tiers: a launch creator's referrers share 10% of the creator fee, and a trader's referrers earn part of the FLOOR Platform fee that trader's trades pay.
+
+##### Everything else an integrator may need
+Every chain, contract address, live pool, sample transaction, event and endpoint, and how this adapter was checked against the chain: https://github.com/gudtekdonkey/floor-sdk/blob/main/docs/integration-facts.md

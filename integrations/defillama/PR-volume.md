@@ -37,3 +37,6 @@ The same adapters report fees and revenue, each part read from its own event (se
 - **Why might the numbers differ from FLOOR's own pages?** They should not. Checked on 2026-10-13 against each pool's own lifetime counters in the hook's `poolState`, over every hour since the launches: the pool volume equals `cumulativeVolumeEth`, protocol revenue equals `teamFeesOwed + teamFeesPaid + platformPaidEth`, and the creator and referral fees equal their owed + paid counters, to the wei on all five EVM chains. FLOOR's tape also leaves out hook-sent swaps.
 - **Did the fee rate ever change?** Each launch copies the FLOOR Platform fee setting when it is created and keeps it. Volume adds the fee back from the logged amount, so a rate change does not affect it.
 - **Fee-to-volume ratio:** high while a pool is young (the skim is up to 5% far from the floor and holder fees up to 5%), and it falls as the price nears the floor.
+
+##### Everything else an integrator may need
+Every chain, contract address, live pool, sample transaction, event and endpoint, and how these adapters were checked against the chain: https://github.com/gudtekdonkey/floor-sdk/blob/main/docs/integration-facts.md

@@ -78,18 +78,20 @@ The patch also carries changes outside the plugin's folder:
 - The v3, v4 and msgpack packages pass with `CI=1` (41 packages). Without `CI`, navjit's live RPC tests fail on
   live-market tolerances, unrelated to this change.
 
-## Before a real PR
+## Known limits
 
 - **Gas is estimated, not measured.** `gasBeforeSwap` 60k, `gasTakeFees` 200k and `gasBidReplace` 350k on top of
   `uniswapv4.DefaultGas` come from the hook suite's 0.1 ETH pool buy (387,230 gas in all) less the v4 base gas; the
   bid re-place has no measured figure. Measure through the V4Quoter's gas estimate on a live pool.
-- **No live test.** `Track`'s RPC wiring is untested against a node: no graduated FLOOR pool on a mainnet was
-  available. A live test in the `fablecurve/hook_live_test.go` style needs one pool id per chain.
+- **No live RPC test.** `Track`'s RPC wiring is tested by decoding answers in the contracts' shapes, not against a
+  node. The live pools are covered by the fixture replay (their state read at one block, with the V4Quoter's answers);
+  a `fablecurve/hook_live_test.go`-style test can use pool id
+  `0x5259c52ce22be9d859d73e8b29bed5d316053fe4b9afab637d986812041d89ff` on every chain.
 - **Pool discovery is the platform's.** The plugin only prices pools the uniswap-v4 lister finds. Robinhood Chain and
   Arc have no hosted v4 subgraph, so they need the on-chain `Initialize` path with StateView ticks
-  (`FetchTickFromStateView`); `uniswapv4.Quoter` has no Robinhood entry (this plugin does not use it). Arc's native
-  USDC uses the library's existing 18 / 6 decimal rescaling, which the fixtures (all on Base) do not exercise.
-- **Untested orientations and settings.** No fixture has a non-zero protocol fee or a holder rate; both are handled
-  and unit-tested only. The gap buy skim is always on: every FLOOR set at this address carries it.
+  (`FetchTickFromStateView`); `uniswapv4.Quoter` has no Robinhood entry (this plugin does not use it).
+- **Untested setting.** No pool has a non-zero Uniswap protocol fee; it is handled and unit-tested only. Holder rates
+  (500 bps on the live pools) and Arc's native USDC are covered by the live fixtures. The gap buy skim is always on:
+  every FLOOR set at this address carries it.
 - `poolState` is decoded positionally (57 words, 53 fields). A hook redeploy that changes `PoolState` needs the
   struct and the ABI updated; the hook address would change too, so the old registration would simply stop matching.
