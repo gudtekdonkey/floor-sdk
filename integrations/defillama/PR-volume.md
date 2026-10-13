@@ -8,7 +8,7 @@ https://x.com/floordotsupply
 https://floor.supply
 
 ##### Chain:
-Ethereum, Base, BSC, Robinhood Chain, Arc
+Ethereum, Base, BSC, Robinhood Chain, Arc (`dexs/floor-launchpad`); Solana (`dexs/floor-launchpad-solana`, through Dune)
 
 ##### Category:
 Launchpad
@@ -19,6 +19,8 @@ Volume is every trade on a FLOOR launch, in its own quote asset (the chain's nat
 - **Sale buys**: `Bought.ethSpent` plus the FLOOR Platform fee `TeamFeeCharged` reports for that buy, so the figure is gross of the fee.
 - **Sale sell-backs**: `SoldBack.ethReturned`, the seller's gross share.
 - **Pool swaps**: the quote side of every Uniswap v4 `Swap` whose pool id is a FLOOR launch's (launches from FLOOR's on-chain registry, pool ids from the hook's `poolForAccount`). One side only.
+
+On Solana the same three parts come from the programs' events on Dune: `floor_launch`'s `Bought` / `TeamBought` and `SoldBack` / `TeamBuySoldBack`, and the quote side of `carpenter_amm`'s `Swapped` on each FLOOR pool.
 
 Excluded: swaps the hook sends itself during a ratchet. These are the protocol's own rebalancing, not user trades.
 
