@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "FLOOR on Solana: the floor_hook / floor_launch / floor_holders / floor_vesting IDLs and Codama clients, account layouts, PDAs and events, sale buy / sell-back and graduated-pool trade builders, the quoter, sendSolanaTransactions, and createSolanaAdapter for @floor/sdk. Built on @carpenter/sdk.",
   "license": "Apache-2.0",
+  "engines": {
+    "node": ">=20.18"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gudtekdonkey/floor-sdk.git",

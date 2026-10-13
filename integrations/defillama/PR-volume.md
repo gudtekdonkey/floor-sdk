@@ -26,6 +26,9 @@ Excluded: swaps the hook sends itself during a ratchet. These are the protocol's
 
 Marked `doublecounted` because graduated launches are Uniswap v4 pools.
 
+##### Fees and revenue:
+The same adapters report fees and revenue: the FLOOR Platform fee and FLOOR's 2.5% cut of the skim (protocol revenue), the rest of the skim and the holder fee (holders' revenue: the skim becomes the pool's backing), and the creator fee, its referral share and the LP fee (supply side). Each part is read from its own event; see the adapter's breakdown methodology.
+
 ##### Answers to the usual review questions:
 - **Is a zero day correct?** Yes. A chain with no FLOOR trades in a window reports 0.
 - **Why might the numbers differ from FLOOR's own pages?** They should not. On Sepolia the pool volume equals the site's indexer swap totals to the wei, hour by hour. FLOOR's tape also leaves out hook-sent swaps.

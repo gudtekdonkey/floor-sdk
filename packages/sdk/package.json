@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "FLOOR: one API for FLOOR launches on every chain. Chain adapters: @floor/sdk-evm, @floor/sdk-solana.",
   "license": "Apache-2.0",
+  "engines": {
+    "node": ">=20.18"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gudtekdonkey/floor-sdk.git",

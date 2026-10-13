@@ -6,8 +6,8 @@ repository, at the same path, and opened as a pull request there.
 | File | Goes to | Measures |
 |---|---|---|
 | [`DefiLlama-Adapters/projects/floor-launchpad/index.js`](DefiLlama-Adapters/projects/floor-launchpad/index.js) | [DefiLlama/DefiLlama-Adapters](https://github.com/DefiLlama/DefiLlama-Adapters) | TVL: Ethereum, Base, BSC, Robinhood Chain, Arc, Solana |
-| [`dimension-adapters/dexs/floor-launchpad/index.ts`](dimension-adapters/dexs/floor-launchpad/index.ts) | [DefiLlama/dimension-adapters](https://github.com/DefiLlama/dimension-adapters) | Volume: Ethereum, Base, BSC, Robinhood Chain, Arc |
-| [`dimension-adapters/dexs/floor-launchpad-solana/index.ts`](dimension-adapters/dexs/floor-launchpad-solana/index.ts) | [DefiLlama/dimension-adapters](https://github.com/DefiLlama/dimension-adapters) | Volume: Solana |
+| [`dimension-adapters/dexs/floor-launchpad/index.ts`](dimension-adapters/dexs/floor-launchpad/index.ts) | [DefiLlama/dimension-adapters](https://github.com/DefiLlama/dimension-adapters) | Volume, fees and revenue: Ethereum, Base, BSC, Robinhood Chain, Arc |
+| [`dimension-adapters/dexs/floor-launchpad-solana/index.ts`](dimension-adapters/dexs/floor-launchpad-solana/index.ts) | [DefiLlama/dimension-adapters](https://github.com/DefiLlama/dimension-adapters) | Volume, fees and revenue: Solana |
 | [`PR-tvl.md`](PR-tvl.md), [`PR-volume.md`](PR-volume.md) | the two pull request bodies | |
 
 ## What they count
@@ -38,7 +38,23 @@ drops every chain's record when one throws, and Dune's Solana data lands hours l
 and quote mints come from `floor_launch`'s registry; a pool swap counts its quote side. Marked `doublecounted`: the pools
 are Carpenter pools.
 
-Launch tokens and the platform's 2.5% cut are counted in neither.
+**Fees and revenue.** The same two adapters report every fee a trader pays, split by who it goes to:
+
+| Part | EVM source | Solana source | Goes to |
+|---|---|---|---|
+| FLOOR Platform fee | `TeamFeeCharged` and the team buy's `fee` on the sale; on the pool, `HookFee` less the logged parts | `Swapped` fee split `team`; `TeamBought` / `TeamBuySoldBack` `fee` | protocol revenue |
+| Skim: FLOOR's cut (2.5%) | the `PlatformCut` logged with each `Skimmed` | fee split `platform` | protocol revenue |
+| Skim: the rest | `Skimmed` less the cut | fee split `skim` less `platform` | holders' revenue (the pool's backing) |
+| Holder fee | `HolderTax` | fee split `holder` | holders' revenue |
+| Creator fee | `CreatorFee`, and its referral share `ReferralAccrued` | fee split `creator` | supply side |
+| LP fee | `Swap.fee` of the input | `lp_fee_total` | supply side |
+
+On a sell the LP fee is charged on the token and stated in the quote at the swap's own rate. On Solana the sale's other buys
+and sell-backs log no fee of their own, so only the team buy's sale fee is counted there. Checked on pools created on a fork
+of Base: on every trade the derived FLOOR Platform fee is exactly the pool's rate of the quote leg, and the paired cut
+exactly 2.5% of the skim.
+
+Launch tokens are not counted in volume, fees or TVL.
 
 ## Testing
 

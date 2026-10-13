@@ -37,6 +37,17 @@ const TeamFeeCharged = 'event TeamFeeCharged(address indexed who, uint256 fee, b
 // sell-back the cost, the deployer's gross share before the fee.
 const TeamBought = 'event TeamBought(address indexed buyer, uint256 stepTokens, uint256 walletTokens, uint64 cliffs, uint256 cost, uint256 fee)';
 const TeamBuySoldBack = 'event TeamBuySoldBack(address indexed buyer, uint256 tokens, uint256 cost, uint256 fee)';
+// The hook's take on a pool trade, emitted by the chain's FLOOR hook per pool. `HookFee` is the whole take on the quote leg;
+// `Skimmed`, `CreatorFee` (net of the referral share), `ReferralAccrued` and `HolderTax` are its parts, and the FLOOR
+// Platform fee is the rest (it has no event of its own). `PlatformCut` is FLOOR's 2.5% of the skim, logged just before the
+// `Skimmed` it was cut from (`PlatformCutDeferred` when it is held for a later sweep).
+const HookFee = 'event HookFee(bytes32 indexed id, address indexed sender, uint128 feeAmount0, uint128 feeAmount1)';
+const Skimmed = 'event Skimmed(bytes32 indexed poolId, uint256 ethAmount, uint256 skimBps)';
+const CreatorFee = 'event CreatorFee(bytes32 indexed poolId, uint256 ethAmount, bool isBuy)';
+const ReferralAccrued = 'event ReferralAccrued(bytes32 indexed poolId, address indexed referrer, address indexed asset, uint256 amount, uint256 grossCreatorFee)';
+const HolderTax = 'event HolderTax(bytes32 indexed poolId, uint256 ethAmount, bool isBuy)';
+const PlatformCut = 'event PlatformCut(bytes32 indexed poolId, uint256 amount)';
+const PlatformCutDeferred = 'event PlatformCutDeferred(bytes32 indexed poolId, uint256 amount)';
 // Pool trades: the Uniswap v4 PoolManager's Swap, for FLOOR's pool ids only.
 const Swap = 'event Swap(bytes32 indexed id, address indexed sender, int128 amount0, int128 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick, uint24 fee)';
 
@@ -53,6 +64,22 @@ const addQuote = (chain: string, balances: any, quote: string, amount: any, labe
 const fetch = async (options: FetchOptions) => {
   const { poolManager, quotes: listed } = chainConfig[options.chain];
   const dailyVolume = options.createBalances();
+  const dailyFees = options.createBalances();
+  const dailyRevenue = options.createBalances();
+  const dailyProtocolRevenue = options.createBalances();
+  const dailyHoldersRevenue = options.createBalances();
+  const dailySupplySideRevenue = options.createBalances();
+  const result = () => ({ dailyVolume, dailyFees, dailyUserFees: dailyFees, dailyRevenue, dailyProtocolRevenue, dailyHoldersRevenue, dailySupplySideRevenue });
+  // One fee part, booked to the fees and to whoever it goes to.
+  const book = (quote: string, amount: bigint, label: string, to: 'protocol' | 'holders' | 'supply') => {
+    if (amount <= 0n) return;
+    addQuote(options.chain, dailyFees, quote, amount, label);
+    if (to === 'supply') addQuote(options.chain, dailySupplySideRevenue, quote, amount, label);
+    else {
+      addQuote(options.chain, dailyRevenue, quote, amount, label);
+      addQuote(options.chain, to === 'protocol' ? dailyProtocolRevenue : dailyHoldersRevenue, quote, amount, label);
+    }
+  };
 
   const created: any[] = [];
   for (const registry of REGISTRIES) {
@@ -60,13 +87,13 @@ const fetch = async (options: FetchOptions) => {
     for (let start = 0; start < count; start += PAGE)
       created.push(...await options.api.call({ target: registry, abi: RegistryPage, params: [start, Math.min(PAGE, count - start)] }));
   }
-  if (!created.length) return { dailyVolume };
+  if (!created.length) return result();
 
   // Only launches quoted in the native asset or a listed quote asset are counted.
   const createdQuotes: string[] = await options.api.multiCall({ abi: 'address:quoteToken', calls: created.map((l: any) => l.launch) });
   const allowed = new Set([NATIVE, ...listed.map((q) => q.toLowerCase())]);
   const kept = created.map((l: any, i: number) => ({ l, quote: createdQuotes[i] })).filter(({ quote }) => allowed.has(String(quote).toLowerCase()));
-  if (!kept.length) return { dailyVolume };
+  if (!kept.length) return result();
   const launches = kept.map(({ l }) => l);
   const quotes: string[] = kept.map(({ quote }) => quote);
 
@@ -84,6 +111,10 @@ const fetch = async (options: FetchOptions) => {
   for (const l of soldBack) addQuote(options.chain, dailyVolume, quoteOf.get(l.address.toLowerCase())!, l.args.ethReturned, 'Sale sell-backs');
   for (const l of teamBought) addQuote(options.chain, dailyVolume, quoteOf.get(l.address.toLowerCase())!, BigInt(l.args.cost) + BigInt(l.args.fee), 'Sale buys');
   for (const l of teamSoldBack) addQuote(options.chain, dailyVolume, quoteOf.get(l.address.toLowerCase())!, l.args.cost, 'Sale sell-backs');
+  // The sale's one fee, the FLOOR Platform fee, on every buy and sell-back (the team buy's included).
+  for (const l of teamFees) book(quoteOf.get(l.address.toLowerCase())!, BigInt(l.args.fee), 'FLOOR Platform fees', 'protocol');
+  for (const l of teamBought) book(quoteOf.get(l.address.toLowerCase())!, BigInt(l.args.fee), 'FLOOR Platform fees', 'protocol');
+  for (const l of teamSoldBack) book(quoteOf.get(l.address.toLowerCase())!, BigInt(l.args.fee), 'FLOOR Platform fees', 'protocol');
 
   // Pool phase: one side of each swap, the quote side. Currencies are sorted by address, so the quote is currency0 when its
   // address is the lower one (always for a native-quoted pool, whose currency0 is address(0)).
@@ -99,10 +130,70 @@ const fetch = async (options: FetchOptions) => {
     const pool = pools.get(String(s.id).toLowerCase());
     // A swap the hook sends itself (its `_nudge` at a ratchet) is the protocol's own action, not a trade.
     if (!pool || String(s.sender).toLowerCase() === pool.hook) continue;
-    addQuote(options.chain, dailyVolume, pool.quote, abs(BigInt(pool.quoteIs0 ? s.amount0 : s.amount1)), 'Pool swaps');
+    const quoteLeg = abs(BigInt(pool.quoteIs0 ? s.amount0 : s.amount1));
+    addQuote(options.chain, dailyVolume, pool.quote, quoteLeg, 'Pool swaps');
+    // The LP fee (Swap.fee pips) is charged on the input: the quote on a buy, exact; on a sell the token, stated here in
+    // the quote at the swap's own rate.
+    const fee = BigInt(s.fee);
+    const quoteIn = BigInt(pool.quoteIs0 ? s.amount0 : s.amount1) < 0n;
+    book(pool.quote, quoteIn ? (quoteLeg * fee) / 1_000_000n : (quoteLeg * fee) / (1_000_000n - fee), 'LP fees', 'supply');
   }
 
-  return { dailyVolume };
+  // The hook's take, per FLOOR pool.
+  const hooks = [...new Set(launches.map((l: any) => l.hook.toLowerCase()))];
+  const ofPool = (l: any) => pools.get(String(l.args.id ?? l.args.poolId).toLowerCase());
+  const [hookFees, skims, creators, referrals, holders, cuts, deferred] = await Promise.all(
+    [HookFee, Skimmed, CreatorFee, ReferralAccrued, HolderTax, PlatformCut, PlatformCutDeferred].map((eventAbi) =>
+      options.getLogs({ targets: hooks, eventAbi, entireLog: true, parseLog: true })),
+  );
+  const total = new Map<string, bigint>();
+  const add = (pool: string, v: bigint) => total.set(pool, (total.get(pool) ?? 0n) + v);
+  for (const l of hookFees) {
+    const pool = ofPool(l);
+    if (!pool) continue;
+    add(String(l.args.id).toLowerCase(), BigInt(l.args.feeAmount0) + BigInt(l.args.feeAmount1));
+  }
+  // FLOOR's cut of a skim: the PlatformCut / PlatformCutDeferred of the same pool in the same transaction, just before it.
+  const cutsByTx = new Map<string, any[]>();
+  for (const c of [...cuts, ...deferred]) {
+    const k = String(c.transactionHash).toLowerCase();
+    cutsByTx.set(k, [...(cutsByTx.get(k) ?? []), c]);
+  }
+  for (const l of skims) {
+    const pool = ofPool(l);
+    if (!pool) continue;
+    const id = String(l.args.poolId).toLowerCase();
+    const skim = BigInt(l.args.ethAmount);
+    const before = (cutsByTx.get(String(l.transactionHash).toLowerCase()) ?? [])
+      .filter((c) => String(c.args.poolId).toLowerCase() === id && Number(c.logIndex) < Number(l.logIndex))
+      .sort((a, b) => Number(b.logIndex) - Number(a.logIndex))[0];
+    const cut = before ? BigInt(before.args.amount) : 0n;
+    book(pool.quote, cut, 'Floor skim: FLOOR\'s cut', 'protocol');
+    book(pool.quote, skim - cut, 'Floor skim: backing', 'holders');
+    add(id, -skim);
+  }
+  for (const l of creators) {
+    const pool = ofPool(l);
+    if (!pool) continue;
+    book(pool.quote, BigInt(l.args.ethAmount), 'Creator fees', 'supply');
+    add(String(l.args.poolId).toLowerCase(), -BigInt(l.args.ethAmount));
+  }
+  for (const l of referrals) {
+    const pool = ofPool(l);
+    if (!pool) continue;
+    book(pool.quote, BigInt(l.args.amount), 'Referral fees', 'supply');
+    add(String(l.args.poolId).toLowerCase(), -BigInt(l.args.amount));
+  }
+  for (const l of holders) {
+    const pool = ofPool(l);
+    if (!pool) continue;
+    book(pool.quote, BigInt(l.args.ethAmount), 'Holder fees', 'holders');
+    add(String(l.args.poolId).toLowerCase(), -BigInt(l.args.ethAmount));
+  }
+  // What is left of the hook's take is the FLOOR Platform fee.
+  for (const [id, rest] of total) book(pools.get(id)!.quote, rest, 'FLOOR Platform fees', 'protocol');
+
+  return result();
 };
 
 const adapter: SimpleAdapter = {
@@ -113,9 +204,24 @@ const adapter: SimpleAdapter = {
   // Graduated pools are Uniswap v4 pools, so their swaps are also in Uniswap v4's volume.
   doublecounted: true,
   methodology: {
+    Fees: "Every fee a trader pays on a FLOOR launch: on the sale, the FLOOR Platform fee; on the pool, the hook's skim, creator fee (with its referral share), holder fee and FLOOR Platform fee, read from the hook's HookFee / Skimmed / CreatorFee / ReferralAccrued / HolderTax events, and the Uniswap v4 LP fee.",
+    UserFees: "The same as Fees: every fee is paid by the trader.",
+    Revenue: "The FLOOR Platform fee, the skim and the holder fee.",
+    ProtocolRevenue: "The FLOOR Platform fee, and FLOOR's 2.5% cut of the skim.",
+    HoldersRevenue: "The holder fee, and the rest of the skim, which goes into the pool's backing (the floor under every holder's tokens).",
+    SupplySideRevenue: "The creator fee and its referral share, and the LP fee.",
     Volume: "Every trade on a FLOOR launch quoted in the chain's native asset or a quote asset FLOOR lists, in that asset: buys (with the FLOOR Platform fee) and sell-backs on each launch's sale, read from its Bought / TeamFeeCharged / SoldBack events and the deployer's TeamBought / TeamBuySoldBack, then the quote side of every Uniswap v4 Swap on a graduated launch's pool.",
   },
   breakdownMethodology: {
+    Fees: {
+      'FLOOR Platform fees': 'TeamFeeCharged.fee and the team buy\'s fee on the sale; on the pool, HookFee less the parts the hook logs.',
+      'Floor skim: backing': 'Skimmed.ethAmount less FLOOR\'s cut.',
+      'Floor skim: FLOOR\'s cut': 'The PlatformCut (or PlatformCutDeferred) logged with each Skimmed: 2.5% of the skim.',
+      'Creator fees': 'CreatorFee.ethAmount, net of the referral share.',
+      'Referral fees': 'ReferralAccrued.amount, 10% of the gross creator fee.',
+      'Holder fees': 'HolderTax.ethAmount.',
+      'LP fees': 'Swap.fee pips of the input; on a sell, stated in the quote at the swap\'s rate.',
+    },
     Volume: {
       'Sale buys': 'Bought.ethSpent plus the FLOOR Platform fee TeamFeeCharged reports for the buy, and the team buy\'s TeamBought.cost + fee.',
       'Sale sell-backs': 'SoldBack.ethReturned, the seller\'s gross share before the fee, and the team buy\'s TeamBuySoldBack.cost.',

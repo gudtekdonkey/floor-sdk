@@ -23,20 +23,31 @@ const TEAM_BUY_SOLD_BACK = '0x' + TAG + '8652ae3a099b6b1c';
 // floor_launch Bought / SoldBack: launch 17 · buyer 49 · tokens 81 · cost / payout 89 (u64).
 // TeamBought: launch 17 · creator 49 · tokens 81 · step_tokens 89 · wallet_tokens 97 · cost 105 · fee 113 (u64); counted
 // as cost + fee, the team buy's gross.
-// TeamBuySoldBack: launch 17 · creator 49 · tokens 81 · cost 89 (u64).
-const u64At = (pos: number) => `bytearray_to_uint256(bytearray_reverse(bytearray_substring(data, ${pos}, 8)))`;
+// TeamBuySoldBack: launch 17 · creator 49 · tokens 81 · cost 89 · fee 97 (u64).
+const u64At = (pos: number | string) => `bytearray_to_uint256(bytearray_reverse(bytearray_substring(data, ${pos}, 8)))`;
+// Swapped's fee fields (1-based; `o` is 143 when fee_override is Some, 139 when None, as in carpenter's adapter):
+// lp_fee_total 130 (u64, the input token) · fee_split0 o+67 and fee_split1 o+107, five u64 each: [skim, creator, holder,
+// platform, team] in currency 0 / 1. The hook's takes are on the quote, so one array is all zeros; the two are summed.
+// `platform` (FLOOR's cut) is inside `skim`; `team` (the FLOOR Platform fee) is charged on top.
+const split = (k: number) => `CAST(SUM(${u64At(`o + ${67 + 8 * k}`)} + ${u64At(`o + ${107 + 8 * k}`)}) AS VARCHAR)`;
 const QUERY = `
+  WITH swaps AS (
+    SELECT data, IF(bytearray_substring(data, 138, 1) = 0x01, 143, 139) AS o
+    FROM solana.instruction_calls
+    WHERE executing_account = '${CARPENTER_AMM}'
+      AND tx_success
+      AND bytearray_substring(data, 1, 16) = ${SWAPPED}
+      AND TIME_RANGE
+  )
   SELECT
     'swap' AS kind,
     to_base58(bytearray_substring(data, 17, 32)) AS account,
     bytearray_substring(data, 81, 1) = 0x01 AS zero_for_one,
     CAST(SUM(${u64At(82)}) AS VARCHAR) AS amount_in,
-    CAST(SUM(${u64At(90)}) AS VARCHAR) AS amount_out
-  FROM solana.instruction_calls
-  WHERE executing_account = '${CARPENTER_AMM}'
-    AND tx_success
-    AND bytearray_substring(data, 1, 16) = ${SWAPPED}
-    AND TIME_RANGE
+    CAST(SUM(${u64At(90)}) AS VARCHAR) AS amount_out,
+    CAST(SUM(${u64At(130)}) AS VARCHAR) AS lp_fee,
+    ${split(0)} AS skim, ${split(1)} AS creator, ${split(2)} AS holder, ${split(3)} AS platform, ${split(4)} AS team
+  FROM swaps
   GROUP BY 1, 2, 3
   UNION ALL
   SELECT
@@ -44,7 +55,10 @@ const QUERY = `
     to_base58(bytearray_substring(data, 17, 32)) AS account,
     NULL AS zero_for_one,
     CAST(SUM(IF(bytearray_substring(data, 1, 16) = ${TEAM_BOUGHT}, ${u64At(105)} + ${u64At(113)}, ${u64At(89)})) AS VARCHAR) AS amount_in,
-    NULL AS amount_out
+    NULL AS amount_out,
+    NULL AS lp_fee, NULL AS skim, NULL AS creator, NULL AS holder, NULL AS platform,
+    CAST(SUM(IF(bytearray_substring(data, 1, 16) = ${TEAM_BOUGHT}, ${u64At(113)},
+      IF(bytearray_substring(data, 1, 16) = ${TEAM_BUY_SOLD_BACK}, ${u64At(97)}, 0))) AS VARCHAR) AS team
   FROM solana.instruction_calls
   WHERE executing_account = '${FLOOR_LAUNCH}'
     AND tx_success
@@ -96,9 +110,24 @@ async function floorLaunches(): Promise<FloorLaunch[]> {
 const fetch = async (options: FetchOptions) => {
   assertDuneSolanaIndexed(options);
   const dailyVolume = options.createBalances();
+  const dailyFees = options.createBalances();
+  const dailyRevenue = options.createBalances();
+  const dailyProtocolRevenue = options.createBalances();
+  const dailyHoldersRevenue = options.createBalances();
+  const dailySupplySideRevenue = options.createBalances();
+  const result = () => ({ dailyVolume, dailyFees, dailyUserFees: dailyFees, dailyRevenue, dailyProtocolRevenue, dailyHoldersRevenue, dailySupplySideRevenue });
+  const book = (mint: string, amount: bigint, label: string, to: 'protocol' | 'holders' | 'supply') => {
+    if (amount <= 0n) return;
+    dailyFees.add(mint, amount, label);
+    if (to === 'supply') dailySupplySideRevenue.add(mint, amount, label);
+    else {
+      dailyRevenue.add(mint, amount, label);
+      (to === 'protocol' ? dailyProtocolRevenue : dailyHoldersRevenue).add(mint, amount, label);
+    }
+  };
 
   const launches = await floorLaunches();
-  if (!launches.length) return { dailyVolume };
+  if (!launches.length) return result();
   const byLaunch = new Map(launches.map((l) => [l.launch, l]));
   const byPool = new Map(launches.map((l) => [l.pool, l]));
 
@@ -111,13 +140,24 @@ const fetch = async (options: FetchOptions) => {
       const quoteIs0 = Buffer.compare(Buffer.from(base58Decode(l.quote)), Buffer.from(base58Decode(l.mint))) < 0;
       const quoteIsInput = r.zero_for_one === quoteIs0;
       dailyVolume.add(l.quote, quoteIsInput ? r.amount_in : r.amount_out, 'Pool swaps');
+      // The LP fee is charged on the input: the quote on a buy; on a sell the token, stated in the quote at the swap's rate.
+      const lp = BigInt(r.lp_fee);
+      const lpQuote = quoteIsInput ? lp : BigInt(r.amount_in) > lp ? (BigInt(r.amount_out) * lp) / (BigInt(r.amount_in) - lp) : 0n;
+      book(l.quote, lpQuote, 'LP fees', 'supply');
+      const skim = BigInt(r.skim), cut = BigInt(r.platform);
+      book(l.quote, cut, 'Floor skim: FLOOR\'s cut', 'protocol');
+      book(l.quote, skim - cut, 'Floor skim: backing', 'holders');
+      book(l.quote, BigInt(r.creator), 'Creator fees', 'supply');
+      book(l.quote, BigInt(r.holder), 'Holder fees', 'holders');
+      book(l.quote, BigInt(r.team), 'FLOOR Platform fees', 'protocol');
     } else {
       const l = byLaunch.get(r.account);
       if (!l) continue;
       dailyVolume.add(l.quote, r.amount_in, r.kind === 'buy' ? 'Sale buys' : 'Sale sell-backs');
+      book(l.quote, BigInt(r.team ?? 0), 'FLOOR Platform fees', 'protocol');
     }
   }
-  return { dailyVolume };
+  return result();
 };
 
 const adapter: SimpleAdapter = {
@@ -130,9 +170,23 @@ const adapter: SimpleAdapter = {
   // Graduated launches trade on Carpenter pools, so their swaps are also in Carpenter's volume.
   doublecounted: true,
   methodology: {
+    Fees: "On each FLOOR launch's Carpenter pool, the hook's take from carpenter_amm's Swapped events (skim, creator fee, holder fee, FLOOR Platform fee) and the LP fee; on the sale, the team buy's FLOOR Platform fee. The sale's other buys and sell-backs log no fee of their own and are not counted. Carpenter's own protocol fee is Carpenter's.",
+    UserFees: "The same as Fees: every fee is paid by the trader.",
+    Revenue: "The FLOOR Platform fee, the skim and the holder fee.",
+    ProtocolRevenue: "The FLOOR Platform fee, and FLOOR's cut of the skim.",
+    HoldersRevenue: "The holder fee, and the rest of the skim, which goes into the pool's backing.",
+    SupplySideRevenue: "The creator fee and the LP fee.",
     Volume: "Every trade on a FLOOR launch quoted in wSOL or a quote asset FLOOR lists, in that asset: buys and sell-backs on each launch's sale (the team's included), then the quote side of every swap on its Carpenter pool.",
   },
   breakdownMethodology: {
+    Fees: {
+      'FLOOR Platform fees': 'Swapped fee split `team`, and TeamBought / TeamBuySoldBack `fee`.',
+      'Floor skim: backing': 'Swapped fee split `skim` less `platform`.',
+      'Floor skim: FLOOR\'s cut': 'Swapped fee split `platform` (inside the skim).',
+      'Creator fees': 'Swapped fee split `creator`.',
+      'Holder fees': 'Swapped fee split `holder`.',
+      'LP fees': 'Swapped lp_fee_total (the input); on a sell, stated in the quote at the swap\'s rate.',
+    },
     Volume: {
       'Sale buys': 'floor_launch Bought.cost, and TeamBought.cost + fee.',
       'Sale sell-backs': 'floor_launch SoldBack.payout and TeamBuySoldBack.cost.',

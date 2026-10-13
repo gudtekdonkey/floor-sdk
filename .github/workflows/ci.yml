@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  typescript:
+    runs-on: ubuntu-latest
+    steps:
+      # The packages build against a sibling carpenter-sdk checkout (the root package.json's `overrides`).
+      - uses: actions/checkout@v4
+        with:
+          path: floor-sdk
+      - uses: actions/checkout@v4
+        with:
+          repository: gudtekdonkey/carpenter-sdk
+          path: carpenter-sdk
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci && npm run build
+        working-directory: carpenter-sdk
+      - run: npm ci
+        working-directory: floor-sdk
+      - run: npm run typecheck
+        working-directory: floor-sdk
+      - run: npm test
+        working-directory: floor-sdk
+      - run: npm run build
+        working-directory: floor-sdk
+
+  rust:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+      - run: cargo fetch --locked
+      - run: cargo test --workspace --locked
+
+  jupiter:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: jupiter
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: jupiter
+      - run: cargo fetch --locked
+      - run: cargo test --locked
