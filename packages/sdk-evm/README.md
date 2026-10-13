@@ -108,10 +108,19 @@ createEvmAdapter({ chains: [31337], rpcUrls: { 31337: 'http://127.0.0.1:8545' },
 - **Reads**: `getLaunch`, `listLaunches` (one registry page per call), the pool state (`readPoolState`, width-checked), the
   published floor (`floorPriceX18`, off the pool's `floorTick`), and every rate read per launch or per pool.
 - **Quotes**: a bonding buy (the sale's tranche walk), a sell-back (`quoteSellBack`, less the FLOOR Platform fee), each in
-  the contract version's own rounding (see "Limits worth knowing"), and a pool trade (Uniswap's V4Quoter).
+  the contract version's own rounding (see "Limits worth knowing"), and a pool trade (Uniswap's V4Quoter, or off-chain with
+  `simulateSwap`).
 - **Trades**: bonding buy, sell-back, pool buy / sell through the UniversalRouter (a token input pulled through Permit2,
   approved on chain in the same batch), and the same through `FloorSwapRatchet` (`buildTrade(params, { swapRatchet })`).
 - **Sending**: `sendEvmCalls(walletClient, tx)` — EIP-5792 where atomic, else one transaction per call.
+- **Simulating a pool swap off-chain** (`simulate.ts`): `readSwapSnapshot(client, chainId, poolId)` reads one FLOOR pool
+  (the hook's rates and floor, the cushion, slot0, liquidity, the whole tick bitmap and every initialized tick), and
+  `simulateSwap(snapshot, side, amountIn)` gives the exact output and its fee parts with no network: Uniswap v4's swap,
+  ported from v4-core, with the FLOOR hook's fees around it (exact input only; on a buy the hook's fees come off the quote
+  paid in at the pre-swap price's skim, on a sell off the quote paid out at the post-swap price's). Tested against the
+  V4Quoter on pools created on a fork of Base, a native and an ERC-20 quote on each side of the pool, at six pool states
+  (`test/fixtures/simulate/`, re-recorded with `scripts/fork-parity.mts`): every amount equal to the wei. Re-read the
+  snapshot after any swap; `reachedBand` marks a sell after which the hook re-places its bid.
 - **Events** (`events.ts`): `decodeFloorLog` / `decodeFloorLogs` decode any log of any contract whose ABI is here, by its
   first topic (`FLOOR_EVENTS`, one layout per selector), and refuse a log whose topics or data do not fit the layout.
   `floorEventTopics(name)` gives an event's selectors for an `eth_getLogs` filter. The twin of `@floor/sdk-solana`'s
