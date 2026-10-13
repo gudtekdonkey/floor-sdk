@@ -112,6 +112,10 @@ createEvmAdapter({ chains: [31337], rpcUrls: { 31337: 'http://127.0.0.1:8545' },
 - **Trades**: bonding buy, sell-back, pool buy / sell through the UniversalRouter (a token input pulled through Permit2,
   approved on chain in the same batch), and the same through `FloorSwapRatchet` (`buildTrade(params, { swapRatchet })`).
 - **Sending**: `sendEvmCalls(walletClient, tx)` — EIP-5792 where atomic, else one transaction per call.
+- **Events** (`events.ts`): `decodeFloorLog` / `decodeFloorLogs` decode any log of any contract whose ABI is here, by its
+  first topic (`FLOOR_EVENTS`, one layout per selector), and refuse a log whose topics or data do not fit the layout.
+  `floorEventTopics(name)` gives an event's selectors for an `eth_getLogs` filter. The twin of `@floor/sdk-solana`'s
+  `events.ts`.
 
 ## What it does not cover
 
