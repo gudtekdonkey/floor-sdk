@@ -14,6 +14,7 @@ team steps and governance are not part of them; the ABIs and IDLs they ship are 
 | [`packages/sdk-solana`](packages/sdk-solana) | `@floorsupply/sdk-solana`: the Solana adapter (the four programs' IDLs and Codama clients, layouts, PDAs, events, the sale buy / sell-back and graduated-pool trade builders, the quoter wasm), built on `@floorsupply/carpenter-sdk` |
 | [`rust/`](rust) | Rust crates: `floor-types` (layouts, seeds, constants), `floor-math` (the mechanism's math), `floor-quote` (the FLOOR hook's quoter for Carpenter's `HookQuoter`), `floor-quote-wasm` (the wasm build `@floorsupply/sdk-solana` ships) |
 | [`jupiter/`](jupiter) | `floor-sale-amm`: a `jupiter-amm-interface` `Amm` for FLOOR bonding sales; its own Cargo workspace |
+| [`docs/integration-facts.md`](docs/integration-facts.md) | **Start here to integrate FLOOR**: every chain, address, live pool, sample transaction, event, endpoint and test result in one page |
 | [`docs/evm-events.md`](docs/evm-events.md) | How FLOOR's EVM events become launches, pools, trades, the floor and candles |
 | [`integrations/velora/`](integrations/velora) | FLOOR hook pools in Velora's `paraswap-dex-lib` (TypeScript), Base and BSC: its files at their upstream paths and `upstream.patch` |
 | [`integrations/kyberswap/`](integrations/kyberswap) | The FLOOR hook for KyberSwap's `kyberswap-dex-lib` (Go): its files at their upstream paths and `upstream.patch` |
