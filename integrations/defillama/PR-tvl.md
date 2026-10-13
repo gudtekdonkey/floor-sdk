@@ -14,7 +14,7 @@ https://floor.supply
 TODO: the F mark, Floor Orange on black
 
 ##### Current TVL:
-TODO at submission: the adapter's own output
+About $2.0k on 2026-10-13 (Ethereum $1.13k, BSC $389, Robinhood Chain $209, Arc $183, Solana $52, Base $47), the adapter's own output
 
 ##### Treasury Addresses (if the protocol has treasury)
 Not counted in TVL. The same address on Ethereum, Base, BSC, Robinhood Chain and Arc:
@@ -50,11 +50,13 @@ https://floor.supply/technical
 None. Graduated launches trade on Uniswap v4 pools through FLOOR's own hook.
 
 ##### methodology (what is being counted as tvl, how is tvl being calculated):
-For every launch in FLOOR's on-chain registry, only launches quoted in the chain's native asset or a quote asset FLOOR lists:
-- EVM: while the launch is still selling, the quote asset raised and held by its sale contract (`raised()`); once it has graduated, its pool's backing in the quote asset (`backingEth()`: the vault plus the deployed bid, read through the hook's `execute`).
-- Solana: while selling, the SOL in the launch's sale vault and its quote vault; once graduated, the FloorPool account's `vault_eth + bid_eth_deployed`.
+For every launch in FLOOR's on-chain registry, only launches quoted in the chain's native asset or a quote asset FLOOR lists, the quote asset FLOOR holds:
+- EVM: while the launch is still selling, its sale contract's quote balance (the raise). Once it has graduated: the quote in its Uniswap v4 pool's liquidity (every initialized range at the current price, read from Uniswap's StateView: the bid, the protocol-owned liquidity, the cushion and any staircase step the price is in), plus its custody vault's quote balance (the rest of the backing and every fee owed but not yet claimed).
+- Solana: while selling, the SOL in the launch's sale vault and its quote vault. Once graduated, the Carpenter pool's quote vault (every position's quote and the hook's claims), less Carpenter's own protocol fees owed in it.
 
-Launch tokens and the platform's 2.5% cut are not counted. Marked `doublecounted` because a graduated EVM launch's bid is a Uniswap v4 position.
+Launch tokens and quote already paid out of the protocol (to the platform treasury, creators, referrers or holders) are not counted. Marked `doublecounted` because a graduated launch's liquidity sits in a Uniswap v4 pool (EVM) or a Carpenter pool (Solana), which those protocols count too.
+
+Checked against the chain on 2026-10-13: on each EVM chain the quote in the pool equals the hook's seed + bid + cushion positions to the wei, and the custody vault's balance equals `vaultEth` plus every owed fee in the hook's `poolState`.
 
 ##### Github org/user (Optional, if your code is open source, we can track activity):
 

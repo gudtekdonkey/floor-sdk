@@ -1,3 +1,4 @@
+const sdk = require('@defillama/sdk')
 const ADDRESSES = require('../helper/coreAssets.json')
 const { PublicKey } = require('@solana/web3.js')
 const { getMultipleAccounts, sumTokens2 } = require('../helper/solana')
@@ -24,20 +25,91 @@ const abi = {
   page: 'function page(uint256 start, uint256 n) view returns ((address launch, address token, address hook, address rewards, bytes32 poolId, uint8 mode, uint64 at, address registrar)[])',
   quoteToken: 'address:quoteToken',
   graduated: 'bool:graduated',
-  raised: 'uint256:raised',
   poolForAccount: 'function poolForAccount(address account) view returns (bytes32)',
-  execute: 'function execute(bytes32 id, bytes data) view returns (bytes)',
+  // The hook's whole record of one pool; field 41 is the pool's custody vault.
+  poolState: 'function poolState(bytes32 id) view returns ((address,uint256,uint256,(address,address,uint24,int24,address),bool,int24,uint256,uint256,uint256,int24,int24,uint128,uint256,uint256,bool,uint256,uint128,int24,int24,uint256,uint256,int24,uint256,uint256,bool,address,address,uint256,uint256,uint256,uint256,uint256,address,uint256,uint256,address,uint256,uint256,uint256,address,bool,address,uint256,uint256,int24,address,uint256,uint256,uint256,uint256,uint256,uint256,uint256))',
+  getSlot0: 'function getSlot0(bytes32 poolId) view returns (uint160 sqrtPriceX96, int24 tick, uint24 protocolFee, uint24 lpFee)',
+  getTickBitmap: 'function getTickBitmap(bytes32 poolId, int16 word) view returns (uint256)',
+  getTickLiquidity: 'function getTickLiquidity(bytes32 poolId, int24 tick) view returns (uint128 liquidityGross, int128 liquidityNet)',
+}
+const CUSTODY_VAULT = 41
+const TICK_SPACING = 60 // every FLOOR pool's
+
+// Uniswap v4's StateView on each chain: a pool's price, tick bitmap and ticks, by pool id.
+const STATE_VIEW = {
+  ethereum: '0x7fFE42C4a5DEeA5b0feC41C94C136Cf115597227',
+  base: '0xA3c0c9b65baD0b08107Aa264b0f3dB444b867A71',
+  bsc: '0xd13Dd3D6E93f276FAfc9Db9E6BB47C1180aeE0c4',
+  robinhood: '0xF3334192D15450CdD385c8B70e03f9A6bD9E673b',
+  arc: '0xF3334192D15450CdD385c8B70e03f9A6bD9E673b',
 }
 
-// `backingEth()` (0x34f441a4): the pool's backing, its vault plus the deployed bid, in raw quote units. A per-pool view the
-// hook answers through `execute`.
-const BACKING_ETH = '0x34f441a4'
+// Uniswap v4's TickMath.getSqrtPriceAtTick, exactly (Q64.96).
+const MIN_TICK = -887272
+const MAX_TICK = 887272
+const Q96 = 1n << 96n
+const MAX_U256 = (1n << 256n) - 1n
+const TICK_RATIOS = [
+  [0x2n, 0xfff97272373d413259a46990580e213an], [0x4n, 0xfff2e50f5f656932ef12357cf3c7fdccn], [0x8n, 0xffe5caca7e10e4e61c3624eaa0941cd0n],
+  [0x10n, 0xffcb9843d60f6159c9db58835c926644n], [0x20n, 0xff973b41fa98c081472e6896dfb254c0n], [0x40n, 0xff2ea16466c96a3843ec78b326b52861n],
+  [0x80n, 0xfe5dee046a99a2a811c461f1969c3053n], [0x100n, 0xfcbe86c7900a88aedcffc83b479aa3a4n], [0x200n, 0xf987a7253ac413176f2b074cf7815e54n],
+  [0x400n, 0xf3392b0822b70005940c7a398e4b70f3n], [0x800n, 0xe7159475a2c29b7443b29c7fa6e889d9n], [0x1000n, 0xd097f3bdfd2022b8845ad8f792aa5825n],
+  [0x2000n, 0xa9f746462d870fdf8a65dc1f90e061e5n], [0x4000n, 0x70d869a156d2a1b890bb3df62baf32f7n], [0x8000n, 0x31be135f97d08fd981231505542fcfa6n],
+  [0x10000n, 0x9aa508b5b7a84e1c677de54f3e99bc9n], [0x20000n, 0x5d6af8dedb81196699c329225ee604n], [0x40000n, 0x2216e584f5fa1ea926041bedfe98n],
+  [0x80000n, 0x48a170391f7dc42444e8fa2n],
+]
+function sqrtPriceAtTick(tick) {
+  const abs = BigInt(Math.abs(tick))
+  let r = (abs & 1n) ? 0xfffcb933bd6fad37aa2d162d1a594001n : 0x100000000000000000000000000000000n
+  for (const [bit, m] of TICK_RATIOS) if (abs & bit) r = (r * m) >> 128n
+  if (tick > 0) r = MAX_U256 / r
+  return (r >> 32n) + (r % (1n << 32n) ? 1n : 0n)
+}
+
+// The quote a pool's liquidity holds at its current price: in every initialized range, currency0's amount above the
+// price (a quote at currency0) or currency1's below it (a quote at currency1), rounded down.
+async function poolQuote(api, poolId, quoteIsCurrency1) {
+  const sv = STATE_VIEW[api.chain]
+  const words = []
+  for (let w = Math.floor(MIN_TICK / TICK_SPACING) >> 8; w <= Math.floor(MAX_TICK / TICK_SPACING) >> 8; w++) words.push(w)
+  const [slot0, bitmaps] = await Promise.all([
+    api.call({ target: sv, abi: abi.getSlot0, params: [poolId] }),
+    api.multiCall({ target: sv, abi: abi.getTickBitmap, calls: words.map((w) => ({ params: [poolId, w] })) }),
+  ])
+  const ticks = []
+  words.forEach((w, i) => {
+    const word = BigInt(bitmaps[i])
+    if (!word) return
+    for (let bit = 0; bit < 256; bit++) if ((word >> BigInt(bit)) & 1n) ticks.push(((w << 8) + bit) * TICK_SPACING)
+  })
+  if (ticks.length < 2) return 0n
+  const nets = await api.multiCall({ target: sv, abi: abi.getTickLiquidity, calls: ticks.map((t) => ({ params: [poolId, t] })) })
+  const sp = BigInt(slot0.sqrtPriceX96)
+  let liquidity = 0n
+  let quote = 0n
+  for (let i = 0; i < ticks.length - 1; i++) {
+    liquidity += BigInt(nets[i].liquidityNet)
+    if (liquidity <= 0n) continue
+    const sa = sqrtPriceAtTick(ticks[i])
+    const sb = sqrtPriceAtTick(ticks[i + 1])
+    if (!quoteIsCurrency1) {
+      const lo = sa > sp ? sa : sp
+      if (lo < sb) quote += (liquidity * (sb - lo) * Q96) / (lo * sb)
+    } else {
+      const hi = sb < sp ? sb : sp
+      if (hi > sa) quote += (liquidity * (hi - sa)) / Q96
+    }
+  }
+  return quote
+}
+
 const PAGE = 200
 
 async function registryEntries(api) {
   const entries = []
   for (const registry of REGISTRIES) {
-    const count = Number(await api.call({ target: registry, abi: abi.count }))
+    // A registry not yet deployed at this block lists nothing (it answers no data).
+    const count = Number(await api.call({ target: registry, abi: abi.count, permitFailure: true }) ?? 0)
     for (let start = 0; start < count; start += PAGE)
       entries.push(...await api.call({ target: registry, abi: abi.page, params: [start, Math.min(PAGE, count - start)] }))
   }
@@ -66,26 +138,36 @@ async function tvl(api) {
   const quotes = kept.map(({ quote }) => quote)
 
   const sales = launches.map((l) => l.launch)
-  const [graduated, raised, poolIds] = await Promise.all([
+  const [graduated, poolIds] = await Promise.all([
     api.multiCall({ abi: abi.graduated, calls: sales }),
-    api.multiCall({ abi: abi.raised, calls: sales }),
     api.multiCall({ abi: abi.poolForAccount, calls: launches.map((l) => ({ target: l.hook, params: [l.launch] })) }),
   ])
 
-  // A launch still selling holds its raise in the sale contract.
-  sales.forEach((_, i) => { if (!graduated[i]) addQuote(api, quotes[i], raised[i]) })
+  // A launch still selling holds its raise, and the sale's FLOOR Platform fee until graduation, in the sale contract.
+  const held = []
+  sales.forEach((sale, i) => { if (!graduated[i]) held.push({ owner: sale, quote: quotes[i] }) })
 
-  // A graduated launch's raise is the pool's backing, in the quote asset.
+  // A graduated launch: the quote in its pool's liquidity (the bid, the protocol-owned liquidity, the cushion and any
+  // step the price is in), plus its custody vault, which holds the rest of the backing and every fee not yet claimed.
   const pools = launches.map((l, i) => ({ l, i })).filter(({ i }) => graduated[i])
-  const backing = await api.multiCall({
-    abi: abi.execute,
-    calls: pools.map(({ l, i }) => ({ target: l.hook, params: [poolIds[i], BACKING_ETH] })),
-    permitFailure: true,
-  })
-  pools.forEach(({ i }, j) => { if (backing[j]) addQuote(api, quotes[i], BigInt(backing[j])) })
+  const states = await api.multiCall({ abi: abi.poolState, calls: pools.map(({ l, i }) => ({ target: l.hook, params: [poolIds[i]] })) })
+  for (const [j, { l, i }] of pools.entries()) {
+    const quoteIsCurrency1 = BigInt(quotes[i]) > BigInt(l.token)
+    addQuote(api, quotes[i], await poolQuote(api, poolIds[i], quoteIsCurrency1))
+    held.push({ owner: states[j][CUSTODY_VAULT], quote: quotes[i] })
+  }
+
+  const native = held.filter((h) => String(h.quote).toLowerCase() === NATIVE)
+  const tokens = held.filter((h) => String(h.quote).toLowerCase() !== NATIVE)
+  if (native.length) {
+    const { output } = await sdk.api.eth.getBalances({ targets: native.map((h) => h.owner), chain: api.chain, block: api.block })
+    output.forEach(({ balance }) => addQuote(api, NATIVE, balance))
+  }
+  const tokenBalances = await api.multiCall({ abi: 'erc20:balanceOf', calls: tokens.map((h) => ({ target: h.quote, params: [h.owner] })) })
+  tokens.forEach((h, k) => addQuote(api, h.quote, tokenBalances[k]))
 }
 
-// Solana: the same two places, read from the floor_launch program's registry. Account offsets include the 8-byte
+// Solana: the same places, read from the floor_launch program's registry. Account offsets include the 8-byte
 // discriminator. `SOLANA_QUOTES`: the SPL quote assets FLOOR lists on Solana, besides wSOL.
 const FLOOR_LAUNCH = new PublicKey('8vfdPWfaA3b9GtJoFUwc36JKDaMfVCJ4oT9HrCrQ6Tdi')
 const WSOL = ADDRESSES.solana.SOL
@@ -106,7 +188,7 @@ async function solanaTvl(api) {
   const allowed = new Set([WSOL, ...SOLANA_QUOTES])
   const solOwners = []
   const tokenAccounts = []
-  const floorPools = []
+  const amms = []
   launches.forEach((l, i) => {
     if (!l) return
     const raw = key(l.data, 8 + 400) // Launch.quote_mint, all zeros on a wSOL launch
@@ -115,21 +197,27 @@ async function solanaTvl(api) {
     // While selling: SOL in the launch's ["sale_vault", launch], an SPL quote in its quote vault.
     solOwners.push(pda([Buffer.from('sale_vault'), launchKeys[i].toBuffer()]).toBase58())
     tokenAccounts.push(key(l.data, 8 + 232).toBase58()) // Launch.wsol_vault
-    floorPools.push({ address: key(l.data, 8 + 168), quote }) // Launch.floor_pool
+    amms.push({ address: key(l.data, 8 + 136), quote }) // Launch.amm_pool
   })
 
-  // Once graduated: FloorPool.vault_eth + bid_eth_deployed, the pool's backing in raw quote units.
-  const pools = await getMultipleAccounts(floorPools.map((p) => p.address))
+  // Once graduated: the Carpenter pool's quote vault holds every position's quote (the bid, the protocol-owned liquidity,
+  // the cushion) and the hook's claims (the pool's vault and every fee owed but not yet claimed). Carpenter's own
+  // protocol fees owed in that vault are not FLOOR's and are left out.
+  const pools = await getMultipleAccounts(amms.map((a) => a.address))
   pools.forEach((p, i) => {
-    if (p) api.add(floorPools[i].quote, p.data.readBigUInt64LE(8 + 256) + p.data.readBigUInt64LE(8 + 264))
+    if (!p) return
+    const quoteIs0 = key(p.data, 8 + 24).toBase58() === amms[i].quote // Pool.mint0
+    tokenAccounts.push(key(p.data, 8 + (quoteIs0 ? 152 : 184)).toBase58()) // Pool.vault0 / vault1
+    api.add(amms[i].quote, -p.data.readBigUInt64LE(8 + (quoteIs0 ? 344 : 352))) // Pool.protocol_fees_owed0 / 1
   })
 
   return sumTokens2({ api, solOwners, tokenAccounts, allowError: true })
 }
 
 module.exports = {
-  methodology: 'TVL is the quote asset FLOOR holds for its launches quoted in the chain\'s native asset or a quote asset FLOOR lists: the raise held by each sale until it sells out, then each graduated pool\'s backing (its vault plus the deployed bid). Launch tokens are not counted.',
-  // A graduated launch's bid is a Uniswap v4 position on the EVM chains, so Uniswap v4's TVL counts it too.
+  methodology: 'TVL is the quote asset FLOOR holds for its launches quoted in the chain\'s native asset or a quote asset FLOOR lists: the raise held by each sale until it sells out; then, for each graduated launch, the quote in its pool\'s liquidity (the bid, the protocol-owned liquidity and the cushion) and in its custody (the vault and every fee owed but not yet claimed). Launch tokens are not counted.',
+  // A graduated launch's liquidity sits in a Uniswap v4 pool on the EVM chains and in a Carpenter pool on Solana, which
+  // those protocols count too.
   doublecounted: true,
   solana: { tvl: solanaTvl },
 }

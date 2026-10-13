@@ -141,9 +141,11 @@ const fetch = async (options: FetchOptions) => {
       const quoteIsInput = r.zero_for_one === quoteIs0;
       dailyVolume.add(l.quote, quoteIsInput ? r.amount_in : r.amount_out, 'Pool swaps');
       // The LP fee is charged on the input: the quote on a buy; on a sell the token, stated in the quote at the swap's rate.
+      // Every position in a FLOOR pool is FLOOR's own (the protocol-owned liquidity, the bid, the cushion, the steps), so
+      // the LP fee goes into the pool's backing. Carpenter's own protocol fee is not in it (Carpenter's adapter counts it).
       const lp = BigInt(r.lp_fee);
       const lpQuote = quoteIsInput ? lp : BigInt(r.amount_in) > lp ? (BigInt(r.amount_out) * lp) / (BigInt(r.amount_in) - lp) : 0n;
-      book(l.quote, lpQuote, 'LP fees', 'supply');
+      book(l.quote, lpQuote, 'LP fees: backing', 'holders');
       const skim = BigInt(r.skim), cut = BigInt(r.platform);
       book(l.quote, cut, 'Floor skim: FLOOR\'s cut', 'protocol');
       book(l.quote, skim - cut, 'Floor skim: backing', 'holders');
@@ -172,10 +174,10 @@ const adapter: SimpleAdapter = {
   methodology: {
     Fees: "On each FLOOR launch's Carpenter pool, the hook's take from carpenter_amm's Swapped events (skim, creator fee, holder fee, FLOOR Platform fee) and the LP fee; on the sale, the team buy's FLOOR Platform fee. The sale's other buys and sell-backs log no fee of their own and are not counted. Carpenter's own protocol fee is Carpenter's.",
     UserFees: "The same as Fees: every fee is paid by the trader.",
-    Revenue: "The FLOOR Platform fee, the skim and the holder fee.",
+    Revenue: "The FLOOR Platform fee, the skim, the holder fee and the LP fee (every position in a FLOOR pool is FLOOR's own).",
     ProtocolRevenue: "The FLOOR Platform fee, and FLOOR's cut of the skim.",
-    HoldersRevenue: "The holder fee, and the rest of the skim, which goes into the pool's backing.",
-    SupplySideRevenue: "The creator fee and the LP fee.",
+    HoldersRevenue: "The holder fee, the rest of the skim and the LP fee, which go into the pool's backing.",
+    SupplySideRevenue: "The creator fee.",
     Volume: "Every trade on a FLOOR launch quoted in wSOL or a quote asset FLOOR lists, in that asset: buys and sell-backs on each launch's sale (the team's included), then the quote side of every swap on its Carpenter pool.",
   },
   breakdownMethodology: {
@@ -185,7 +187,7 @@ const adapter: SimpleAdapter = {
       'Floor skim: FLOOR\'s cut': 'Swapped fee split `platform` (inside the skim).',
       'Creator fees': 'Swapped fee split `creator`.',
       'Holder fees': 'Swapped fee split `holder`.',
-      'LP fees': 'Swapped lp_fee_total (the input); on a sell, stated in the quote at the swap\'s rate.',
+      'LP fees: backing': 'Swapped lp_fee_total (the input; on a sell, stated in the quote at the swap\'s rate): the LP fee of FLOOR\'s own positions, which goes into the pool\'s backing.',
     },
     Volume: {
       'Sale buys': 'floor_launch Bought.cost, and TeamBought.cost + fee.',
