@@ -157,7 +157,7 @@ Uniswap v4's swap ported from v4-core with the hook's fees around it. Checked ag
 | DefiLlama | Volume, fees, revenue (EVM; Solana through Dune) | [`integrations/defillama/dimension-adapters`](../integrations/defillama/dimension-adapters) |
 | KyberSwap | The FLOOR hook for `kyberswap-dex-lib` | [`integrations/kyberswap`](../integrations/kyberswap) |
 | Velora | FLOOR hook pools in `paraswap-dex-lib` (Base, BSC) | [`integrations/velora`](../integrations/velora) |
-| Jupiter | Carpenter pools, FLOOR's hook included | [carpenter-sdk `jupiter/`](https://github.com/gudtekdonkey/carpenter-sdk/tree/main/jupiter) |
+| Jupiter | Carpenter pools, FLOOR's hook included; FLOOR's bonding sales (`floor-sale-amm`) | [carpenter-sdk `jupiter/`](https://github.com/gudtekdonkey/carpenter-sdk/tree/main/jupiter), [`jupiter/`](../jupiter) |
 | GeckoTerminal, DEX Screener | FLOOR's public DEX endpoint | above |
 
 The DefiLlama adapters were checked against each pool's own on-chain counters in `poolState`: pool volume equals
