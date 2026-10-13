@@ -13,7 +13,8 @@ while the version is `0.x`, a minor release may change the API.
 - `integrations/velora`: FLOOR hook pools in Velora's `paraswap-dex-lib` for Base and BSC.
 - `integrations/kyberswap`: the FLOOR hook for KyberSwap's `kyberswap-dex-lib`, tested against the same V4Quoter fixtures.
 - `@floor/sdk-evm`: `simulateSwap` and `readSwapSnapshot`, an off-chain simulator of a swap on a FLOOR pool (Uniswap v4's
-  swap with the FLOOR hook's fees), tested against Uniswap's V4Quoter on pools created on a fork of Base.
+  swap with the FLOOR hook's fees), tested against Uniswap's V4Quoter on pools created on a fork of Base and on the live
+  graduated pools of Ethereum, BSC, Base, Robinhood Chain and Arc (`scripts/live-parity.mts`).
 - `@floor/sdk-evm`: event decoders (`decodeFloorLog`, `decodeFloorLogs`, `floorEventTopics`, `FLOOR_EVENTS`).
 - `@floor/sdk-evm`: each mainnet deployment row carries `singletonHook`, `upgradeTimelock` and `platformTreasury`.
 - `docs/evm-events.md`: how FLOOR's EVM events become launches, pools, trades, the floor and candles.

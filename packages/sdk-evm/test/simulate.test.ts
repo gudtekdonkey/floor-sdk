@@ -4,8 +4,9 @@ import { describe, expect, it } from 'vitest';
 import { MAX_SQRT, MAX_TICK, MIN_SQRT, MIN_TICK, sqrtPriceAtTick } from '../src/pool.js';
 import { computeSwapStepExactIn, getTickAtSqrtPrice, simulateSwap, type SwapSnapshot } from '../src/simulate.js';
 
-// Each fixture: a FLOOR pool created and graduated on a fork of the chain, read at several states, with what Uniswap's
-// V4Quoter answered for each swap at that block (`null` = the quoter reverted). Recorded by `scripts/fork-parity.mts`.
+// Each fixture: a FLOOR pool read at one or more states, with what Uniswap's V4Quoter answered for each swap at that block
+// (`null` = the quoter reverted). `base-*.json`: pools created and graduated on a fork of Base, at several states, recorded by
+// `scripts/fork-parity.mts`. `live-*.json`: each chain's live graduated pools, recorded by `scripts/live-parity.mts`.
 const DIR = join(__dirname, 'fixtures', 'simulate');
 type Fixture = { chainId: number; label: string; quote: string; cases: { state: string; block: string; snapshot: any; expected: { side: 'buy' | 'sell'; amountIn: string; amountOut: string | null }[] }[] };
 const fixtures: Fixture[] = readdirSync(DIR).filter((f) => f.endsWith('.json')).map((f) => JSON.parse(readFileSync(join(DIR, f), 'utf8')));
@@ -23,7 +24,7 @@ function snapshotOf(j: any): SwapSnapshot {
   };
 }
 
-describe('simulateSwap against the V4Quoter (recorded on a fork)', () => {
+describe('simulateSwap against the V4Quoter (recorded on a fork and on live pools)', () => {
   it('has fixtures for a native quote and for an ERC-20 quote on each side of the pool', () => {
     const orientations = new Set(fixtures.flatMap((f) => f.cases.map((c) => `${BigInt(f.quote) === 0n ? 'native' : 'erc20'}:${c.snapshot.quoteIsCurrency1}`)));
     expect([...orientations].sort()).toEqual(['erc20:false', 'erc20:true', 'native:false']);

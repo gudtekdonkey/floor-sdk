@@ -76,15 +76,16 @@ tick spacing 60, and the hook sets the LP fee to 2,500 pips on every swap.
 
 | Test | Result |
 |---|---|
-| `floor-hook.test.ts` (unit, no RPC) | **38 / 38 pass** |
+| `floor-hook.test.ts` (unit, no RPC) | **40 / 40 pass** |
 | `floor-hook-events.test.ts` (RPC: BSC archive) | **17 / 17 pass** |
 | `floor-hook-integration.test.ts` (RPC), BSC | **3 / 3 pass** |
-| `floor-hook-integration.test.ts` (RPC), Base | not run: Base has no FLOOR launch yet (`registry.count() == 0`), so "lists FLOOR pools" would fail |
+| `floor-hook-integration.test.ts` (RPC), Base | **3 / 3 pass** (Base's first launch) |
 | `pnpm tsc` (whole repo), `eslint` (all of `src`), `prettier --check` (touched files) | clean |
 
 **`floor-hook.test.ts`**
-- It replays every one of the 270 V4Quoter answers in the three fixtures through `uniswapV4PoolMath.queryOutputs` plus
-  the hook, all wei-exact. The fixtures cover a native quote and USDC on either side, across six pool states each.
+- It replays every one of the 310 V4Quoter answers in the five fixtures through `uniswapV4PoolMath.queryOutputs` plus
+  the hook, all wei-exact. Three fixtures come from a fork of Base and cover a native quote and USDC on either side,
+  across six pool states each; two are the live graduated pools on Base and BSC, read at one block, 20 sizes each.
   `amountOut: null` (the quoter reverted) is expected as 0.
 - Unit tests cover the skim ramp (buy and sell, both slopes, the flat sell), the gap skim (no cushion, at or under
   2,232, the linear ramp, the full 1.5× from 5,109, the 1,500 cap), per-fee rounding, the engine frame, the LP-fee

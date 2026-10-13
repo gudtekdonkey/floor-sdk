@@ -118,9 +118,12 @@ createEvmAdapter({ chains: [31337], rpcUrls: { 31337: 'http://127.0.0.1:8545' },
   `simulateSwap(snapshot, side, amountIn)` gives the exact output and its fee parts with no network: Uniswap v4's swap,
   ported from v4-core, with the FLOOR hook's fees around it (exact input only; on a buy the hook's fees come off the quote
   paid in at the pre-swap price's skim, on a sell off the quote paid out at the post-swap price's). Tested against the
-  V4Quoter on pools created on a fork of Base, a native and an ERC-20 quote on each side of the pool, at six pool states
-  (`test/fixtures/simulate/`, re-recorded with `scripts/fork-parity.mts`): every amount equal to the wei. Re-read the
-  snapshot after any swap; `reachedBand` marks a sell after which the hook re-places its bid.
+  V4Quoter, every amount equal to the wei, two ways (`test/fixtures/simulate/`): on pools created on a fork of Base, a
+  native and an ERC-20 quote on each side of the pool, at six pool states (`scripts/fork-parity.mts`); and on the live
+  graduated pools of Ethereum, BSC, Base, Robinhood Chain and Arc (Arc's quote is its 18-decimal native USDC), read at one
+  block each (`scripts/live-parity.mts`, which also re-records their fixtures). Not yet met on a pool: a non-zero Uniswap
+  protocol fee (none of these pools has one; the unit tests cover it). Re-read the snapshot after any swap; `reachedBand`
+  marks a sell after which the hook re-places its bid.
 - **Events** (`events.ts`): `decodeFloorLog` / `decodeFloorLogs` decode any log of any contract whose ABI is here, by its
   first topic (`FLOOR_EVENTS`, one layout per selector), and refuse a log whose topics or data do not fit the layout.
   `floorEventTopics(name)` gives an event's selectors for an `eth_getLogs` filter. The twin of `@floor/sdk-solana`'s

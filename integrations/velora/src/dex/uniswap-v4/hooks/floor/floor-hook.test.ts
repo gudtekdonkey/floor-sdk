@@ -24,8 +24,9 @@ import { FloorHookState, FloorPoolHookState, FloorPoolRates } from './types';
 import FloorHookABI from '../../../../abi/uniswap-v4/hooks/floor/floor-hook.abi.json';
 import UniswapV4PoolManagerABI from '../../../../abi/uniswap-v4/pool-manager.abi.json';
 
-// Snapshots of FLOOR pools recorded on a fork of Base, with Uniswap's
-// V4Quoter answer for each swap (amountOut null: the quoter reverted)
+// Snapshots of FLOOR pools, with Uniswap's V4Quoter answer for each swap
+// (amountOut null: the quoter reverted): base-*.json recorded on a fork of
+// Base at six pool states, live-*.json the live Base and BSC pools.
 type FixtureCase = {
   state: string;
   block: string;
@@ -189,7 +190,7 @@ describe('FloorHook', () => {
         (n, f) => n + f.cases.reduce((m, c) => m + c.expected.length, 0),
         0,
       ),
-    ).toBe(270);
+    ).toBe(310);
   });
 
   describe('replays the V4Quoter through UniswapV4 pool math', () => {

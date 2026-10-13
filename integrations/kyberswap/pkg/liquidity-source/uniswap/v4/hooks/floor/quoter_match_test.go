@@ -21,12 +21,14 @@ import (
 )
 
 // The simulator must agree with Uniswap's V4Quoter (Base 0x0d5e0F971ED27FBfF6c2837bf31316121532048D, which runs the
-// real SingletonFloorHook through PoolManager.unlock) to the wei. Each testdata file is one Cook launch created,
+// real SingletonFloorHook through PoolManager.unlock) to the wei. Each base-*.json file is one Cook launch created,
 // sold out and graduated on a fork of Base, read at six pool states (fresh, after a 3 ETH buy, after a ratchet, after
 // a big buy above the cushion, after selling half the bag, after a deep sell into the bid): the PoolManager's slot0,
 // liquidity, every tick bitmap word and every initialised tick's liquidityNet (StateView), the hook's poolState(id)
 // and stairs(), and the quoter's answer for 15 buy and sell sizes (null: the quoter reverted). Three layouts: native
-// ETH at currency0, USDC at currency0, USDC at currency1. 270 quotes in all.
+// ETH at currency0, USDC at currency0, USDC at currency1. 270 quotes in all. The live-*.json files are each chain's live
+// graduated FLOOR pool (Ethereum, BSC, Robinhood Chain, Arc, Base; native quote), read at one block with the quoter's
+// answer for 20 sizes at that block, 100 quotes in all; Arc's quote is its native USDC.
 // Pure fixtures, no network: these run in CI.
 
 const (
@@ -98,11 +100,11 @@ type fixture struct {
 	Cases   []fixtureCase `json:"cases"`
 }
 
-func loadFixtures(t *testing.T) []fixture {
+func loadFixtures(t *testing.T, pattern string, n int) []fixture {
 	t.Helper()
-	files, err := filepath.Glob("testdata/*.json")
+	files, err := filepath.Glob(pattern)
 	require.NoError(t, err)
-	require.Len(t, files, 3)
+	require.Len(t, files, n)
 	fixtures := make([]fixture, 0, len(files))
 	for _, f := range files {
 		raw, err := os.ReadFile(f)
@@ -261,23 +263,42 @@ func quoteOf(sim *uniswapv4.PoolSimulator, e *expectedQuote, token, quote string
 // checkCase asserts every quote of a state; zero is what the quoter answers for a dust buy the fees eat whole, and a
 // zero-output quote is an error here, as for every source. It returns how many quotes matched an amount, how many
 // were refused as the quoter refused them, and how many were dust.
-func checkCase(t *testing.T, sim *uniswapv4.PoolSimulator, c *fixtureCase, token, quote string) (matched, refused, dust int) {
+//
+// On Arc the library names native USDC by its wrapped entry, the 6-decimal ERC-20 interface over the same balance, and
+// the v4 simulator scales a native leg by 1e12 on the way in and out (valueobject.WrapNativeAmount). The fixtures are in
+// the chain's own units (18 decimals), so a native input is given in the wrapped unit, a native output compared after
+// the same rounding down, and a native input the wrapped unit cannot express is skipped.
+func checkCase(t *testing.T, sim *uniswapv4.PoolSimulator, c *fixtureCase, chainID valueobject.ChainID, nativeQuote bool,
+	token, quote string) (matched, refused, dust, skipped int) {
 	t.Helper()
 	for i := range c.Expected {
 		e := &c.Expected[i]
-		res, err := quoteOf(sim, e, token, quote, bi(t, e.AmountIn))
+		amountIn, want := bi(t, e.AmountIn), e.AmountOut
+		if nativeQuote && e.Side == "buy" {
+			wrapped := valueobject.WrapNativeAmount(chainID, amountIn)
+			if valueobject.UnwrapNativeAmount(chainID, wrapped).Cmp(amountIn) != 0 {
+				skipped++
+				continue
+			}
+			amountIn = wrapped
+		}
+		if nativeQuote && e.Side == "sell" && want != nil {
+			w := valueobject.WrapNativeAmount(chainID, bi(t, *want)).String()
+			want = &w
+		}
+		res, err := quoteOf(sim, e, token, quote, amountIn)
 		switch {
-		case e.AmountOut == nil:
+		case want == nil:
 			assert.Error(t, err, "%s %s: the quoter reverted", e.Side, e.AmountIn)
 			refused++
-		case *e.AmountOut == "0":
+		case *want == "0":
 			if err == nil {
 				assert.Zero(t, res.TokenAmountOut.Amount.Sign(), "%s %s", e.Side, e.AmountIn)
 			}
 			dust++
 		default:
 			if assert.NoError(t, err, "%s %s", e.Side, e.AmountIn) {
-				assert.Equal(t, *e.AmountOut, res.TokenAmountOut.Amount.String(), "%s %s", e.Side, e.AmountIn)
+				assert.Equal(t, *want, res.TokenAmountOut.Amount.String(), "%s %s", e.Side, e.AmountIn)
 				assert.Zero(t, res.RemainingTokenAmountIn.Amount.Sign())
 				matched++
 			}
@@ -287,20 +308,23 @@ func checkCase(t *testing.T, sim *uniswapv4.PoolSimulator, c *fixtureCase, token
 }
 
 func TestQuoterMatch_Fixtures(t *testing.T) {
-	var matched, refused, dust int
-	for _, fx := range loadFixtures(t) {
+	var matched, refused, dust, skipped int
+	for _, fx := range loadFixtures(t, "testdata/*.json", 8) {
 		for i := range fx.Cases {
 			c := &fx.Cases[i]
 			t.Run(fx.Label+"/"+c.State, func(t *testing.T) {
 				sim, token, quote := newSim(t, &fx, c)
-				m, r, d := checkCase(t, sim, c, token, quote)
-				matched, refused, dust = matched+m, refused+r, dust+d
+				_, _, _, native := poolTokens(&fx, c.Snapshot.QuoteIsCurrency1)
+				m, r, d, k := checkCase(t, sim, c, valueobject.ChainID(fx.ChainID), native, token, quote)
+				matched, refused, dust, skipped = matched+m, refused+r, dust+d, skipped+k
 			})
 		}
 	}
-	t.Logf("quotes: %d matched to the wei, %d refused as the quoter refused, %d dust (quoter 0)", matched, refused, dust)
-	assert.Equal(t, 270, matched+refused+dust)
-	assert.Equal(t, 2, refused)
+	t.Logf("quotes: %d matched to the wei, %d refused as the quoter refused, %d dust (quoter 0), %d below Arc's wrapped unit",
+		matched, refused, dust, skipped)
+	assert.Equal(t, 370, matched+refused+dust+skipped)
+	assert.Equal(t, 3, refused)
+	assert.Equal(t, 2, skipped)
 }
 
 // The two buys between recorded states change only the price: no ratchet runs and no position moves. Swapping the
@@ -308,7 +332,7 @@ func TestQuoterMatch_Fixtures(t *testing.T) {
 // price, tick and liquidity, and quote every one of the later state's sizes exactly -- the hook's own view of the
 // tick, which the next buy's skim reads, moves with the pool.
 func TestQuoterMatch_BuysAppliedWithUpdateBalance(t *testing.T) {
-	for _, fx := range loadFixtures(t) {
+	for _, fx := range loadFixtures(t, "testdata/base-*.json", 3) {
 		for _, step := range []struct {
 			from, to         string
 			native, erc20Buy string
@@ -338,7 +362,9 @@ func TestQuoterMatch_BuysAppliedWithUpdateBalance(t *testing.T) {
 				assert.Equal(t, to.Snapshot.Pool.SqrtPriceX96, sim.V3Pool.SqrtRatioX96.Dec())
 				assert.Equal(t, to.Snapshot.Pool.Tick, sim.V3Pool.TickCurrent)
 				assert.Equal(t, to.Snapshot.Pool.Liquidity, sim.V3Pool.Liquidity.Dec())
-				m, r, d := checkCase(t, sim, to, token, quote)
+				_, _, _, native := poolTokens(&fx, to.Snapshot.QuoteIsCurrency1)
+				m, r, d, k := checkCase(t, sim, to, valueobject.ChainID(fx.ChainID), native, token, quote)
+				assert.Zero(t, k)
 				assert.Equal(t, len(to.Expected), m+r+d)
 			})
 		}
@@ -378,7 +404,7 @@ func TestQuoterMatch_SellIntoTheBandStopsQuoting(t *testing.T) {
 		})
 	}
 
-	for _, fx := range loadFixtures(t) {
+	for _, fx := range loadFixtures(t, "testdata/base-*.json", 3) {
 		t.Run(fx.Label, func(t *testing.T) {
 			c := caseNamed(t, &fx, "after a big buy above the cushion")
 			sim, token, quote := newSim(t, &fx, c)

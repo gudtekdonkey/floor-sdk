@@ -56,12 +56,15 @@ The patch also carries changes outside the plugin's folder:
 
 `go test ./pkg/liquidity-source/uniswap/v4/hooks/floor/` (go 1.25.10, the module's toolchain), `go vet` clean.
 
-- `quoter_match_test.go` replays FLOOR's recorded fixtures (from `packages/sdk-evm/test/fixtures/simulate/`): three
-  Cook launches on a fork of Base (native ETH at currency0, USDC at currency0, USDC at currency1), six pool states
-  each, 15 sizes per state, each with the V4Quoter's answer. Every quote goes through `uniswapv4.NewPoolSimulator`
-  with this hook registered, so it tests the integration, not a separate re-implementation. Of 270 quotes, 232 match
-  the quoter to the wei, the 2 the quoter reverted are refused, and 36 are dust the quoter answers with 0 (a zero
-  output is an error in the library, as for every source).
+- `quoter_match_test.go` replays FLOOR's recorded fixtures (from `packages/sdk-evm/test/fixtures/simulate/`), each
+  with the V4Quoter's answer: three Cook launches on a fork of Base (native ETH at currency0, USDC at currency0, USDC
+  at currency1), six pool states each, 15 sizes per state; and the live graduated pool on each of Ethereum, BSC,
+  Robinhood Chain, Arc and Base, read at one block, 20 sizes each. Every quote goes through
+  `uniswapv4.NewPoolSimulator` with this hook registered, so it tests the integration, not a separate
+  re-implementation. Of 370 quotes, 318 match the quoter to the wei, the 3 the quoter reverted are refused, 47 are
+  dust the quoter answers with 0 (a zero output is an error in the library, as for every source), and 2 are Arc buys
+  smaller than the library's unit for Arc's native USDC (it names native USDC by its 6-decimal wrapped entry and
+  scales by 1e12 inside the v4 simulator, so the test gives and compares Arc's native amounts in that unit).
 - The two buy steps between recorded states (a 3 ETH buy, then a 12 ETH buy after a ratchet) are applied with
   `UpdateBalance`: the simulator lands on the next state's exact price, tick and liquidity and quotes all its sizes
   exactly.
