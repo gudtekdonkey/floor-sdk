@@ -1,0 +1,4635 @@
+diff --git a/pkg/liquidity-source/uniswap/v3/math.go b/pkg/liquidity-source/uniswap/v3/math.go
+index f25ae22..33b3950 100644
+--- a/pkg/liquidity-source/uniswap/v3/math.go
++++ b/pkg/liquidity-source/uniswap/v3/math.go
+@@ -66,7 +66,9 @@ func NewPool(fee FeeAmount, sqrtRatioX96 uint256.Int, liquidity uint256.Int, tic
+ 		return nil, ErrInvalidSqrtRatioX96
+ 	} else if err = GetSqrtRatioAtTick(tickCurrent+1, &sqrtP); err != nil {
+ 		return nil, err
+-	} else if !sqrtRatioX96.Lt(&sqrtP) {
++	} else if sqrtRatioX96.Gt(&sqrtP) {
++		// The upper bound is inclusive, as in the SDK: a zeroForOne swap that ends exactly on an initialized tick T
++		// leaves the price at sqrtRatioAtTick(T) with tickCurrent = T-1.
+ 		return nil, ErrInvalidSqrtRatioX96
+ 	}
+ 	sqrtPrices := make([]uint256.Int, len(ticks))
+diff --git a/pkg/liquidity-source/uniswap/v3/math_test.go b/pkg/liquidity-source/uniswap/v3/math_test.go
+index 27bedea..d41a68c 100644
+--- a/pkg/liquidity-source/uniswap/v3/math_test.go
++++ b/pkg/liquidity-source/uniswap/v3/math_test.go
+@@ -146,6 +146,15 @@ func TestNewPool(t *testing.T) {
+ 	bad := *uint256.MustFromDecimal("1")
+ 	_, err = NewPool(FeeMedium, bad, liquidity, 0, ticks, 60)
+ 	require.ErrorIs(t, err, ErrInvalidSqrtRatioX96)
++
++	// a zeroForOne swap that stopped on tick 0 leaves the price at sqrtRatioAtTick(0) and the tick at -1
++	p, err = NewPool(FeeMedium, sqrtPrice, liquidity, -1, ticks, 60)
++	require.NoError(t, err)
++	require.Equal(t, -1, p.TickCurrent)
++	above := sqrtPrice
++	above.AddUint64(&above, 1)
++	_, err = NewPool(FeeMedium, above, liquidity, -1, ticks, 60)
++	require.ErrorIs(t, err, ErrInvalidSqrtRatioX96)
+ }
+ 
+ // ---------- GetOutputAmountV2 (exact input) ----------
+diff --git a/pkg/liquidity-source/uniswap/v4/hooks.go b/pkg/liquidity-source/uniswap/v4/hooks.go
+index 85bec75..4b7c779 100644
+--- a/pkg/liquidity-source/uniswap/v4/hooks.go
++++ b/pkg/liquidity-source/uniswap/v4/hooks.go
+@@ -68,6 +68,9 @@ type AfterSwapParams struct {
+ 	// BeforeSwapResult is this quote's BeforeSwap result (nil if the hook has none), so a hook can pass
+ 	// quote-scoped values to AfterSwap without writing its own state.
+ 	BeforeSwapResult *BeforeSwapResult
++	// PoolSwapInfo is the pool's own state after the swap (price, tick, liquidity, unspent input), before
++	// any hook delta, for hooks whose afterSwap reads the post-swap price.
++	PoolSwapInfo *PoolSwapInfo
+ }
+ 
+ type FeeAmount = uniswapv3.FeeAmount
+diff --git a/pkg/liquidity-source/uniswap/v4/hooks/floor/abi.go b/pkg/liquidity-source/uniswap/v4/hooks/floor/abi.go
+new file mode 100644
+index 0000000..ad5c4f7
+--- /dev/null
++++ b/pkg/liquidity-source/uniswap/v4/hooks/floor/abi.go
+@@ -0,0 +1,30 @@
++package floor
++
++import (
++	"bytes"
++
++	"github.com/ethereum/go-ethereum/accounts/abi"
++)
++
++var (
++	hookABI      abi.ABI // SingletonFloorHook: poolState, execute
++	poolViewsABI abi.ABI // the per-pool views reached through execute(poolId, data): stairs
++	stateViewABI abi.ABI // Uniswap v4 StateView: getSlot0
++)
++
++func init() {
++	for _, item := range []struct {
++		dst  *abi.ABI
++		json []byte
++	}{
++		{&hookABI, hookABIJson},
++		{&poolViewsABI, poolViewsABIJson},
++		{&stateViewABI, stateViewABIJson},
++	} {
++		parsed, err := abi.JSON(bytes.NewReader(item.json))
++		if err != nil {
++			panic(err)
++		}
++		*item.dst = parsed
++	}
++}
+diff --git a/pkg/liquidity-source/uniswap/v4/hooks/floor/abis/FloorPoolViews.json b/pkg/liquidity-source/uniswap/v4/hooks/floor/abis/FloorPoolViews.json
+new file mode 100644
+index 0000000..65d2c97
+--- /dev/null
++++ b/pkg/liquidity-source/uniswap/v4/hooks/floor/abis/FloorPoolViews.json
+@@ -0,0 +1,32 @@
++[
++  {
++    "type": "function", "name": "stairs", "stateMutability": "view",
++    "inputs": [],
++    "outputs": [{"name": "", "type": "tuple", "components": [
++      {"name": "next", "type": "uint8"},
++      {"name": "placed", "type": "bool"},
++      {"name": "base", "type": "int24"},
++      {"name": "tailCheap", "type": "int24"},
++      {"name": "tailLiq", "type": "uint128"},
++      {"name": "tailTokens", "type": "uint96"},
++      {"name": "relistLower", "type": "int24"},
++      {"name": "relistUpper", "type": "int24"},
++      {"name": "relistTokens", "type": "uint96"},
++      {"name": "relistLiq", "type": "uint128"},
++      {"name": "cushionLower", "type": "int24"},
++      {"name": "cushionUpper", "type": "int24"},
++      {"name": "cushionLiq", "type": "uint128"},
++      {"name": "cushionQuote", "type": "uint256"},
++      {"name": "cushionFed", "type": "uint256"},
++      {"name": "pending", "type": "uint256"},
++      {"name": "step", "type": "tuple[16]", "components": [{"name": "cheap", "type": "int24"}, {"name": "liq", "type": "uint128"}, {"name": "tokens", "type": "uint96"}]},
++      {"name": "boughtTokens", "type": "uint128"},
++      {"name": "boughtCost", "type": "uint128"},
++      {"name": "sweptQuote", "type": "uint256"},
++      {"name": "cushionFees", "type": "uint256"},
++      {"name": "cushionBasisTokens", "type": "uint128"},
++      {"name": "cushionBasisCost", "type": "uint128"},
++      {"name": "cushionInPool", "type": "uint256"}
++    ]}]
++  }
++]
+diff --git a/pkg/liquidity-source/uniswap/v4/hooks/floor/abis/SingletonFloorHook.json b/pkg/liquidity-source/uniswap/v4/hooks/floor/abis/SingletonFloorHook.json
+new file mode 100644
+index 0000000..c4ddc1d
+--- /dev/null
++++ b/pkg/liquidity-source/uniswap/v4/hooks/floor/abis/SingletonFloorHook.json
+@@ -0,0 +1,66 @@
++[
++  {
++    "type": "function", "name": "poolState", "stateMutability": "view",
++    "inputs": [{"name": "id", "type": "bytes32"}],
++    "outputs": [{"name": "", "type": "tuple", "components": [
++      {"name": "poolInitializer", "type": "address"},
++      {"name": "skimBuyFarBps", "type": "uint256"},
++      {"name": "skimSellFarBps", "type": "uint256"},
++      {"name": "poolKey", "type": "tuple", "components": [{"name": "currency0", "type": "address"}, {"name": "currency1", "type": "address"}, {"name": "fee", "type": "uint24"}, {"name": "tickSpacing", "type": "int24"}, {"name": "hooks", "type": "address"}]},
++      {"name": "poolBound", "type": "bool"},
++      {"name": "tickSpacing", "type": "int24"},
++      {"name": "vaultEth", "type": "uint256"},
++      {"name": "bidEthDeployed", "type": "uint256"},
++      {"name": "inventoryTokens", "type": "uint256"},
++      {"name": "floorTick", "type": "int24"},
++      {"name": "bidLower", "type": "int24"},
++      {"name": "bidLiquidity", "type": "uint128"},
++      {"name": "cumulativeVolumeEth", "type": "uint256"},
++      {"name": "unpaidSkim", "type": "uint256"},
++      {"name": "needsRatchet", "type": "bool"},
++      {"name": "wallShape", "type": "uint256"},
++      {"name": "seedLiq", "type": "uint128"},
++      {"name": "seedLower", "type": "int24"},
++      {"name": "seedUpper", "type": "int24"},
++      {"name": "seedFeesSweptEth", "type": "uint256"},
++      {"name": "seedFeesSweptTokens", "type": "uint256"},
++      {"name": "ladderUpper", "type": "int24"},
++      {"name": "ladderTokensRemaining", "type": "uint256"},
++      {"name": "ladderProceedsEth", "type": "uint256"},
++      {"name": "ladderSeeded", "type": "bool"},
++      {"name": "token", "type": "address"},
++      {"name": "platformVault", "type": "address"},
++      {"name": "platformPaidEth", "type": "uint256"},
++      {"name": "creatorSlotCount", "type": "uint256"},
++      {"name": "creatorBuyBps", "type": "uint256"},
++      {"name": "creatorSellBps", "type": "uint256"},
++      {"name": "creatorPendingMask", "type": "uint256"},
++      {"name": "recipientClaims", "type": "address"},
++      {"name": "creatorFeesOwed", "type": "uint256"},
++      {"name": "creatorFeesPaid", "type": "uint256"},
++      {"name": "holderRewards", "type": "address"},
++      {"name": "holderBuyBps", "type": "uint256"},
++      {"name": "holderSellBps", "type": "uint256"},
++      {"name": "holderPaidEth", "type": "uint256"},
++      {"name": "quoteToken", "type": "address"},
++      {"name": "quoteIsCurrency1", "type": "bool"},
++      {"name": "custodyVault", "type": "address"},
++      {"name": "skimBuyAtFloorBps", "type": "uint256"},
++      {"name": "skimSellAtFloorBps", "type": "uint256"},
++      {"name": "bidWidth", "type": "int24"},
++      {"name": "referrer", "type": "address"},
++      {"name": "referralFeesPaid", "type": "uint256"},
++      {"name": "quoteUnit", "type": "uint256"},
++      {"name": "holderOwedEth", "type": "uint256"},
++      {"name": "referralFeesOwed", "type": "uint256"},
++      {"name": "teamFeesOwed", "type": "uint256"},
++      {"name": "teamFeesPaid", "type": "uint256"},
++      {"name": "teamFeeBps", "type": "uint256"}
++    ]}]
++  },
++  {
++    "type": "function", "name": "execute", "stateMutability": "payable",
++    "inputs": [{"name": "id", "type": "bytes32"}, {"name": "data", "type": "bytes"}],
++    "outputs": [{"name": "", "type": "bytes"}]
++  }
++]
+diff --git a/pkg/liquidity-source/uniswap/v4/hooks/floor/abis/StateView.json b/pkg/liquidity-source/uniswap/v4/hooks/floor/abis/StateView.json
+new file mode 100644
+index 0000000..648db0b
+--- /dev/null
++++ b/pkg/liquidity-source/uniswap/v4/hooks/floor/abis/StateView.json
+@@ -0,0 +1,14 @@
++[
++  {
++    "type": "function",
++    "name": "getSlot0",
++    "stateMutability": "view",
++    "inputs": [{"name": "poolId", "type": "bytes32"}],
++    "outputs": [
++      {"name": "sqrtPriceX96", "type": "uint160"},
++      {"name": "tick", "type": "int24"},
++      {"name": "protocolFee", "type": "uint24"},
++      {"name": "lpFee", "type": "uint24"}
++    ]
++  }
++]
+diff --git a/pkg/liquidity-source/uniswap/v4/hooks/floor/constant.go b/pkg/liquidity-source/uniswap/v4/hooks/floor/constant.go
+new file mode 100644
+index 0000000..b2f3032
+--- /dev/null
++++ b/pkg/liquidity-source/uniswap/v4/hooks/floor/constant.go
+@@ -0,0 +1,50 @@
++package floor
++
++import (
++	"errors"
++
++	"github.com/ethereum/go-ethereum/common"
++)
++
++// HookAddresses is SingletonFloorHook, the one hook every FLOOR launch trades through once it graduates. It is
++// deployed at the same address on Ethereum, BSC, Base, Robinhood Chain and Arc.
++var HookAddresses = []common.Address{
++	common.HexToAddress("0xe44886ffe0a894c6C5900d77A51c7d49732C60Cc"),
++}
++
++const (
++	lpFeePips = 2_500 // SingletonFloorEngine.LP_FEE: the LP fee the hook overrides onto every swap (0.25%)
++
++	bidBandTicks  = 120    // FloorPolicy.BID_BAND_TICKS, before rounding up to the pool's spacing
++	skimRampTicks = 16_094 // SingletonFloorEngine.SKIM_RAMP_TICKS
++
++	gapSkimTicks     = 5_109  // FloorPolicy.STAIR_GAP_SKIM_TICKS: the full multiplier at and past this gap
++	gapSkimFromTicks = 2_232  // FloorPolicy.STAIR_GAP_SKIM_FROM_TICKS: no scaling at and under this gap
++	gapSkimMultBps   = 15_000 // FloorPolicy.STAIR_GAP_SKIM_MULT_BPS (1.5x)
++	gapSkimMaxBps    = 1_500  // FloorPolicy.STAIR_GAP_SKIM_MAX_BPS
++
++	maxPoolTeamFeeBps = 50     // FloorPolicy.MAX_POOL_TEAM_FEE_BPS
++	bpsDenominator    = 10_000 // every rate is in basis points of the quote leg
++
++	// Gas on top of the plain v4 swap (uniswapv4.DefaultGas). Every swap pays gasBeforeSwap (the engine
++	// delegatecall, the TWAP write, the trader-referral gate); the swap's quote leg pays gasTakeFees (one take into
++	// the pool's custody vault and the skim, creator, holder and platform bookings), in beforeSwap on a buy and in
++	// afterSwap on a sell. A native 0.1 ETH pool buy measures 387,230 gas in the hook's own suite. A sell that
++	// reaches the bid band re-places the bid inside the swap: gasBidReplace.
++	gasBeforeSwap = 60_000
++	gasTakeFees   = 200_000
++	gasBidReplace = 350_000
++)
++
++var (
++	ErrPoolNotTracked        = errors.New("floor: pool state not tracked")
++	ErrExactOutNotSupported  = errors.New("floor: exact output is not supported")
++	ErrBidReplacePending     = errors.New("floor: bid re-placed by an earlier swap, pool must be re-tracked")
++	ErrPartialFill           = errors.New("floor: pool cannot fill the whole input")
++	ErrInvalidPoolState      = errors.New("floor: invalid pool state")
++	ErrInvalidStairs         = errors.New("floor: invalid stairs answer")
++	ErrRateOutOfRange        = errors.New("floor: rate out of range")
++	ErrMissingPostSwapState  = errors.New("floor: post-swap pool state missing")
++	ErrFeeOverflow           = errors.New("floor: fee overflow")
++	ErrQuoteOrientationDiffs = errors.New("floor: quote orientation disagrees with the pool key")
++)
+diff --git a/pkg/liquidity-source/uniswap/v4/hooks/floor/embed.go b/pkg/liquidity-source/uniswap/v4/hooks/floor/embed.go
+new file mode 100644
+index 0000000..5e6ca67
+--- /dev/null
++++ b/pkg/liquidity-source/uniswap/v4/hooks/floor/embed.go
+@@ -0,0 +1,12 @@
++package floor
++
++import _ "embed"
++
++//go:embed abis/SingletonFloorHook.json
++var hookABIJson []byte
++
++//go:embed abis/FloorPoolViews.json
++var poolViewsABIJson []byte
++
++//go:embed abis/StateView.json
++var stateViewABIJson []byte
+diff --git a/pkg/liquidity-source/uniswap/v4/hooks/floor/hook.go b/pkg/liquidity-source/uniswap/v4/hooks/floor/hook.go
+new file mode 100644
+index 0000000..602235c
+--- /dev/null
++++ b/pkg/liquidity-source/uniswap/v4/hooks/floor/hook.go
+@@ -0,0 +1,288 @@
++// Package floor implements SingletonFloorHook (0xe44886ffe0a894c6C5900d77A51c7d49732C60Cc on Ethereum, BSC, Base,
++// Robinhood Chain and Arc), the one Uniswap v4 hook every graduated FLOOR launch trades through. Its pools carry the
++// dynamic-fee flag, spacing 60, and the hook overrides the LP fee to 0.25% on every swap.
++//
++//   - Exact input only: beforeSwap reverts ExactOutNotSupported on an exact-output swap.
++//   - Buy (quote in): beforeSwap takes skim + creator + holder + platform fee off the quote paid in, each
++//     floor(amountIn * bps / 10,000), the skim at the PRE-swap price (skimBpsAt) scaled by the cushion gap
++//     (gapSkimBps). The pool swaps what is left.
++//   - Sell (token in): the pool swaps; afterSwap takes the same four rates off the quote paid out, the skim at the
++//     POST-swap price, no gap scaling.
++//   - A sell that reaches the bid band re-places the bid inside the swap after the trader's amounts are settled: the
++//     quote is exact, but the pool changes in a way the tick math does not describe, so the hook refuses to quote
++//     the pool again until it is re-tracked (the re-place's ModifyLiquidity events trigger that).
++//
++// Everything the fee rule reads is per pool: the rates, floor and orientation from poolState(id), the cushion from
++// execute(id, stairs()), the protocol fee from StateView. All of it changes only in transactions that emit
++// PoolManager events for the pool, so the event-driven refresh keeps it current.
++package floor
++
++import (
++	"context"
++	"fmt"
++	"math/big"
++
++	"github.com/KyberNetwork/ethrpc"
++	"github.com/ethereum/go-ethereum/common"
++	"github.com/ethereum/go-ethereum/common/hexutil"
++	"github.com/goccy/go-json"
++	"github.com/holiman/uint256"
++
++	uniswapv4 "github.com/KyberNetwork/kyberswap-dex-lib/pkg/liquidity-source/uniswap/v4"
++	"github.com/KyberNetwork/kyberswap-dex-lib/pkg/util/bignumber"
++	"github.com/KyberNetwork/kyberswap-dex-lib/pkg/valueobject"
++)
++
++type Hook struct {
++	uniswapv4.Hook `json:"-"`
++	Extra
++
++	// tick is the pool's current raw tick: read from the pool's extra when the hook is built, moved by
++	// UpdateBalance. hasTick is false when the pool's extra carried none.
++	tick    int
++	hasTick bool
++	// bidReplaced is set by a simulated sell that reached the bid band: the state is stale from then on.
++	bidReplaced bool
++}
++
++var _ = uniswapv4.RegisterHooksFactory(func(param *uniswapv4.HookParam) uniswapv4.Hook {
++	h := &Hook{Hook: &uniswapv4.BaseHook{Exchange: valueobject.ExchangeUniswapV4Floor}}
++	_ = param.HookExtra.Unmarshal(&h.Extra)
++	if param.Pool != nil && param.Pool.Extra != "" {
++		var extra struct {
++			Tick *int `json:"tick"`
++		}
++		if err := json.Unmarshal([]byte(param.Pool.Extra), &extra); err == nil && extra.Tick != nil {
++			h.tick, h.hasTick = *extra.Tick, true
++		}
++	}
++	return h
++}, HookAddresses...)
++
++// Track reads poolState(id), the pool's stairs() through execute(id, ...) and the PoolManager's slot0 (for the
++// protocol fee) in one multicall, so all three come from one block.
++func (h *Hook) Track(ctx context.Context, param *uniswapv4.HookParam) (json.RawMessage, error) {
++	poolId := common.HexToHash(param.Pool.Address)
++	hookAddr := hexutil.Encode(param.HookAddress[:])
++	stairsCall, err := poolViewsABI.Pack("stairs")
++	if err != nil {
++		return nil, err
++	}
++
++	var state poolStateResp
++	var stairsRaw []byte
++	var slot0 slot0RPC
++	if _, err = param.RpcClient.NewRequest().SetContext(ctx).SetBlockNumber(param.BlockNumber).
++		SetOverrides(param.Overrides).
++		AddCall(&ethrpc.Call{ABI: hookABI, Target: hookAddr, Method: "poolState",
++			Params: []any{poolId}}, []any{&state}).
++		AddCall(&ethrpc.Call{ABI: hookABI, Target: hookAddr, Method: "execute",
++			Params: []any{poolId, stairsCall}}, []any{&stairsRaw}).
++		AddCall(&ethrpc.Call{ABI: stateViewABI, Target: param.Cfg.StateViewAddress, Method: "getSlot0",
++			Params: []any{poolId}}, []any{&slot0}).
++		Aggregate(); err != nil {
++		return nil, fmt.Errorf("failed to track floor pool: %w", err)
++	}
++
++	var stairs stairsResp
++	if err = unpackStairs(stairsRaw, &stairs); err != nil {
++		return nil, err
++	}
++	if h.Extra, err = extraFrom(&state.PoolState, &stairs.Stairs, &slot0); err != nil {
++		return nil, err
++	}
++	return json.Marshal(h.Extra)
++}
++
++// unpackStairs decodes the bytes execute returned for stairs().
++func unpackStairs(raw []byte, dst *stairsResp) error {
++	outputs := poolViewsABI.Methods["stairs"].Outputs
++	values, err := outputs.Unpack(raw)
++	if err == nil {
++		err = outputs.Copy(dst, values)
++	}
++	if err != nil {
++		return fmt.Errorf("%w: %v", ErrInvalidStairs, err)
++	}
++	return nil
++}
++
++// extraFrom keeps what the fee rule reads. A pool that is not bound yet (its launch has not graduated) keeps an
++// empty Extra, which BeforeSwap refuses to price: the pool holds no liquidity then anyway.
++func extraFrom(state *poolStateRPC, stairs *stairsRPC, slot0 *slot0RPC) (Extra, error) {
++	if !state.PoolBound {
++		return Extra{}, nil
++	}
++	tickSpacing, ok1 := int24Of(state.TickSpacing)
++	floorTick, ok2 := int24Of(state.FloorTick)
++	cushionLower, ok3 := int24Of(stairs.CushionLower)
++	if !ok1 || !ok2 || !ok3 || tickSpacing <= 0 || stairs.CushionLiq == nil ||
++		slot0.ProtocolFee == nil || !slot0.ProtocolFee.IsUint64() || slot0.ProtocolFee.Uint64() >= 1<<24 {
++		return Extra{}, ErrInvalidPoolState
++	}
++	if (state.QuoteToken == state.PoolKey.Currency1) != state.QuoteIsCurrency1 {
++		return Extra{}, ErrQuoteOrientationDiffs
++	}
++
++	var r Rates
++	for _, f := range []struct {
++		dst *uint16
++		v   *big.Int
++	}{
++		{&r.SkimBuyFar, state.SkimBuyFarBps}, {&r.SkimSellFar, state.SkimSellFarBps},
++		{&r.SkimBuyAtFloor, state.SkimBuyAtFloorBps}, {&r.SkimSellAtFloor, state.SkimSellAtFloorBps},
++		{&r.CreatorBuy, state.CreatorBuyBps}, {&r.CreatorSell, state.CreatorSellBps},
++		{&r.HolderBuy, state.HolderBuyBps}, {&r.HolderSell, state.HolderSellBps},
++		{&r.TeamFee, state.TeamFeeBps},
++	} {
++		if f.v == nil || !f.v.IsUint64() || f.v.Uint64() > bpsDenominator {
++			return Extra{}, ErrRateOutOfRange
++		}
++		*f.dst = uint16(f.v.Uint64())
++	}
++	// The most each side can take, at any price: a buy's skim is at most its larger endpoint or the gap skim's cap.
++	maxBuySkim := max(r.SkimBuyFar, r.SkimBuyAtFloor, gapSkimMaxBps)
++	maxSellSkim := max(r.SkimSellFar, r.SkimSellAtFloor)
++	if r.TeamFee > maxPoolTeamFeeBps ||
++		int(maxBuySkim)+int(r.CreatorBuy)+int(r.HolderBuy)+int(r.TeamFee) >= bpsDenominator ||
++		int(maxSellSkim)+int(r.CreatorSell)+int(r.HolderSell)+int(r.TeamFee) >= bpsDenominator {
++		return Extra{}, ErrRateOutOfRange
++	}
++
++	return Extra{
++		TickSpacing:      int32(tickSpacing),
++		QuoteIsCurrency1: state.QuoteIsCurrency1,
++		FloorTick:        int32(floorTick),
++		Rates:            r,
++		CushionLower:     int32(cushionLower),
++		HasCushion:       stairs.CushionLiq.Sign() != 0,
++		ProtocolFee:      uint32(slot0.ProtocolFee.Uint64()),
++	}, nil
++}
++
++func int24Of(v *big.Int) (int, bool) {
++	if v == nil || !v.IsInt64() || v.Int64() < -(1<<23) || v.Int64() >= 1<<23 {
++		return 0, false
++	}
++	return int(v.Int64()), true
++}
++
++func (h *Hook) ready() error {
++	if h.TickSpacing <= 0 || !h.hasTick {
++		return ErrPoolNotTracked
++	} else if h.bidReplaced {
++		return ErrBidReplacePending
++	}
++	return nil
++}
++
++// dearEdge is the bid band's dear edge in the engine frame (SingletonFloorEngine._dearEdge).
++func (h *Hook) dearEdge() int {
++	return int(h.FloorTick) - bandTicks(int(h.TickSpacing))
++}
++
++func (h *Hook) isBuy(zeroForOne bool) bool {
++	return zeroForOne != h.QuoteIsCurrency1
++}
++
++// BeforeSwap overrides the LP fee and, on a buy, takes the hook's four fees off the quote paid in, at the skim of
++// the pre-swap price.
++func (h *Hook) BeforeSwap(params *uniswapv4.BeforeSwapParams) (*uniswapv4.BeforeSwapResult, error) {
++	if !params.CalcOut {
++		return nil, ErrExactOutNotSupported
++	} else if err := h.ready(); err != nil {
++		return nil, err
++	} else if params.AmountSpecified == nil || params.AmountSpecified.Sign() <= 0 {
++		return nil, uniswapv4.ErrInvalidAmountIn
++	}
++
++	result := &uniswapv4.BeforeSwapResult{
++		DeltaSpecified:   bignumber.ZeroBI,
++		DeltaUnspecified: bignumber.ZeroBI,
++		SwapFee:          swapFee(h.ProtocolFee, params.ZeroForOne),
++		Gas:              gasBeforeSwap,
++		SwapInfo:         &SwapInfo{},
++	}
++	if !h.isBuy(params.ZeroForOne) {
++		return result, nil
++	}
++
++	var leg uint256.Int
++	if overflow := leg.SetFromBig(params.AmountSpecified); overflow {
++		return nil, ErrFeeOverflow
++	}
++	pre := marketTick(h.tick, h.QuoteIsCurrency1)
++	skim := gapSkimBps(skimBpsAt(true, h.dearEdge()-pre, &h.Rates), h.HasCushion, int(h.CushionLower), pre)
++	total, err := hookTakes(true, &leg, skim, &h.Rates)
++	if err != nil {
++		return nil, err
++	}
++	result.DeltaSpecified = total.ToBig()
++	result.Gas += gasTakeFees
++	return result, nil
++}
++
++// AfterSwap records the post-swap tick and, on a sell, takes the hook's four fees off the quote paid out, at the
++// skim of the post-swap price. The V4Quoter refuses a swap the pool cannot fill whole, and so does this hook.
++func (h *Hook) AfterSwap(params *uniswapv4.AfterSwapParams) (*uniswapv4.AfterSwapResult, error) {
++	if !params.CalcOut {
++		return nil, ErrExactOutNotSupported
++	}
++	post := params.PoolSwapInfo
++	if post == nil {
++		return nil, ErrMissingPostSwapState
++	} else if post.RemainingAmountIn != nil && !post.RemainingAmountIn.IsZero() {
++		return nil, ErrPartialFill
++	}
++	var info *SwapInfo
++	if params.BeforeSwapResult != nil {
++		info, _ = params.BeforeSwapResult.SwapInfo.(*SwapInfo)
++	}
++	if info == nil {
++		return nil, ErrMissingPostSwapState
++	}
++	info.Tick = post.NextStateTickCurrent
++
++	if h.isBuy(params.ZeroForOne) {
++		return &uniswapv4.AfterSwapResult{HookFee: bignumber.ZeroBI}, nil
++	}
++
++	var leg uint256.Int
++	if params.AmountOut == nil || params.AmountOut.Sign() < 0 {
++		return nil, uniswapv4.ErrInvalidAmountOut
++	} else if overflow := leg.SetFromBig(params.AmountOut); overflow {
++		return nil, ErrFeeOverflow
++	}
++	postTick := marketTick(post.NextStateTickCurrent, h.QuoteIsCurrency1)
++	dearEdge := h.dearEdge()
++	total, err := hookTakes(false, &leg, skimBpsAt(false, dearEdge-postTick, &h.Rates), &h.Rates)
++	if err != nil {
++		return nil, err
++	}
++	gas := int64(gasTakeFees)
++	if postTick >= dearEdge {
++		info.BandReached = true
++		gas += gasBidReplace
++	}
++	return &uniswapv4.AfterSwapResult{HookFee: total.ToBig(), Gas: gas}, nil
++}
++
++func (h *Hook) CloneState() uniswapv4.Hook {
++	cloned := *h
++	return &cloned
++}
++
++// UpdateBalance moves the hook's view of the pool's tick. After a sell that reached the bid band the hook refuses
++// to quote until the pool is tracked again: the bid it re-placed is not in the simulated state.
++func (h *Hook) UpdateBalance(swapInfo any) {
++	info, ok := swapInfo.(*SwapInfo)
++	if !ok || info == nil {
++		return
++	}
++	h.tick = info.Tick
++	if info.BandReached {
++		h.bidReplaced = true
++	}
++}
++
++var _ uniswapv4.Hook = (*Hook)(nil)
+diff --git a/pkg/liquidity-source/uniswap/v4/hooks/floor/hook_test.go b/pkg/liquidity-source/uniswap/v4/hooks/floor/hook_test.go
+new file mode 100644
+index 0000000..f94585d
+--- /dev/null
++++ b/pkg/liquidity-source/uniswap/v4/hooks/floor/hook_test.go
+@@ -0,0 +1,304 @@
++package floor
++
++import (
++	"math/big"
++	"reflect"
++	"testing"
++
++	"github.com/ethereum/go-ethereum/common"
++	"github.com/goccy/go-json"
++	"github.com/holiman/uint256"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	"github.com/KyberNetwork/kyberswap-dex-lib/pkg/entity"
++	uniswapv4 "github.com/KyberNetwork/kyberswap-dex-lib/pkg/liquidity-source/uniswap/v4"
++	"github.com/KyberNetwork/kyberswap-dex-lib/pkg/valueobject"
++)
++
++// tracked is a USDC-at-currency1 pool as Track keeps it, with the pool's tick at -370540 (engine tick 370539).
++func tracked() *Hook {
++	h := &Hook{Hook: &uniswapv4.BaseHook{}, Extra: Extra{
++		TickSpacing: 60, QuoteIsCurrency1: true, FloorTick: 375660, Rates: testRates,
++		CushionLower: 375060, HasCushion: true,
++	}}
++	h.tick, h.hasTick = -370540, true
++	return h
++}
++
++// The registered factory rebuilds the hook from the tracked extra and the pool's tick, and the address's permission
++// bits select beforeSwap and afterSwap with both return deltas (0x20cc: beforeInitialize | beforeSwap | afterSwap |
++// beforeSwapReturnDelta | afterSwapReturnDelta).
++func TestFactory_RegisteredAndPermissions(t *testing.T) {
++	addr := common.HexToAddress("0xe44886ffe0a894c6C5900d77A51c7d49732C60Cc")
++	extra := tracked().Extra
++	hX, err := json.Marshal(extra)
++	require.NoError(t, err)
++	hook, ok := uniswapv4.GetHook(addr, &uniswapv4.HookParam{
++		HookExtra: uniswapv4.HookExtra(hX),
++		Pool:      &entity.Pool{Extra: `{"liquidity":1,"sqrtPriceX96":1,"tickSpacing":60,"tick":-370540,"ticks":[]}`},
++	})
++	require.True(t, ok)
++	h, isFloor := hook.(*Hook)
++	require.True(t, isFloor)
++	assert.Equal(t, extra, h.Extra)
++	assert.Equal(t, -370540, h.tick)
++	assert.True(t, h.hasTick)
++	assert.Equal(t, string(valueobject.ExchangeUniswapV4Floor), h.GetExchange())
++	assert.True(t, h.CanBeforeSwap(addr))
++	assert.True(t, h.CanAfterSwap(addr))
++
++	const (
++		beforeInitialize      = 1 << 13
++		beforeSwap            = 1 << 7
++		afterSwap             = 1 << 6
++		beforeSwapReturnDelta = 1 << 3
++		afterSwapReturnDelta  = 1 << 2
++	)
++	flags := (uint16(addr[18])<<8 | uint16(addr[19])) & 0x3fff
++	assert.Equal(t, uint16(beforeInitialize|beforeSwap|afterSwap|beforeSwapReturnDelta|afterSwapReturnDelta), flags)
++
++	// a pool whose extra carries no tick is never priced
++	hook, _ = uniswapv4.GetHook(addr, &uniswapv4.HookParam{HookExtra: uniswapv4.HookExtra(hX)})
++	_, err = hook.BeforeSwap(&uniswapv4.BeforeSwapParams{CalcOut: true, AmountSpecified: big.NewInt(1e6)})
++	assert.ErrorIs(t, err, ErrPoolNotTracked)
++}
++
++func TestBeforeSwap_Refusals(t *testing.T) {
++	h := tracked()
++	_, err := h.BeforeSwap(&uniswapv4.BeforeSwapParams{CalcOut: false, AmountSpecified: big.NewInt(1e6)})
++	assert.ErrorIs(t, err, ErrExactOutNotSupported, "the hook reverts ExactOutNotSupported")
++
++	_, err = (&Hook{Hook: &uniswapv4.BaseHook{}}).BeforeSwap(&uniswapv4.BeforeSwapParams{CalcOut: true,
++		AmountSpecified: big.NewInt(1e6)})
++	assert.ErrorIs(t, err, ErrPoolNotTracked)
++
++	_, err = h.BeforeSwap(&uniswapv4.BeforeSwapParams{CalcOut: true, AmountSpecified: big.NewInt(0)})
++	assert.ErrorIs(t, err, uniswapv4.ErrInvalidAmountIn)
++
++	h.bidReplaced = true
++	_, err = h.BeforeSwap(&uniswapv4.BeforeSwapParams{CalcOut: true, AmountSpecified: big.NewInt(1e6)})
++	assert.ErrorIs(t, err, ErrBidReplacePending)
++}
++
++// A buy (quote in; the quote is currency1, so oneForZero) takes its fees before the swap at the pre-swap skim; a sell
++// takes nothing before it. Both override the LP fee to 0.25%.
++func TestBeforeSwap_BuyTakesFeesSellDoesNot(t *testing.T) {
++	h := tracked()
++	amount := big.NewInt(1_000_000_000)
++
++	buy, err := h.BeforeSwap(&uniswapv4.BeforeSwapParams{CalcOut: true, ZeroForOne: false, AmountSpecified: amount})
++	require.NoError(t, err)
++	require.NoError(t, uniswapv4.ValidateBeforeSwapResult(buy))
++	// engine tick 370539, dear edge 375540: distance 5001, closeness 10000 - 3107 = 6893, skim 100 - 68 = 32;
++	// gap 375060 - 370539 = 4521: m = 10000 + 5000 * 2289 / 2877 = 13978, skim 32 * 13978 / 10000 = 44
++	assert.Equal(t, big.NewInt(1_000_000_000*(44+50+25+25)/10_000), buy.DeltaSpecified)
++	assert.Zero(t, buy.DeltaUnspecified.Sign())
++	assert.Equal(t, uniswapv4.FeeAmount(lpFeePips), buy.SwapFee)
++	assert.Equal(t, int64(gasBeforeSwap+gasTakeFees), buy.Gas)
++
++	sell, err := h.BeforeSwap(&uniswapv4.BeforeSwapParams{CalcOut: true, ZeroForOne: true, AmountSpecified: amount})
++	require.NoError(t, err)
++	assert.Zero(t, sell.DeltaSpecified.Sign())
++	assert.Equal(t, uniswapv4.FeeAmount(lpFeePips), sell.SwapFee)
++	assert.Equal(t, int64(gasBeforeSwap), sell.Gas)
++}
++
++func afterSwap(h *Hook, zeroForOne bool, amountOut int64, tick int, remaining uint64,
++) (*uniswapv4.AfterSwapResult, *SwapInfo, error) {
++	params := &uniswapv4.BeforeSwapParams{CalcOut: true, ZeroForOne: zeroForOne, AmountSpecified: big.NewInt(1e18)}
++	before, err := h.BeforeSwap(params)
++	if err != nil {
++		return nil, nil, err
++	}
++	res, err := h.AfterSwap(&uniswapv4.AfterSwapParams{
++		BeforeSwapParams: params,
++		AmountIn:         params.AmountSpecified,
++		AmountOut:        big.NewInt(amountOut),
++		BeforeSwapResult: before,
++		PoolSwapInfo: &uniswapv4.PoolSwapInfo{
++			RemainingAmountIn:     uint256.NewInt(remaining),
++			NextStateSqrtRatioX96: uint256.NewInt(1),
++			NextStateTickCurrent:  tick,
++		},
++	})
++	return res, before.SwapInfo.(*SwapInfo), err
++}
++
++// A sell takes its fees after the swap at the post-swap skim. One that ends in the bid band (engine tick at or past
++// the dear edge, 375540 here) is flagged and costs the bid re-place's gas; applying it stops the pool quoting.
++func TestAfterSwap_SellSkimAtThePostSwapPriceAndTheBand(t *testing.T) {
++	h := tracked()
++	// engine tick 370539 (raw -370540): distance 5001 from the dear edge, sell skim 100 + 400 * 6893 / 10000 = 375
++	res, info, err := afterSwap(h, true, 1_000_000_000, -370540, 0)
++	require.NoError(t, err)
++	assert.Equal(t, big.NewInt(1_000_000_000*(375+75+0+25)/10_000), res.HookFee)
++	assert.Equal(t, int64(gasTakeFees), res.Gas)
++	assert.Equal(t, SwapInfo{Tick: -370540}, *info)
++
++	// engine tick 375539 is one tick short of the band
++	_, info, err = afterSwap(h, true, 1_000_000_000, -375540, 0)
++	require.NoError(t, err)
++	assert.False(t, info.BandReached)
++
++	// engine tick 375540 is in it: the at-floor sell skim, 500
++	res, info, err = afterSwap(h, true, 1_000_000_000, -375541, 0)
++	require.NoError(t, err)
++	assert.Equal(t, big.NewInt(1_000_000_000*(500+75+0+25)/10_000), res.HookFee)
++	assert.Equal(t, int64(gasTakeFees+gasBidReplace), res.Gas)
++	assert.Equal(t, SwapInfo{Tick: -375541, BandReached: true}, *info)
++
++	cloned := h.CloneState().(*Hook)
++	cloned.UpdateBalance(info)
++	assert.Equal(t, -375541, cloned.tick)
++	_, err = cloned.BeforeSwap(&uniswapv4.BeforeSwapParams{CalcOut: true, AmountSpecified: big.NewInt(1e6)})
++	assert.ErrorIs(t, err, ErrBidReplacePending)
++	// the original is untouched
++	assert.Equal(t, -370540, h.tick)
++	assert.False(t, h.bidReplaced)
++
++	// a buy takes nothing after the swap, but its post-swap tick moves the hook's view of the pool
++	res, info, err = afterSwap(h, false, 1_000_000_000, -369000, 0)
++	require.NoError(t, err)
++	assert.Zero(t, res.HookFee.Sign())
++	h.UpdateBalance(info)
++	assert.Equal(t, -369000, h.tick)
++}
++
++// The V4Quoter refuses a swap the pool cannot fill whole; the buy's fees were taken on the whole input.
++func TestAfterSwap_PartialFillAndMissingStateRefused(t *testing.T) {
++	_, _, err := afterSwap(tracked(), false, 1, -369000, 1)
++	assert.ErrorIs(t, err, ErrPartialFill)
++
++	h := tracked()
++	_, err = h.AfterSwap(&uniswapv4.AfterSwapParams{
++		BeforeSwapParams: &uniswapv4.BeforeSwapParams{CalcOut: true}, AmountOut: big.NewInt(1),
++	})
++	assert.ErrorIs(t, err, ErrMissingPostSwapState)
++
++	_, err = h.AfterSwap(&uniswapv4.AfterSwapParams{BeforeSwapParams: &uniswapv4.BeforeSwapParams{CalcOut: false}})
++	assert.ErrorIs(t, err, ErrExactOutNotSupported)
++}
++
++// fill sets every nil *big.Int reachable in v to zero, so a decode target can be ABI-encoded.
++func fill(v reflect.Value) {
++	switch v.Kind() {
++	case reflect.Pointer:
++		if v.Type() == reflect.TypeOf(&big.Int{}) && v.IsNil() {
++			v.Set(reflect.ValueOf(new(big.Int)))
++		}
++	case reflect.Struct:
++		for i := 0; i < v.NumField(); i++ {
++			fill(v.Field(i))
++		}
++	case reflect.Array:
++		for i := 0; i < v.Len(); i++ {
++			fill(v.Index(i))
++		}
++	default:
++	}
++}
++
++// Track's answers, encoded in the contracts' own shapes (poolState's 57 words, execute's bytes around stairs()'s 71,
++// StateView's slot0), decode through the embedded ABIs exactly as ethrpc decodes them, and extraFrom keeps what the
++// fee rule reads.
++func TestTrack_DecodesTheContractsAnswers(t *testing.T) {
++	usdc := common.HexToAddress("0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913")
++	state := poolStateRPC{
++		PoolBound: true, TickSpacing: big.NewInt(60), FloorTick: big.NewInt(-1200),
++		SkimBuyFarBps: big.NewInt(200), SkimSellFarBps: big.NewInt(200), SkimSellAtFloorBps: big.NewInt(300),
++		CreatorBuyBps: big.NewInt(75), CreatorSellBps: big.NewInt(75), HolderSellBps: big.NewInt(10),
++		TeamFeeBps: big.NewInt(25), QuoteToken: usdc, QuoteIsCurrency1: true,
++	}
++	state.PoolKey.Currency0, state.PoolKey.Currency1 = common.HexToAddress("0x1111111111111111111111111111111111111111"), usdc
++	fill(reflect.ValueOf(&state).Elem())
++	stairs := stairsRPC{CushionLower: big.NewInt(-1860), CushionLiq: big.NewInt(42)}
++	stairs.Step[3].Cheap = big.NewInt(-7)
++	fill(reflect.ValueOf(&stairs).Elem())
++
++	stateData, err := hookABI.Methods["poolState"].Outputs.Pack(state)
++	require.NoError(t, err)
++	assert.Len(t, stateData, 57*32)
++	stairsData, err := poolViewsABI.Methods["stairs"].Outputs.Pack(stairs)
++	require.NoError(t, err)
++	assert.Len(t, stairsData, 71*32)
++	executeData, err := hookABI.Methods["execute"].Outputs.Pack(stairsData)
++	require.NoError(t, err)
++	slot0Data, err := stateViewABI.Methods["getSlot0"].Outputs.Pack(big.NewInt(1), big.NewInt(-5), big.NewInt(1000|300<<12),
++		big.NewInt(0))
++	require.NoError(t, err)
++
++	var gotState poolStateResp
++	require.NoError(t, hookABI.UnpackIntoInterface(&gotState, "poolState", stateData))
++	var raw []byte
++	require.NoError(t, hookABI.UnpackIntoInterface(&raw, "execute", executeData))
++	var gotStairs stairsResp
++	require.NoError(t, unpackStairs(raw, &gotStairs))
++	var slot0 slot0RPC
++	require.NoError(t, stateViewABI.UnpackIntoInterface(&slot0, "getSlot0", slot0Data))
++	assert.Equal(t, jsonOf(t, state), jsonOf(t, gotState.PoolState))
++	assert.Equal(t, jsonOf(t, stairs), jsonOf(t, gotStairs.Stairs))
++
++	extra, err := extraFrom(&gotState.PoolState, &gotStairs.Stairs, &slot0)
++	require.NoError(t, err)
++	assert.Equal(t, Extra{
++		TickSpacing: 60, QuoteIsCurrency1: true, FloorTick: -1200,
++		Rates:        Rates{SkimBuyFar: 200, SkimSellFar: 200, SkimSellAtFloor: 300, CreatorBuy: 75, CreatorSell: 75, HolderSell: 10, TeamFee: 25},
++		CushionLower: -1860, HasCushion: true, ProtocolFee: 1000 | 300<<12,
++	}, extra)
++
++	assert.ErrorIs(t, unpackStairs(stairsData[:10*32], &gotStairs), ErrInvalidStairs)
++}
++
++func jsonOf(t *testing.T, v any) string {
++	t.Helper()
++	b, err := json.Marshal(v)
++	require.NoError(t, err)
++	return string(b)
++}
++
++func TestExtraFrom_Refusals(t *testing.T) {
++	usdc := common.HexToAddress("0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913")
++	base := func() (poolStateRPC, stairsRPC, slot0RPC) {
++		s := poolStateRPC{PoolBound: true, TickSpacing: big.NewInt(60), FloorTick: big.NewInt(1200), QuoteToken: usdc,
++			SkimBuyFarBps: big.NewInt(200), SkimSellFarBps: big.NewInt(200), SkimSellAtFloorBps: big.NewInt(300),
++			TeamFeeBps: big.NewInt(25)}
++		s.PoolKey.Currency0 = usdc
++		fill(reflect.ValueOf(&s).Elem())
++		st := stairsRPC{}
++		fill(reflect.ValueOf(&st).Elem())
++		return s, st, slot0RPC{ProtocolFee: new(big.Int)}
++	}
++
++	s, st, s0 := base()
++	_, err := extraFrom(&s, &st, &s0)
++	require.NoError(t, err)
++
++	// a pool whose launch has not graduated is kept untracked, not refused
++	s.PoolBound = false
++	extra, err := extraFrom(&s, &st, &s0)
++	require.NoError(t, err)
++	assert.Equal(t, Extra{}, extra)
++
++	for name, mutate := range map[string]func(*poolStateRPC, *stairsRPC, *slot0RPC){
++		"no spacing":            func(s *poolStateRPC, _ *stairsRPC, _ *slot0RPC) { s.TickSpacing.SetInt64(0) },
++		"floor tick past int24": func(s *poolStateRPC, _ *stairsRPC, _ *slot0RPC) { s.FloorTick.SetInt64(1 << 23) },
++		"protocol fee past 24 bits": func(_ *poolStateRPC, _ *stairsRPC, s0 *slot0RPC) {
++			s0.ProtocolFee.SetInt64(1 << 24)
++		},
++		"orientation": func(s *poolStateRPC, _ *stairsRPC, _ *slot0RPC) { s.QuoteIsCurrency1 = true },
++		"rate past 100%": func(s *poolStateRPC, _ *stairsRPC, _ *slot0RPC) {
++			s.CreatorSellBps.SetInt64(10_001)
++		},
++		"platform fee past its cap": func(s *poolStateRPC, _ *stairsRPC, _ *slot0RPC) { s.TeamFeeBps.SetInt64(51) },
++		"sell takes sum to 100%": func(s *poolStateRPC, _ *stairsRPC, _ *slot0RPC) {
++			s.CreatorSellBps.SetInt64(5_000)
++			s.HolderSellBps.SetInt64(4_675)
++		},
++	} {
++		s, st, s0 := base()
++		mutate(&s, &st, &s0)
++		_, err := extraFrom(&s, &st, &s0)
++		assert.Error(t, err, name)
++	}
++}
+diff --git a/pkg/liquidity-source/uniswap/v4/hooks/floor/math.go b/pkg/liquidity-source/uniswap/v4/hooks/floor/math.go
+new file mode 100644
+index 0000000..5869798
+--- /dev/null
++++ b/pkg/liquidity-source/uniswap/v4/hooks/floor/math.go
+@@ -0,0 +1,101 @@
++package floor
++
++import (
++	"github.com/holiman/uint256"
++
++	uniswapv4 "github.com/KyberNetwork/kyberswap-dex-lib/pkg/liquidity-source/uniswap/v4"
++)
++
++// bandTicks mirrors SingletonFloorEngine._bandTicks: BID_BAND_TICKS rounded up to the pool's spacing (120 at 60).
++func bandTicks(tickSpacing int) int {
++	return (bidBandTicks + tickSpacing - 1) / tickSpacing * tickSpacing
++}
++
++// marketTick mirrors SingletonFloorEngine._market: the pool's raw tick in the engine frame. A quote at currency1 maps
++// to -tick - 1 (not -tick).
++func marketTick(rawTick int, quoteIsCurrency1 bool) int {
++	if quoteIsCurrency1 {
++		return -rawTick - 1
++	}
++	return rawTick
++}
++
++// skimBpsAt mirrors FloorHookMath.skimBps: the skim in bps at distance ticks from the bid band's dear edge
++// (dearEdge - current, engine frame). A buy ramps from its at-floor rate at the band to its far rate SKIM_RAMP_TICKS
++// away; a sell ramps from its at-floor rate down to its far rate, and is flat when its far rate is at or above its
++// at-floor rate.
++func skimBpsAt(isBuy bool, distance int, r *Rates) int {
++	closeness := 0
++	if distance <= 0 {
++		closeness = bpsDenominator
++	} else if distance < skimRampTicks {
++		closeness = bpsDenominator - distance*bpsDenominator/skimRampTicks
++	}
++	if isBuy {
++		far, at := int(r.SkimBuyFar), int(r.SkimBuyAtFloor)
++		if far >= at {
++			return far - (far-at)*closeness/bpsDenominator
++		}
++		return far + (at-far)*closeness/bpsDenominator
++	}
++	far, at := int(r.SkimSellFar), int(r.SkimSellAtFloor)
++	if far >= at {
++		return far
++	}
++	return far + (at-far)*closeness/bpsDenominator
++}
++
++// gapSkimBps mirrors SingletonFloorEngine._gapSkim (FloorPolicy.STAIR_GAP_SKIM = 2, the linear ramp): a buy's ramped
++// skim scaled by how far the price stands above the standing cushion's top, gap = cushionLower - current (engine
++// frame). Untouched at or under 2,232 ticks, 1.5x at and past 5,109, linear (floored) between; a scaled skim is
++// capped at 1,500 bps. No standing cushion: untouched.
++func gapSkimBps(bps int, hasCushion bool, cushionLower, current int) int {
++	if !hasCushion {
++		return bps
++	}
++	gap := cushionLower - current
++	var m int
++	if gap >= gapSkimTicks {
++		m = gapSkimMultBps
++	} else if gap > gapSkimFromTicks {
++		m = bpsDenominator + (gapSkimMultBps-bpsDenominator)*(gap-gapSkimFromTicks)/(gapSkimTicks-gapSkimFromTicks)
++	} else {
++		return bps
++	}
++	return min(bps*m/bpsDenominator, gapSkimMaxBps)
++}
++
++// hookTakes mirrors SingletonFloorEngine._takeFees: skim, creator fee, holder tax and platform fee, each
++// leg * bps / 10,000 rounded down, summed.
++func hookTakes(isBuy bool, leg *uint256.Int, skimBps int, r *Rates) (*uint256.Int, error) {
++	creator, holder := r.CreatorSell, r.HolderSell
++	if isBuy {
++		creator, holder = r.CreatorBuy, r.HolderBuy
++	}
++	var total, part, bps uint256.Int
++	for _, rate := range [4]uint64{uint64(skimBps), uint64(creator), uint64(holder), uint64(r.TeamFee)} {
++		if rate == 0 {
++			continue
++		}
++		bps.SetUint64(rate)
++		if _, overflow := part.MulOverflow(leg, &bps); overflow {
++			return nil, ErrFeeOverflow
++		}
++		part.Div(&part, uint256.NewInt(bpsDenominator))
++		total.Add(&total, &part)
++	}
++	return &total, nil
++}
++
++// swapFee is the fee the swap is charged in pips: the hook's LP fee override composed with the PoolManager's
++// protocol fee for the direction, as ProtocolFeeLibrary.calculateSwapFee does.
++func swapFee(protocolFee uint32, zeroForOne bool) uniswapv4.FeeAmount {
++	pf := protocolFee & 0xfff
++	if !zeroForOne {
++		pf = protocolFee >> 12 & 0xfff
++	}
++	if pf == 0 {
++		return lpFeePips
++	}
++	return uniswapv4.FeeAmount(pf + lpFeePips - pf*lpFeePips/uint32(uniswapv4.FeeMax))
++}
+diff --git a/pkg/liquidity-source/uniswap/v4/hooks/floor/math_test.go b/pkg/liquidity-source/uniswap/v4/hooks/floor/math_test.go
+new file mode 100644
+index 0000000..9375efa
+--- /dev/null
++++ b/pkg/liquidity-source/uniswap/v4/hooks/floor/math_test.go
+@@ -0,0 +1,105 @@
++package floor
++
++import (
++	"testing"
++
++	"github.com/holiman/uint256"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	uniswapv4 "github.com/KyberNetwork/kyberswap-dex-lib/pkg/liquidity-source/uniswap/v4"
++)
++
++var testRates = Rates{
++	SkimBuyFar: 100, SkimSellFar: 100, SkimBuyAtFloor: 0, SkimSellAtFloor: 500,
++	CreatorBuy: 50, CreatorSell: 75, HolderBuy: 25, HolderSell: 0, TeamFee: 25,
++}
++
++func TestMarketTickAndBand(t *testing.T) {
++	assert.Equal(t, -5, marketTick(-5, false))
++	assert.Equal(t, 4, marketTick(-5, true), "a currency1 quote maps -tick - 1, not -tick")
++	assert.Equal(t, 120, bandTicks(60))
++	assert.Equal(t, 200, bandTicks(100))
++	assert.Equal(t, 120, bandTicks(1))
++}
++
++// skimBpsAt must be FloorHookMath.skimBps at its corners and in between.
++func TestSkimBpsAt(t *testing.T) {
++	// at or inside the dear edge: the at-floor rate; at or past the ramp: the far rate
++	assert.Equal(t, 0, skimBpsAt(true, 0, &testRates))
++	assert.Equal(t, 0, skimBpsAt(true, -50, &testRates))
++	assert.Equal(t, 100, skimBpsAt(true, skimRampTicks, &testRates))
++	assert.Equal(t, 500, skimBpsAt(false, 0, &testRates))
++	assert.Equal(t, 100, skimBpsAt(false, skimRampTicks+1, &testRates))
++	// half way: closeness 10,000 - floor(8,047 * 10,000 / 16,094) = 5,000
++	assert.Equal(t, 50, skimBpsAt(true, 8047, &testRates))
++	assert.Equal(t, 300, skimBpsAt(false, 8047, &testRates))
++	// one tick into the ramp: closeness 10,000 - floor(10,000 / 16,094) = 10,000, still the at-floor rate
++	assert.Equal(t, 0, skimBpsAt(true, 1, &testRates))
++	assert.Equal(t, 500, skimBpsAt(false, 1, &testRates))
++	// a sell whose far rate is at or above its at-floor rate does not ramp
++	flat := testRates
++	flat.SkimSellAtFloor = 100
++	assert.Equal(t, 100, skimBpsAt(false, 0, &flat))
++	// a buy whose at-floor rate is above its far rate ramps the other way
++	inverted := testRates
++	inverted.SkimBuyAtFloor = 300
++	assert.Equal(t, 300, skimBpsAt(true, 0, &inverted))
++	assert.Equal(t, 200, skimBpsAt(true, 8047, &inverted))
++	assert.Equal(t, 100, skimBpsAt(true, skimRampTicks, &inverted))
++}
++
++// gapSkimBps must be SingletonFloorEngine._gapSkim: 1x to 2,232 ticks, a linear ramp to 1.5x at 5,109, capped at
++// 1,500 bps.
++func TestGapSkimBps(t *testing.T) {
++	const top = 10_000
++	at := func(bps, gap int) int { return gapSkimBps(bps, true, top, top-gap) }
++
++	// at and under 2,232 ticks: untouched, not even capped
++	for _, gap := range []int{-500, 0, 2_232} {
++		assert.Equal(t, []int{75, 100, 1_000, 1_600}, []int{at(75, gap), at(100, gap), at(1_000, gap), at(1_600, gap)})
++	}
++	// 2,233: m = 10,000 + floor(5,000 * 1 / 2,877) = 10,001, and a scaled skim is capped
++	assert.Equal(t, []int{1_000, 1_500}, []int{at(1_000, 2_233), at(1_600, 2_233)})
++	// half way, 3,670: m = 10,000 + floor(5,000 * 1,438 / 2,877) = 12,499
++	assert.Equal(t, []int{93, 124, 1_249}, []int{at(75, 3_670), at(100, 3_670), at(1_000, 3_670)})
++	// 5,108: m = 14,998; 5,109 and past: 15,000
++	assert.Equal(t, 1_499, at(1_000, 5_108))
++	for _, gap := range []int{5_109, 5_110, 20_000} {
++		assert.Equal(t, []int{112, 150, 1_500, 1_500}, []int{at(75, gap), at(100, gap), at(1_000, gap), at(1_001, gap)})
++	}
++	// no cushion standing: untouched, whatever its edge says; a zero ramp stays zero
++	assert.Equal(t, 1_000, gapSkimBps(1_000, false, top, top-20_000))
++	assert.Equal(t, 0, at(0, 20_000))
++}
++
++// hookTakes must be SingletonFloorEngine._takeFees: four rates off one leg, each rounded down, summed.
++func TestHookTakes(t *testing.T) {
++	total, err := hookTakes(true, uint256.NewInt(10_001), 100, &testRates)
++	require.NoError(t, err)
++	assert.Equal(t, uint64(100+50+25+25), total.Uint64())
++
++	// a sell takes the sell side's creator and holder rates
++	total, err = hookTakes(false, uint256.NewInt(10_001), 300, &testRates)
++	require.NoError(t, err)
++	assert.Equal(t, uint64(300+75+0+25), total.Uint64())
++
++	// each part rounds down on its own: 3 * floor(399 * 25 / 10,000) = 0, not floor(399 * 75 / 10,000) = 2
++	r := Rates{CreatorBuy: 25, HolderBuy: 25, TeamFee: 25}
++	total, err = hookTakes(true, uint256.NewInt(399), 0, &r)
++	require.NoError(t, err)
++	assert.Zero(t, total.Uint64())
++
++	_, err = hookTakes(true, new(uint256.Int).SetAllOne(), 1, &testRates)
++	assert.ErrorIs(t, err, ErrFeeOverflow)
++}
++
++// swapFee is the hook's 0.25% override composed with the PoolManager's protocol fee for the swap's direction, as
++// ProtocolFeeLibrary.calculateSwapFee: protocolFee + lpFee - protocolFee * lpFee / 1e6.
++func TestSwapFee(t *testing.T) {
++	assert.Equal(t, uniswapv4.FeeAmount(2_500), swapFee(0, true))
++	assert.Equal(t, uniswapv4.FeeAmount(2_500), swapFee(0, false))
++	const packed = 1_000 | 300<<12 // zeroForOne 0.1%, oneForZero 0.03%
++	assert.Equal(t, uniswapv4.FeeAmount(1_000+2_500-2), swapFee(packed, true))
++	assert.Equal(t, uniswapv4.FeeAmount(300+2_500-0), swapFee(packed, false))
++}
+diff --git a/pkg/liquidity-source/uniswap/v4/hooks/floor/quoter_match_test.go b/pkg/liquidity-source/uniswap/v4/hooks/floor/quoter_match_test.go
+new file mode 100644
+index 0000000..5c44cfb
+--- /dev/null
++++ b/pkg/liquidity-source/uniswap/v4/hooks/floor/quoter_match_test.go
+@@ -0,0 +1,415 @@
++package floor
++
++import (
++	"math/big"
++	"os"
++	"path/filepath"
++	"slices"
++	"strconv"
++	"testing"
++
++	"github.com/ethereum/go-ethereum/common"
++	"github.com/goccy/go-json"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	"github.com/KyberNetwork/kyberswap-dex-lib/pkg/entity"
++	uniswapv3 "github.com/KyberNetwork/kyberswap-dex-lib/pkg/liquidity-source/uniswap/v3"
++	uniswapv4 "github.com/KyberNetwork/kyberswap-dex-lib/pkg/liquidity-source/uniswap/v4"
++	poolpkg "github.com/KyberNetwork/kyberswap-dex-lib/pkg/source/pool"
++	"github.com/KyberNetwork/kyberswap-dex-lib/pkg/valueobject"
++)
++
++// The simulator must agree with Uniswap's V4Quoter (Base 0x0d5e0F971ED27FBfF6c2837bf31316121532048D, which runs the
++// real SingletonFloorHook through PoolManager.unlock) to the wei. Each testdata file is one Cook launch created,
++// sold out and graduated on a fork of Base, read at six pool states (fresh, after a 3 ETH buy, after a ratchet, after
++// a big buy above the cushion, after selling half the bag, after a deep sell into the bid): the PoolManager's slot0,
++// liquidity, every tick bitmap word and every initialised tick's liquidityNet (StateView), the hook's poolState(id)
++// and stairs(), and the quoter's answer for 15 buy and sell sizes (null: the quoter reverted). Three layouts: native
++// ETH at currency0, USDC at currency0, USDC at currency1. 270 quotes in all.
++// Pure fixtures, no network: these run in CI.
++
++const (
++	hookAddr = "0xe44886ffe0a894c6c5900d77a51c7d49732c60cc"
++	baseWETH = "0x4200000000000000000000000000000000000006"
++	// The launch token's address is not part of the snapshot and plays no part in pricing; these stand in for it,
++	// on the side of the quote the pool key puts it.
++	tokenBelowQuote = "0x1111111111111111111111111111111111111111"
++	tokenAboveQuote = "0xf111111111111111111111111111111111111111"
++)
++
++type pair struct {
++	K int
++	V string
++}
++
++func (p *pair) UnmarshalJSON(b []byte) error {
++	var raw [2]json.RawMessage
++	if err := json.Unmarshal(b, &raw); err != nil {
++		return err
++	}
++	if err := json.Unmarshal(raw[0], &p.K); err != nil {
++		return err
++	}
++	return json.Unmarshal(raw[1], &p.V)
++}
++
++type snapshot struct {
++	Pool struct {
++		SqrtPriceX96 string `json:"sqrtPriceX96"`
++		Tick         int    `json:"tick"`
++		Liquidity    string `json:"liquidity"`
++		TickSpacing  int    `json:"tickSpacing"`
++		ProtocolFee  uint32 `json:"protocolFee"`
++		Bitmap       []pair `json:"bitmap"`
++		LiquidityNet []pair `json:"liquidityNet"`
++	} `json:"pool"`
++	QuoteIsCurrency1 bool `json:"quoteIsCurrency1"`
++	FloorTick        int  `json:"floorTick"`
++	Rates            struct {
++		SkimBuyFarBps, SkimSellFarBps, SkimBuyAtFloorBps, SkimSellAtFloorBps   int64
++		CreatorBuyBps, CreatorSellBps, HolderBuyBps, HolderSellBps, TeamFeeBps int64
++	} `json:"rates"`
++	Cushion struct {
++		CushionLower int    `json:"cushionLower"`
++		CushionLiq   string `json:"cushionLiq"`
++	} `json:"cushion"`
++	GapSkim bool `json:"gapSkim"`
++}
++
++type expectedQuote struct {
++	Side      string  `json:"side"`
++	AmountIn  string  `json:"amountIn"`
++	AmountOut *string `json:"amountOut"`
++}
++
++type fixtureCase struct {
++	State    string          `json:"state"`
++	Block    string          `json:"block"`
++	PoolID   string          `json:"poolId"`
++	Snapshot snapshot        `json:"snapshot"`
++	Expected []expectedQuote `json:"expected"`
++}
++
++type fixture struct {
++	ChainID int           `json:"chainId"`
++	Label   string        `json:"label"`
++	Quote   string        `json:"quote"`
++	Cases   []fixtureCase `json:"cases"`
++}
++
++func loadFixtures(t *testing.T) []fixture {
++	t.Helper()
++	files, err := filepath.Glob("testdata/*.json")
++	require.NoError(t, err)
++	require.Len(t, files, 3)
++	fixtures := make([]fixture, 0, len(files))
++	for _, f := range files {
++		raw, err := os.ReadFile(f)
++		require.NoError(t, err)
++		var fx fixture
++		require.NoError(t, json.Unmarshal(raw, &fx))
++		fixtures = append(fixtures, fx)
++	}
++	return fixtures
++}
++
++func bi(t *testing.T, s string) *big.Int {
++	t.Helper()
++	v, ok := new(big.Int).SetString(s, 10)
++	require.True(t, ok, s)
++	return v
++}
++
++// hookExtraOf runs the snapshot's poolState and stairs answers through extraFrom, the same conversion Track makes.
++func hookExtraOf(t *testing.T, s *snapshot, quote string) Extra {
++	t.Helper()
++	require.True(t, s.GapSkim, "every FLOOR set on the five chains carries the gap buy skim")
++	state := poolStateRPC{
++		PoolBound:          true,
++		TickSpacing:        big.NewInt(int64(s.Pool.TickSpacing)),
++		FloorTick:          big.NewInt(int64(s.FloorTick)),
++		SkimBuyFarBps:      big.NewInt(s.Rates.SkimBuyFarBps),
++		SkimSellFarBps:     big.NewInt(s.Rates.SkimSellFarBps),
++		SkimBuyAtFloorBps:  big.NewInt(s.Rates.SkimBuyAtFloorBps),
++		SkimSellAtFloorBps: big.NewInt(s.Rates.SkimSellAtFloorBps),
++		CreatorBuyBps:      big.NewInt(s.Rates.CreatorBuyBps),
++		CreatorSellBps:     big.NewInt(s.Rates.CreatorSellBps),
++		HolderBuyBps:       big.NewInt(s.Rates.HolderBuyBps),
++		HolderSellBps:      big.NewInt(s.Rates.HolderSellBps),
++		TeamFeeBps:         big.NewInt(s.Rates.TeamFeeBps),
++		QuoteIsCurrency1:   s.QuoteIsCurrency1,
++	}
++	state.QuoteToken = common.HexToAddress(quote)
++	if s.QuoteIsCurrency1 {
++		state.PoolKey.Currency0, state.PoolKey.Currency1 = common.HexToAddress(tokenBelowQuote), state.QuoteToken
++	} else {
++		state.PoolKey.Currency0, state.PoolKey.Currency1 = state.QuoteToken, common.HexToAddress(tokenAboveQuote)
++	}
++	stairs := stairsRPC{CushionLower: big.NewInt(int64(s.Cushion.CushionLower)), CushionLiq: bi(t, s.Cushion.CushionLiq)}
++	extra, err := extraFrom(&state, &stairs, &slot0RPC{ProtocolFee: big.NewInt(int64(s.Pool.ProtocolFee))})
++	require.NoError(t, err)
++	return extra
++}
++
++// poolTokens returns the pool's two currencies in key order, the launch token and the quote as the simulator names
++// them (native ETH is WETH in the pool's token list, flagged native in StaticExtra).
++func poolTokens(fx *fixture, quoteIsCurrency1 bool) (tokens [2]string, token, quote string, nativeQuote bool) {
++	quote = fx.Quote
++	if nativeQuote = new(big.Int).SetBytes(common.HexToAddress(quote).Bytes()).Sign() == 0; nativeQuote {
++		quote = baseWETH
++	}
++	if quoteIsCurrency1 {
++		return [2]string{tokenBelowQuote, quote}, tokenBelowQuote, quote, nativeQuote
++	}
++	token = tokenAboveQuote
++	return [2]string{quote, token}, token, quote, nativeQuote
++}
++
++func newSim(t *testing.T, fx *fixture, c *fixtureCase) (sim *uniswapv4.PoolSimulator, token, quote string) {
++	t.Helper()
++	s := &c.Snapshot
++	tokens, token, quote, nativeQuote := poolTokens(fx, s.QuoteIsCurrency1)
++
++	// Every initialised tick is in the bitmap and has a liquidityNet entry, and nothing else.
++	var bitmapTicks []int
++	for _, w := range s.Pool.Bitmap {
++		word := bi(t, w.V)
++		for bit := 0; bit < 256; bit++ {
++			if word.Bit(bit) == 1 {
++				bitmapTicks = append(bitmapTicks, (w.K*256+bit)*s.Pool.TickSpacing)
++			}
++		}
++	}
++	ticks := make([]uniswapv4.Tick, 0, len(s.Pool.LiquidityNet))
++	netTicks := make([]int, 0, len(s.Pool.LiquidityNet))
++	for _, p := range s.Pool.LiquidityNet {
++		net := bi(t, p.V)
++		gross := new(big.Int).Abs(net) // the walk reads only liquidityNet; any non-zero gross marks the tick initialised
++		if gross.Sign() == 0 {
++			gross.SetInt64(1)
++		}
++		ticks = append(ticks, uniswapv4.Tick{Index: p.K, LiquidityGross: gross, LiquidityNet: net})
++		netTicks = append(netTicks, p.K)
++	}
++	slices.Sort(bitmapTicks)
++	require.Equal(t, bitmapTicks, netTicks, "bitmap and liquidityNet disagree")
++
++	hookExtra, err := json.Marshal(hookExtraOf(t, s, fx.Quote))
++	require.NoError(t, err)
++	extra, err := json.Marshal(uniswapv4.Extra{
++		Extra: &uniswapv3.Extra{
++			Liquidity:    bi(t, s.Pool.Liquidity),
++			SqrtPriceX96: bi(t, s.Pool.SqrtPriceX96),
++			TickSpacing:  uint64(s.Pool.TickSpacing),
++			Tick:         big.NewInt(int64(s.Pool.Tick)),
++			Ticks:        ticks,
++		},
++		HookExtra: hookExtra,
++	})
++	require.NoError(t, err)
++	staticExtra, err := json.Marshal(uniswapv4.StaticExtra{
++		IsNative:     [2]bool{nativeQuote, false},
++		Fee:          0x800000, // the dynamic-fee flag every FLOOR pool key carries
++		TickSpacing:  int32(s.Pool.TickSpacing),
++		HooksAddress: common.HexToAddress(hookAddr),
++	})
++	require.NoError(t, err)
++
++	sim, err = uniswapv4.NewPoolSimulator(entity.Pool{
++		Address:  c.PoolID,
++		Exchange: string(valueobject.ExchangeUniswapV4Floor),
++		Type:     uniswapv4.DexType,
++		Tokens:   []*entity.PoolToken{{Address: tokens[0], Swappable: true}, {Address: tokens[1], Swappable: true}},
++		// reserves only cap swap sizes in the simulator; the pool's real balances sit in the PoolManager
++		Reserves:    entity.PoolReserves{"1" + zeros(45), "1" + zeros(45)},
++		StaticExtra: string(staticExtra),
++		Extra:       string(extra),
++		BlockNumber: mustUint(t, c.Block),
++	}, valueobject.ChainID(fx.ChainID))
++	require.NoError(t, err)
++	return sim, token, quote
++}
++
++func zeros(n int) string {
++	b := make([]byte, n)
++	for i := range b {
++		b[i] = '0'
++	}
++	return string(b)
++}
++
++func mustUint(t *testing.T, s string) uint64 {
++	t.Helper()
++	v, err := strconv.ParseUint(s, 10, 64)
++	require.NoError(t, err)
++	return v
++}
++
++func quoteOf(sim *uniswapv4.PoolSimulator, e *expectedQuote, token, quote string, amountIn *big.Int,
++) (*poolpkg.CalcAmountOutResult, error) {
++	tokenIn, tokenOut := quote, token
++	if e.Side == "sell" {
++		tokenIn, tokenOut = token, quote
++	}
++	return sim.CalcAmountOut(poolpkg.CalcAmountOutParams{
++		TokenAmountIn: poolpkg.TokenAmount{Token: tokenIn, Amount: amountIn},
++		TokenOut:      tokenOut,
++	})
++}
++
++// checkCase asserts every quote of a state; zero is what the quoter answers for a dust buy the fees eat whole, and a
++// zero-output quote is an error here, as for every source. It returns how many quotes matched an amount, how many
++// were refused as the quoter refused them, and how many were dust.
++func checkCase(t *testing.T, sim *uniswapv4.PoolSimulator, c *fixtureCase, token, quote string) (matched, refused, dust int) {
++	t.Helper()
++	for i := range c.Expected {
++		e := &c.Expected[i]
++		res, err := quoteOf(sim, e, token, quote, bi(t, e.AmountIn))
++		switch {
++		case e.AmountOut == nil:
++			assert.Error(t, err, "%s %s: the quoter reverted", e.Side, e.AmountIn)
++			refused++
++		case *e.AmountOut == "0":
++			if err == nil {
++				assert.Zero(t, res.TokenAmountOut.Amount.Sign(), "%s %s", e.Side, e.AmountIn)
++			}
++			dust++
++		default:
++			if assert.NoError(t, err, "%s %s", e.Side, e.AmountIn) {
++				assert.Equal(t, *e.AmountOut, res.TokenAmountOut.Amount.String(), "%s %s", e.Side, e.AmountIn)
++				assert.Zero(t, res.RemainingTokenAmountIn.Amount.Sign())
++				matched++
++			}
++		}
++	}
++	return
++}
++
++func TestQuoterMatch_Fixtures(t *testing.T) {
++	var matched, refused, dust int
++	for _, fx := range loadFixtures(t) {
++		for i := range fx.Cases {
++			c := &fx.Cases[i]
++			t.Run(fx.Label+"/"+c.State, func(t *testing.T) {
++				sim, token, quote := newSim(t, &fx, c)
++				m, r, d := checkCase(t, sim, c, token, quote)
++				matched, refused, dust = matched+m, refused+r, dust+d
++			})
++		}
++	}
++	t.Logf("quotes: %d matched to the wei, %d refused as the quoter refused, %d dust (quoter 0)", matched, refused, dust)
++	assert.Equal(t, 270, matched+refused+dust)
++	assert.Equal(t, 2, refused)
++}
++
++// The two buys between recorded states change only the price: no ratchet runs and no position moves. Swapping the
++// same amount on the earlier state's simulator and applying it with UpdateBalance must land on the later state's
++// price, tick and liquidity, and quote every one of the later state's sizes exactly -- the hook's own view of the
++// tick, which the next buy's skim reads, moves with the pool.
++func TestQuoterMatch_BuysAppliedWithUpdateBalance(t *testing.T) {
++	for _, fx := range loadFixtures(t) {
++		for _, step := range []struct {
++			from, to         string
++			native, erc20Buy string
++		}{
++			{"fresh", "after 3 ETH buy", "3000000000000000000", "3000000000"},
++			{"after a ratchet", "after a big buy above the cushion", "12000000000000000000", "12000000000"},
++		} {
++			t.Run(fx.Label+"/"+step.to, func(t *testing.T) {
++				from, to := caseNamed(t, &fx, step.from), caseNamed(t, &fx, step.to)
++				require.Equal(t, from.Snapshot.Pool.LiquidityNet, to.Snapshot.Pool.LiquidityNet)
++				require.Equal(t, hookExtraOf(t, &from.Snapshot, fx.Quote), hookExtraOf(t, &to.Snapshot, fx.Quote))
++
++				sim, token, quote := newSim(t, &fx, from)
++				amount := step.erc20Buy
++				if _, _, _, native := poolTokens(&fx, from.Snapshot.QuoteIsCurrency1); native {
++					amount = step.native
++				}
++				amountIn := bi(t, amount)
++				res, err := quoteOf(sim, &expectedQuote{Side: "buy"}, token, quote, amountIn)
++				require.NoError(t, err)
++				sim.UpdateBalance(poolpkg.UpdateBalanceParams{
++					TokenAmountIn:  poolpkg.TokenAmount{Token: quote, Amount: amountIn},
++					TokenAmountOut: *res.TokenAmountOut,
++					SwapInfo:       res.SwapInfo,
++				})
++
++				assert.Equal(t, to.Snapshot.Pool.SqrtPriceX96, sim.V3Pool.SqrtRatioX96.Dec())
++				assert.Equal(t, to.Snapshot.Pool.Tick, sim.V3Pool.TickCurrent)
++				assert.Equal(t, to.Snapshot.Pool.Liquidity, sim.V3Pool.Liquidity.Dec())
++				m, r, d := checkCase(t, sim, to, token, quote)
++				assert.Equal(t, len(to.Expected), m+r+d)
++			})
++		}
++	}
++}
++
++// A sell that reaches the bid band makes the hook re-place its bid inside the swap. Its own quote is exact (the
++// fixtures' sells after "selling half the bag" are such sells), but the simulated pool no longer describes the real
++// one, so once it is applied the pool refuses every quote until it is tracked again. A sell that stays above the
++// band leaves the pool quotable.
++func TestQuoterMatch_SellIntoTheBandStopsQuoting(t *testing.T) {
++	sellInfo := func(t *testing.T, c *fixtureCase, sim *uniswapv4.PoolSimulator, token, quote string, e *expectedQuote,
++	) (*poolpkg.CalcAmountOutResult, *SwapInfo) {
++		res, err := quoteOf(sim, e, token, quote, bi(t, e.AmountIn))
++		require.NoError(t, err)
++		assert.Equal(t, *e.AmountOut, res.TokenAmountOut.Amount.String())
++		info := res.SwapInfo.(uniswapv4.SwapInfo).HookSwapInfo.(*SwapInfo)
++		dearEdge := c.Snapshot.FloorTick - bandTicks(c.Snapshot.Pool.TickSpacing)
++		assert.Equal(t, marketTick(info.Tick, c.Snapshot.QuoteIsCurrency1) >= dearEdge, info.BandReached)
++		return res, info
++	}
++	largestSell := func(c *fixtureCase) *expectedQuote {
++		var largest *expectedQuote
++		for i := range c.Expected {
++			if e := &c.Expected[i]; e.Side == "sell" && e.AmountOut != nil {
++				largest = e
++			}
++		}
++		return largest
++	}
++	apply := func(sim *uniswapv4.PoolSimulator, token string, e *expectedQuote, res *poolpkg.CalcAmountOutResult) {
++		amountIn, _ := new(big.Int).SetString(e.AmountIn, 10)
++		sim.UpdateBalance(poolpkg.UpdateBalanceParams{
++			TokenAmountIn:  poolpkg.TokenAmount{Token: token, Amount: amountIn},
++			TokenAmountOut: *res.TokenAmountOut,
++			SwapInfo:       res.SwapInfo,
++		})
++	}
++
++	for _, fx := range loadFixtures(t) {
++		t.Run(fx.Label, func(t *testing.T) {
++			c := caseNamed(t, &fx, "after a big buy above the cushion")
++			sim, token, quote := newSim(t, &fx, c)
++			e := largestSell(c)
++			res, info := sellInfo(t, c, sim, token, quote, e)
++			require.False(t, info.BandReached)
++			apply(sim, token, e, res)
++			_, err := quoteOf(sim, &expectedQuote{Side: "buy"}, token, quote, big.NewInt(1_000_000))
++			require.NoError(t, err)
++
++			c = caseNamed(t, &fx, "after selling half the bag")
++			sim, token, quote = newSim(t, &fx, c)
++			e = largestSell(c)
++			res, info = sellInfo(t, c, sim, token, quote, e)
++			require.True(t, info.BandReached)
++			apply(sim, token, e, res)
++			for _, side := range []string{"buy", "sell"} {
++				_, err = quoteOf(sim, &expectedQuote{Side: side}, token, quote, big.NewInt(1_000_000))
++				assert.ErrorIs(t, err, ErrBidReplacePending, side)
++			}
++		})
++	}
++}
++
++func caseNamed(t *testing.T, fx *fixture, state string) *fixtureCase {
++	t.Helper()
++	for i := range fx.Cases {
++		if fx.Cases[i].State == state {
++			return &fx.Cases[i]
++		}
++	}
++	t.Fatalf("%s: no state %q", fx.Label, state)
++	return nil
++}
+diff --git a/pkg/liquidity-source/uniswap/v4/hooks/floor/testdata/base-native.json b/pkg/liquidity-source/uniswap/v4/hooks/floor/testdata/base-native.json
+new file mode 100644
+index 0000000..cae88d8
+--- /dev/null
++++ b/pkg/liquidity-source/uniswap/v4/hooks/floor/testdata/base-native.json
+@@ -0,0 +1,933 @@
++{
++ "chainId": 8453,
++ "label": "native",
++ "quote": "0x0000000000000000000000000000000000000000",
++ "cases": [
++  {
++   "state": "fresh",
++   "block": "52567584",
++   "poolId": "0x59542a07a6a1e85bb1d6cfd80715ba56d174da0e43bda51668bc7835ea267c5a",
++   "snapshot": {
++    "pool": {
++     "sqrtPriceX96": "548882496052679240510736713523598",
++     "tick": 176875,
++     "liquidity": "0",
++     "tickSpacing": 60,
++     "protocolFee": 0,
++     "bitmap": [
++      [
++       -58,
++       "2305843009213693952"
++      ],
++      [
++       4,
++       "1569275433846670190958947355801916604025588861116008628224"
++      ],
++      [
++       11,
++       "873845118252969974173945991884780767051776"
++      ]
++     ],
++     "liquidityNet": [
++      [
++       -887220,
++       "276520824751114262380295"
++      ],
++      [
++       72840,
++       "-126611413697121661276541"
++      ],
++      [
++       169860,
++       "-118463780218011125572205"
++      ],
++      [
++       176820,
++       "-31445630835981475531549"
++      ],
++      [
++       177180,
++       "4777365419254230878438296"
++      ],
++      [
++       177300,
++       "-4777365419254230878438296"
++      ]
++     ]
++    },
++    "quoteIsCurrency1": false,
++    "floorTick": 177300,
++    "rates": {
++     "skimBuyFarBps": 200,
++     "skimSellFarBps": 200,
++     "skimBuyAtFloorBps": 0,
++     "skimSellAtFloorBps": 300,
++     "creatorBuyBps": 75,
++     "creatorSellBps": 75,
++     "holderBuyBps": 0,
++     "holderSellBps": 0,
++     "teamFeeBps": 25
++    },
++    "cushion": {
++     "cushionLower": 0,
++     "cushionLiq": "0"
++    },
++    "gapSkim": true
++   },
++   "expected": [
++    {
++     "side": "buy",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000000",
++     "amountOut": "47117646727023252785"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000000000",
++     "amountOut": "47107440323670592723735"
++    },
++    {
++     "side": "buy",
++     "amountIn": "10000000000000000",
++     "amountOut": "470156897119329542776394"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000000000000",
++     "amountOut": "4611746522403432690070245"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000000000000",
++     "amountOut": "38720078715647214325105759"
++    },
++    {
++     "side": "buy",
++     "amountIn": "5000000000000000000",
++     "amountOut": "129708739965761518015704595"
++    },
++    {
++     "side": "buy",
++     "amountIn": "30000000000000000000",
++     "amountOut": "410679183069408905043851528"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000",
++     "amountOut": "19352595661"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000",
++     "amountOut": "19352595086288"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000000",
++     "amountOut": "19352021242356132"
++    },
++    {
++     "side": "sell",
++     "amountIn": "10000000000000000000000000",
++     "amountOut": "193468530111239926"
++    },
++    {
++     "side": "sell",
++     "amountIn": "50000000000000000000000000",
++     "amountOut": "966195822678327589"
++    },
++    {
++     "side": "sell",
++     "amountIn": "100000000000000000000000000",
++     "amountOut": "1929532212183064487"
++    }
++   ]
++  },
++  {
++   "state": "after 3 ETH buy",
++   "block": "52567585",
++   "poolId": "0x59542a07a6a1e85bb1d6cfd80715ba56d174da0e43bda51668bc7835ea267c5a",
++   "snapshot": {
++    "pool": {
++     "sqrtPriceX96": "373537405428986868194544513046704",
++     "tick": 169177,
++     "liquidity": "149909411053992601103754",
++     "tickSpacing": 60,
++     "protocolFee": 0,
++     "bitmap": [
++      [
++       -58,
++       "2305843009213693952"
++      ],
++      [
++       4,
++       "1569275433846670190958947355801916604025588861116008628224"
++      ],
++      [
++       11,
++       "873845118252969974173945991884780767051776"
++      ]
++     ],
++     "liquidityNet": [
++      [
++       -887220,
++       "276520824751114262380295"
++      ],
++      [
++       72840,
++       "-126611413697121661276541"
++      ],
++      [
++       169860,
++       "-118463780218011125572205"
++      ],
++      [
++       176820,
++       "-31445630835981475531549"
++      ],
++      [
++       177180,
++       "4777365419254230878438296"
++      ],
++      [
++       177300,
++       "-4777365419254230878438296"
++      ]
++     ]
++    },
++    "quoteIsCurrency1": false,
++    "floorTick": 177300,
++    "rates": {
++     "skimBuyFarBps": 200,
++     "skimSellFarBps": 200,
++     "skimBuyAtFloorBps": 0,
++     "skimSellAtFloorBps": 300,
++     "creatorBuyBps": 75,
++     "creatorSellBps": 75,
++     "holderBuyBps": 0,
++     "holderSellBps": 0,
++     "teamFeeBps": 25
++    },
++    "cushion": {
++     "cushionLower": 0,
++     "cushionLiq": "0"
++    },
++    "gapSkim": true
++   },
++   "expected": [
++    {
++     "side": "buy",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000000",
++     "amountOut": "21729413027300243861"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000000000",
++     "amountOut": "21728745660300704210119"
++    },
++    {
++     "side": "buy",
++     "amountIn": "10000000000000000",
++     "amountOut": "217227351926808326417089"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000000000000",
++     "amountOut": "2166281289550853080088242"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000000000000",
++     "amountOut": "21081284383380660088437922"
++    },
++    {
++     "side": "buy",
++     "amountIn": "5000000000000000000",
++     "amountOut": "94170966660632649073166725"
++    },
++    {
++     "side": "buy",
++     "amountIn": "30000000000000000000",
++     "amountOut": "339110745490204266765359187"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000",
++     "amountOut": "43304316560"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000",
++     "amountOut": "43304255503017"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000000",
++     "amountOut": "43243285943838498"
++    },
++    {
++     "side": "sell",
++     "amountIn": "10000000000000000000000000",
++     "amountOut": "426928040059996598"
++    },
++    {
++     "side": "sell",
++     "amountIn": "50000000000000000000000000",
++     "amountOut": "1906738283034839720"
++    },
++    {
++     "side": "sell",
++     "amountIn": "100000000000000000000000000",
++     "amountOut": "3063250125534457864"
++    }
++   ]
++  },
++  {
++   "state": "after a ratchet",
++   "block": "52567586",
++   "poolId": "0x59542a07a6a1e85bb1d6cfd80715ba56d174da0e43bda51668bc7835ea267c5a",
++   "snapshot": {
++    "pool": {
++     "sqrtPriceX96": "373537405428986868194544513046704",
++     "tick": 169177,
++     "liquidity": "14474196110401318488392",
++     "tickSpacing": 60,
++     "protocolFee": 0,
++     "bitmap": [
++      [
++       -58,
++       "2305843009213693952"
++      ],
++      [
++       4,
++       "1569275433846670190958947355801916604025588861116008628224"
++      ],
++      [
++       10,
++       "45671926166590716193865151022383844364247891968"
++      ],
++      [
++       11,
++       "13612623904833323454407888104331008802824"
++      ]
++     ],
++     "liquidityNet": [
++      [
++       -887220,
++       "276520824751114262380295"
++      ],
++      [
++       72840,
++       "-80131051669288700786134"
++      ],
++      [
++       162900,
++       "-171080199671903351942832"
++      ],
++      [
++       169140,
++       "-10835377299520891162937"
++      ],
++      [
++       176160,
++       "335051871759139800297310"
++      ],
++      [
++       176820,
++       "4748826248770356188915163"
++      ],
++      [
++       176940,
++       "-5098352316639897307700865"
++      ]
++     ]
++    },
++    "quoteIsCurrency1": false,
++    "floorTick": 176940,
++    "rates": {
++     "skimBuyFarBps": 200,
++     "skimSellFarBps": 200,
++     "skimBuyAtFloorBps": 0,
++     "skimSellAtFloorBps": 300,
++     "creatorBuyBps": 75,
++     "creatorSellBps": 75,
++     "holderBuyBps": 0,
++     "holderSellBps": 0,
++     "teamFeeBps": 25
++    },
++    "cushion": {
++     "cushionLower": 176160,
++     "cushionLiq": "335051871759139800297310"
++    },
++    "gapSkim": true
++   },
++   "expected": [
++    {
++     "side": "buy",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000000",
++     "amountOut": "21636280776783492088"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000000000",
++     "amountOut": "21629429930809725784711"
++    },
++    {
++     "side": "buy",
++     "amountIn": "10000000000000000",
++     "amountOut": "215728384985429398237013"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000000000000",
++     "amountOut": "2121836805855100807159341"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000000000000",
++     "amountOut": "18288475474629033920113403"
++    },
++    {
++     "side": "buy",
++     "amountIn": "5000000000000000000",
++     "amountOut": "64706915241885660290284986"
++    },
++    {
++     "side": "buy",
++     "amountIn": "30000000000000000000",
++     "amountOut": "250695829512924433904721631"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000",
++     "amountOut": "43295341000"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000",
++     "amountOut": "43294708784790"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000000",
++     "amountOut": "42662756954242885"
++    },
++    {
++     "side": "sell",
++     "amountIn": "10000000000000000000000000",
++     "amountOut": "377073052104113730"
++    },
++    {
++     "side": "sell",
++     "amountIn": "50000000000000000000000000",
++     "amountOut": "1323729395953697170"
++    },
++    {
++     "side": "sell",
++     "amountIn": "100000000000000000000000000",
++     "amountOut": "2353967420861919780"
++    }
++   ]
++  },
++  {
++   "state": "after a big buy above the cushion",
++   "block": "52567586",
++   "poolId": "0x59542a07a6a1e85bb1d6cfd80715ba56d174da0e43bda51668bc7835ea267c5a",
++   "snapshot": {
++    "pool": {
++     "sqrtPriceX96": "233215970962695220148469111400912",
++     "tick": 159755,
++     "liquidity": "196389773081825561594161",
++     "tickSpacing": 60,
++     "protocolFee": 0,
++     "bitmap": [
++      [
++       -58,
++       "2305843009213693952"
++      ],
++      [
++       4,
++       "1569275433846670190958947355801916604025588861116008628224"
++      ],
++      [
++       10,
++       "45671926166590716193865151022383844364247891968"
++      ],
++      [
++       11,
++       "13612623904833323454407888104331008802824"
++      ]
++     ],
++     "liquidityNet": [
++      [
++       -887220,
++       "276520824751114262380295"
++      ],
++      [
++       72840,
++       "-80131051669288700786134"
++      ],
++      [
++       162900,
++       "-171080199671903351942832"
++      ],
++      [
++       169140,
++       "-10835377299520891162937"
++      ],
++      [
++       176160,
++       "335051871759139800297310"
++      ],
++      [
++       176820,
++       "4748826248770356188915163"
++      ],
++      [
++       176940,
++       "-5098352316639897307700865"
++      ]
++     ]
++    },
++    "quoteIsCurrency1": false,
++    "floorTick": 176940,
++    "rates": {
++     "skimBuyFarBps": 200,
++     "skimSellFarBps": 200,
++     "skimBuyAtFloorBps": 0,
++     "skimSellAtFloorBps": 300,
++     "creatorBuyBps": 75,
++     "creatorSellBps": 75,
++     "holderBuyBps": 0,
++     "holderSellBps": 0,
++     "teamFeeBps": 25
++    },
++    "cushion": {
++     "cushionLower": 176160,
++     "cushionLiq": "335051871759139800297310"
++    },
++    "gapSkim": true
++   },
++   "expected": [
++    {
++     "side": "buy",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000000",
++     "amountOut": "8297390697452945092"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000000000",
++     "amountOut": "8297271725451292274204"
++    },
++    {
++     "side": "buy",
++     "amountIn": "10000000000000000",
++     "amountOut": "82962000594178805244775"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000000000000",
++     "amountOut": "828549860511002621740148"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000000000000",
++     "amountOut": "8179983169726483328821085"
++    },
++    {
++     "side": "buy",
++     "amountIn": "5000000000000000000",
++     "amountOut": "38708994825991827940601135"
++    },
++    {
++     "side": "buy",
++     "amountIn": "30000000000000000000",
++     "amountOut": "173999190668492277924547847"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000",
++     "amountOut": "111667612012"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000",
++     "amountOut": "111667419520854"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000000",
++     "amountOut": "111475261476512801"
++    },
++    {
++     "side": "sell",
++     "amountIn": "10000000000000000000000000",
++     "amountOut": "1097734693842172900"
++    },
++    {
++     "side": "sell",
++     "amountIn": "50000000000000000000000000",
++     "amountOut": "5137812993608270883"
++    },
++    {
++     "side": "sell",
++     "amountIn": "100000000000000000000000000",
++     "amountOut": "9507319657179473016"
++    }
++   ]
++  },
++  {
++   "state": "after selling half the bag",
++   "block": "52567590",
++   "poolId": "0x59542a07a6a1e85bb1d6cfd80715ba56d174da0e43bda51668bc7835ea267c5a",
++   "snapshot": {
++    "pool": {
++     "sqrtPriceX96": "540925081636105347140112125005029",
++     "tick": 176582,
++     "liquidity": "349526067869541118785702",
++     "tickSpacing": 60,
++     "protocolFee": 0,
++     "bitmap": [
++      [
++       -58,
++       "2305843009213693952"
++      ],
++      [
++       4,
++       "1569275433846670190958947355801916604025588861116008628224"
++      ],
++      [
++       10,
++       "45671926166590716193865151022383844364247891968"
++      ],
++      [
++       11,
++       "13612623904833323454407888104331008802824"
++      ]
++     ],
++     "liquidityNet": [
++      [
++       -887220,
++       "276520824751114262380295"
++      ],
++      [
++       72840,
++       "-80131051669288700786134"
++      ],
++      [
++       162900,
++       "-171080199671903351942832"
++      ],
++      [
++       169140,
++       "-10835377299520891162937"
++      ],
++      [
++       176160,
++       "335051871759139800297310"
++      ],
++      [
++       176820,
++       "4748826248770356188915163"
++      ],
++      [
++       176940,
++       "-5098352316639897307700865"
++      ]
++     ]
++    },
++    "quoteIsCurrency1": false,
++    "floorTick": 176940,
++    "rates": {
++     "skimBuyFarBps": 200,
++     "skimSellFarBps": 200,
++     "skimBuyAtFloorBps": 0,
++     "skimSellAtFloorBps": 300,
++     "creatorBuyBps": 75,
++     "creatorSellBps": 75,
++     "holderBuyBps": 0,
++     "holderSellBps": 0,
++     "teamFeeBps": 25
++    },
++    "cushion": {
++     "cushionLower": 176160,
++     "cushionLiq": "335051871759139800297310"
++    },
++    "gapSkim": true
++   },
++   "expected": [
++    {
++     "side": "buy",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000000",
++     "amountOut": "46018402395852593534"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000000000",
++     "amountOut": "46017515886973612268648"
++    },
++    {
++     "side": "buy",
++     "amountIn": "10000000000000000",
++     "amountOut": "460095308601653453666362"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000000000000",
++     "amountOut": "4592983274116252984294239"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000000000000",
++     "amountOut": "45147778895394406378382340"
++    },
++    {
++     "side": "buy",
++     "amountIn": "5000000000000000000",
++     "amountOut": "121721377200070179947175675"
++    },
++    {
++     "side": "buy",
++     "amountIn": "30000000000000000000",
++     "amountOut": "320369921120256948828545657"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000",
++     "amountOut": "20547525814"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000",
++     "amountOut": "20547517232867"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000000",
++     "amountOut": "20538940554137998"
++    },
++    {
++     "side": "sell",
++     "amountIn": "10000000000000000000000000",
++     "amountOut": "204598637650745605"
++    },
++    {
++     "side": "sell",
++     "amountIn": "50000000000000000000000000",
++     "amountOut": "1009659807017841741"
++    },
++    {
++     "side": "sell",
++     "amountIn": "100000000000000000000000000",
++     "amountOut": "2010122488365163201"
++    }
++   ]
++  },
++  {
++   "state": "after a deep sell",
++   "block": "52567590",
++   "poolId": "0x59542a07a6a1e85bb1d6cfd80715ba56d174da0e43bda51668bc7835ea267c5a",
++   "snapshot": {
++    "pool": {
++     "sqrtPriceX96": "547375218008343122019487141170606",
++     "tick": 176819,
++     "liquidity": "349526067869541118785702",
++     "tickSpacing": 60,
++     "protocolFee": 0,
++     "bitmap": [
++      [
++       -58,
++       "2305843009213693952"
++      ],
++      [
++       4,
++       "1569275433846670190958947355801916604025588861116008628224"
++      ],
++      [
++       10,
++       "45671926166590716193865151022383844364247891968"
++      ],
++      [
++       11,
++       "13612623904833323454407888104331008802824"
++      ]
++     ],
++     "liquidityNet": [
++      [
++       -887220,
++       "276520824751114262380295"
++      ],
++      [
++       72840,
++       "-80131051669288700786134"
++      ],
++      [
++       162900,
++       "-171080199671903351942832"
++      ],
++      [
++       169140,
++       "-10835377299520891162937"
++      ],
++      [
++       176160,
++       "335051871759139800297310"
++      ],
++      [
++       176820,
++       "2825387764803362131710286"
++      ],
++      [
++       176940,
++       "-3174913832672903250495988"
++      ]
++     ]
++    },
++    "quoteIsCurrency1": false,
++    "floorTick": 176940,
++    "rates": {
++     "skimBuyFarBps": 200,
++     "skimSellFarBps": 200,
++     "skimBuyAtFloorBps": 0,
++     "skimSellAtFloorBps": 300,
++     "creatorBuyBps": 75,
++     "creatorSellBps": 75,
++     "holderBuyBps": 0,
++     "holderSellBps": 0,
++     "teamFeeBps": 25
++    },
++    "cushion": {
++     "cushionLower": 176160,
++     "cushionLiq": "335051871759139800297310"
++    },
++    "gapSkim": true
++   },
++   "expected": [
++    {
++     "side": "buy",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000000",
++     "amountOut": "47136701157915479806"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000000000",
++     "amountOut": "47135781999703857518228"
++    },
++    {
++     "side": "buy",
++     "amountIn": "10000000000000000",
++     "amountOut": "471275029109897749347682"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000000000000",
++     "amountOut": "4704487170178142261781670"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000000000000",
++     "amountOut": "46234221989027420125656109"
++    },
++    {
++     "side": "buy",
++     "amountIn": "5000000000000000000",
++     "amountOut": "143199224917471951170880314"
++    },
++    {
++     "side": "buy",
++     "amountIn": "30000000000000000000",
++     "amountOut": "345446313735238616437170663"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000",
++     "amountOut": "20061945328"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000",
++     "amountOut": "20061944415014"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000000",
++     "amountOut": "20061033046173697"
++    },
++    {
++     "side": "sell",
++     "amountIn": "10000000000000000000000000",
++     "amountOut": "200528262477771429"
++    },
++    {
++     "side": "sell",
++     "amountIn": "50000000000000000000000000",
++     "amountOut": "1000821633996597121"
++    },
++    {
++     "side": "sell",
++     "amountIn": "100000000000000000000000000",
++     "amountOut": "1997112606564013554"
++    }
++   ]
++  }
++ ]
++}
+diff --git a/pkg/liquidity-source/uniswap/v4/hooks/floor/testdata/base-usdc-currency0.json b/pkg/liquidity-source/uniswap/v4/hooks/floor/testdata/base-usdc-currency0.json
+new file mode 100644
+index 0000000..6faea63
+--- /dev/null
++++ b/pkg/liquidity-source/uniswap/v4/hooks/floor/testdata/base-usdc-currency0.json
+@@ -0,0 +1,957 @@
++{
++ "chainId": 8453,
++ "label": "usdc-currency0",
++ "quote": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
++ "cases": [
++  {
++   "state": "fresh",
++   "block": "52567612",
++   "poolId": "0x09be10980162e1d60b295d0d8ebed2d5695971997778b64e3f57b22fc86b3597",
++   "snapshot": {
++    "pool": {
++     "sqrtPriceX96": "11204076004015274215283163451092977049",
++     "tick": 375363,
++     "liquidity": "0",
++     "tickSpacing": 60,
++     "protocolFee": 0,
++     "bitmap": [
++      [
++       -58,
++       "2305843009213693952"
++      ],
++      [
++       17,
++       "2993155353253689176481146537402947624255349848014848"
++      ],
++      [
++       23,
++       "7237005577332262213973186563042994240829374041602535252466099000494570602496"
++      ],
++      [
++       24,
++       "835959794224107248193409909004435456"
++      ]
++     ],
++     "liquidityNet": [
++      [
++       -887220,
++       "13511453451613375810"
++      ],
++      [
++       271380,
++       "-6186529438248864113"
++      ],
++      [
++       368400,
++       "-5788417033539767631"
++      ],
++      [
++       375360,
++       "-1536506979824744066"
++      ],
++      [
++       375660,
++       "233949789722964659611"
++      ],
++      [
++       375780,
++       "-233949789722964659611"
++      ]
++     ]
++    },
++    "quoteIsCurrency1": false,
++    "floorTick": 375780,
++    "rates": {
++     "skimBuyFarBps": 200,
++     "skimSellFarBps": 200,
++     "skimBuyAtFloorBps": 0,
++     "skimSellAtFloorBps": 300,
++     "creatorBuyBps": 75,
++     "creatorSellBps": 75,
++     "holderBuyBps": 0,
++     "holderSellBps": 0,
++     "teamFeeBps": 25
++    },
++    "cushion": {
++     "cushionLower": 0,
++     "cushionLiq": "0"
++    },
++    "gapSkim": true
++   },
++   "expected": [
++    {
++     "side": "buy",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000",
++     "amountOut": "19752385286348318025"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000",
++     "amountOut": "19733121291967385695803"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000",
++     "amountOut": "1955725884780555354423905"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000",
++     "amountOut": "18091510345418155046917364"
++    },
++    {
++     "side": "buy",
++     "amountIn": "10000000000",
++     "amountOut": "113538761050222447743264174"
++    },
++    {
++     "side": "buy",
++     "amountIn": "50000000000",
++     "amountOut": "341238849156631916633437892"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000000",
++     "amountOut": "474950733075689258975442376"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000",
++     "amountOut": "47"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000",
++     "amountOut": "46483"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000000",
++     "amountOut": "46481531"
++    },
++    {
++     "side": "sell",
++     "amountIn": "10000000000000000000000000",
++     "amountOut": "464691063"
++    },
++    {
++     "side": "sell",
++     "amountIn": "50000000000000000000000000",
++     "amountOut": "2320698576"
++    },
++    {
++     "side": "sell",
++     "amountIn": "100000000000000000000000000",
++     "amountOut": "4634523690"
++    }
++   ]
++  },
++  {
++   "state": "after 3 ETH buy",
++   "block": "52567615",
++   "poolId": "0x09be10980162e1d60b295d0d8ebed2d5695971997778b64e3f57b22fc86b3597",
++   "snapshot": {
++    "pool": {
++     "sqrtPriceX96": "8803349587025987630457846128035681100",
++     "tick": 370539,
++     "liquidity": "1536506979824744066",
++     "tickSpacing": 60,
++     "protocolFee": 0,
++     "bitmap": [
++      [
++       -58,
++       "2305843009213693952"
++      ],
++      [
++       17,
++       "2993155353253689176481146537402947624255349848014848"
++      ],
++      [
++       23,
++       "7237005577332262213973186563042994240829374041602535252466099000494570602496"
++      ],
++      [
++       24,
++       "835959794224107248193409909004435456"
++      ]
++     ],
++     "liquidityNet": [
++      [
++       -887220,
++       "13511453451613375810"
++      ],
++      [
++       271380,
++       "-6186529438248864113"
++      ],
++      [
++       368400,
++       "-5788417033539767631"
++      ],
++      [
++       375360,
++       "-1536506979824744066"
++      ],
++      [
++       375660,
++       "233949789722964659611"
++      ],
++      [
++       375780,
++       "-233949789722964659611"
++      ]
++     ]
++    },
++    "quoteIsCurrency1": false,
++    "floorTick": 375780,
++    "rates": {
++     "skimBuyFarBps": 200,
++     "skimSellFarBps": 200,
++     "skimBuyAtFloorBps": 0,
++     "skimSellAtFloorBps": 300,
++     "creatorBuyBps": 75,
++     "creatorSellBps": 75,
++     "holderBuyBps": 0,
++     "holderSellBps": 0,
++     "teamFeeBps": 25
++    },
++    "cushion": {
++     "cushionLower": 0,
++     "cushionLiq": "0"
++    },
++    "gapSkim": true
++   },
++   "expected": [
++    {
++     "side": "buy",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000",
++     "amountOut": "12124063047563933239"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000",
++     "amountOut": "12112599024866657491563"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000",
++     "amountOut": "1202811642771574127592061"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000",
++     "amountOut": "11310924590999400698618047"
++    },
++    {
++     "side": "buy",
++     "amountIn": "10000000000",
++     "amountOut": "91245415705521753712364902"
++    },
++    {
++     "side": "buy",
++     "amountIn": "50000000000",
++     "amountOut": "304711397265418402756037395"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000000",
++     "amountOut": "432877876876505178857052420"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000",
++     "amountOut": "78"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000",
++     "amountOut": "77821"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000000",
++     "amountOut": "77368220"
++    },
++    {
++     "side": "sell",
++     "amountIn": "10000000000000000000000000",
++     "amountOut": "734710424"
++    },
++    {
++     "side": "sell",
++     "amountIn": "50000000000000000000000000",
++     "amountOut": "2998979640"
++    },
++    {
++     "side": "sell",
++     "amountIn": "100000000000000000000000000",
++     "amountOut": "5319215685"
++    }
++   ]
++  },
++  {
++   "state": "after a ratchet",
++   "block": "52567616",
++   "poolId": "0x09be10980162e1d60b295d0d8ebed2d5695971997778b64e3f57b22fc86b3597",
++   "snapshot": {
++    "pool": {
++     "sqrtPriceX96": "8803349587025987630457846128035681100",
++     "tick": 370539,
++     "liquidity": "707243033761502402",
++     "tickSpacing": 60,
++     "protocolFee": 0,
++     "bitmap": [
++      [
++       -58,
++       "2305843009213693952"
++      ],
++      [
++       17,
++       "2993155353253689176481146537402947624255349848014848"
++      ],
++      [
++       23,
++       "7237005577332262213973186563042994240829374041602535252466099000494570602496"
++      ],
++      [
++       24,
++       "212965300838342539451446140650651648"
++      ]
++     ],
++     "liquidityNet": [
++      [
++       -887220,
++       "13511453451613375810"
++      ],
++      [
++       271380,
++       "-6186529438248864113"
++      ],
++      [
++       368400,
++       "-5771822955889094379"
++      ],
++      [
++       370500,
++       "-845858023713914916"
++      ],
++      [
++       375000,
++       "5808148479385630916"
++      ],
++      [
++       375360,
++       "-707243033761502402"
++      ],
++      [
++       375540,
++       "238202773387753636497"
++      ],
++      [
++       375660,
++       "-244010921867139267413"
++      ]
++     ]
++    },
++    "quoteIsCurrency1": false,
++    "floorTick": 375660,
++    "rates": {
++     "skimBuyFarBps": 200,
++     "skimSellFarBps": 200,
++     "skimBuyAtFloorBps": 0,
++     "skimSellAtFloorBps": 300,
++     "creatorBuyBps": 75,
++     "creatorSellBps": 75,
++     "holderBuyBps": 0,
++     "holderSellBps": 0,
++     "teamFeeBps": 25
++    },
++    "cushion": {
++     "cushionLower": 375000,
++     "cushionLiq": "5808148479385630916"
++    },
++    "gapSkim": true
++   },
++   "expected": [
++    {
++     "side": "buy",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000",
++     "amountOut": "12099369451130853323"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000",
++     "amountOut": "12083265461669489945769"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000",
++     "amountOut": "1197684722345440929134661"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000",
++     "amountOut": "11270674994451801205970487"
++    },
++    {
++     "side": "buy",
++     "amountIn": "10000000000",
++     "amountOut": "91047022296453853553078302"
++    },
++    {
++     "side": "buy",
++     "amountIn": "50000000000",
++     "amountOut": "304283468365208255037465946"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000000",
++     "amountOut": "432447822921856103415481739"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000",
++     "amountOut": "78"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000",
++     "amountOut": "77821"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000000",
++     "amountOut": "76828883"
++    },
++    {
++     "side": "sell",
++     "amountIn": "10000000000000000000000000",
++     "amountOut": "689473451"
++    },
++    {
++     "side": "sell",
++     "amountIn": "50000000000000000000000000",
++     "amountOut": "2679217291"
++    },
++    {
++     "side": "sell",
++     "amountIn": "100000000000000000000000000",
++     "amountOut": "5027193265"
++    }
++   ]
++  },
++  {
++   "state": "after a big buy above the cushion",
++   "block": "52567616",
++   "poolId": "0x09be10980162e1d60b295d0d8ebed2d5695971997778b64e3f57b22fc86b3597",
++   "snapshot": {
++    "pool": {
++     "sqrtPriceX96": "6946052392560061749681598658766931462",
++     "tick": 365800,
++     "liquidity": "7324924013364511697",
++     "tickSpacing": 60,
++     "protocolFee": 0,
++     "bitmap": [
++      [
++       -58,
++       "2305843009213693952"
++      ],
++      [
++       17,
++       "2993155353253689176481146537402947624255349848014848"
++      ],
++      [
++       23,
++       "7237005577332262213973186563042994240829374041602535252466099000494570602496"
++      ],
++      [
++       24,
++       "212965300838342539451446140650651648"
++      ]
++     ],
++     "liquidityNet": [
++      [
++       -887220,
++       "13511453451613375810"
++      ],
++      [
++       271380,
++       "-6186529438248864113"
++      ],
++      [
++       368400,
++       "-5771822955889094379"
++      ],
++      [
++       370500,
++       "-845858023713914916"
++      ],
++      [
++       375000,
++       "5808148479385630916"
++      ],
++      [
++       375360,
++       "-707243033761502402"
++      ],
++      [
++       375540,
++       "238202773387753636497"
++      ],
++      [
++       375660,
++       "-244010921867139267413"
++      ]
++     ]
++    },
++    "quoteIsCurrency1": false,
++    "floorTick": 375660,
++    "rates": {
++     "skimBuyFarBps": 200,
++     "skimSellFarBps": 200,
++     "skimBuyAtFloorBps": 0,
++     "skimSellAtFloorBps": 300,
++     "creatorBuyBps": 75,
++     "creatorSellBps": 75,
++     "holderBuyBps": 0,
++     "holderSellBps": 0,
++     "teamFeeBps": 25
++    },
++    "cushion": {
++     "cushionLower": 375000,
++     "cushionLiq": "5808148479385630916"
++    },
++    "gapSkim": true
++   },
++   "expected": [
++    {
++     "side": "buy",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000",
++     "amountOut": "7455704233341797855"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000",
++     "amountOut": "7450006897465132349963"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000",
++     "amountOut": "744146614583582824352259"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000",
++     "amountOut": "7364660673124360004231125"
++    },
++    {
++     "side": "buy",
++     "amountIn": "10000000000",
++     "amountOut": "66756481800535159344170213"
++    },
++    {
++     "side": "buy",
++     "amountIn": "50000000000",
++     "amountOut": "235754166939613800149230705"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000000",
++     "amountOut": "344893883256420075887493983"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000",
++     "amountOut": "126"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000",
++     "amountOut": "125378"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000000",
++     "amountOut": "125182605"
++    },
++    {
++     "side": "sell",
++     "amountIn": "10000000000000000000000000",
++     "amountOut": "1234338145"
++    },
++    {
++     "side": "sell",
++     "amountIn": "50000000000000000000000000",
++     "amountOut": "5811654560"
++    },
++    {
++     "side": "sell",
++     "amountIn": "100000000000000000000000000",
++     "amountOut": "10774021599"
++    }
++   ]
++  },
++  {
++   "state": "after selling half the bag",
++   "block": "52567622",
++   "poolId": "0x09be10980162e1d60b295d0d8ebed2d5695971997778b64e3f57b22fc86b3597",
++   "snapshot": {
++    "pool": {
++     "sqrtPriceX96": "11303667137959267631941102937782404317",
++     "tick": 375539,
++     "liquidity": "5808148479385630916",
++     "tickSpacing": 60,
++     "protocolFee": 0,
++     "bitmap": [
++      [
++       -58,
++       "2305843009213693952"
++      ],
++      [
++       17,
++       "2993155353253689176481146537402947624255349848014848"
++      ],
++      [
++       23,
++       "7237005577332262213973186563042994240829374041602535252466099000494570602496"
++      ],
++      [
++       24,
++       "212965300838342539451446140650651648"
++      ]
++     ],
++     "liquidityNet": [
++      [
++       -887220,
++       "13511453451613375810"
++      ],
++      [
++       271380,
++       "-6186529438248864113"
++      ],
++      [
++       368400,
++       "-5771822955889094379"
++      ],
++      [
++       370500,
++       "-845858023713914916"
++      ],
++      [
++       375000,
++       "5808148479385630916"
++      ],
++      [
++       375360,
++       "-707243033761502402"
++      ],
++      [
++       375540,
++       "220882095055406989001"
++      ],
++      [
++       375660,
++       "-226690243534792619917"
++      ]
++     ]
++    },
++    "quoteIsCurrency1": false,
++    "floorTick": 375660,
++    "rates": {
++     "skimBuyFarBps": 200,
++     "skimSellFarBps": 200,
++     "skimBuyAtFloorBps": 0,
++     "skimSellAtFloorBps": 300,
++     "creatorBuyBps": 75,
++     "creatorSellBps": 75,
++     "holderBuyBps": 0,
++     "holderSellBps": 0,
++     "teamFeeBps": 25
++    },
++    "cushion": {
++     "cushionLower": 375000,
++     "cushionLiq": "5808148479385630916"
++    },
++    "gapSkim": true
++   },
++   "expected": [
++    {
++     "side": "buy",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000",
++     "amountOut": "20111130635523282376"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000",
++     "amountOut": "20100974706542550744061"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000",
++     "amountOut": "2005281872349590947889379"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000",
++     "amountOut": "19645103980992304361841588"
++    },
++    {
++     "side": "buy",
++     "amountIn": "10000000000",
++     "amountOut": "114688923037703741956910460"
++    },
++    {
++     "side": "buy",
++     "amountIn": "50000000000",
++     "amountOut": "340123480047181803514990887"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000000",
++     "amountOut": "472909172526599722437549100"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000",
++     "amountOut": "48"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000",
++     "amountOut": "47045"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000000",
++     "amountOut": "47042588"
++    },
++    {
++     "side": "sell",
++     "amountIn": "10000000000000000000000000",
++     "amountOut": "470295325"
++    },
++    {
++     "side": "sell",
++     "amountIn": "50000000000000000000000000",
++     "amountOut": "2348580131"
++    },
++    {
++     "side": "sell",
++     "amountIn": "100000000000000000000000000",
++     "amountOut": "4689939081"
++    }
++   ]
++  },
++  {
++   "state": "after a deep sell",
++   "block": "52567622",
++   "poolId": "0x09be10980162e1d60b295d0d8ebed2d5695971997778b64e3f57b22fc86b3597",
++   "snapshot": {
++    "pool": {
++     "sqrtPriceX96": "11303667137959267631941102937782404317",
++     "tick": 375539,
++     "liquidity": "5808148479385630916",
++     "tickSpacing": 60,
++     "protocolFee": 0,
++     "bitmap": [
++      [
++       -58,
++       "2305843009213693952"
++      ],
++      [
++       17,
++       "2993155353253689176481146537402947624255349848014848"
++      ],
++      [
++       23,
++       "7237005577332262213973186563042994240829374041602535252466099000494570602496"
++      ],
++      [
++       24,
++       "212965300838342539451446140650651648"
++      ]
++     ],
++     "liquidityNet": [
++      [
++       -887220,
++       "13511453451613375810"
++      ],
++      [
++       271380,
++       "-6186529438248864113"
++      ],
++      [
++       368400,
++       "-5771822955889094379"
++      ],
++      [
++       370500,
++       "-845858023713914916"
++      ],
++      [
++       375000,
++       "5808148479385630916"
++      ],
++      [
++       375360,
++       "-707243033761502402"
++      ],
++      [
++       375540,
++       "87864105058056738452"
++      ],
++      [
++       375660,
++       "-93672253537442369368"
++      ]
++     ]
++    },
++    "quoteIsCurrency1": false,
++    "floorTick": 375660,
++    "rates": {
++     "skimBuyFarBps": 200,
++     "skimSellFarBps": 200,
++     "skimBuyAtFloorBps": 0,
++     "skimSellAtFloorBps": 300,
++     "creatorBuyBps": 75,
++     "creatorSellBps": 75,
++     "holderBuyBps": 0,
++     "holderSellBps": 0,
++     "teamFeeBps": 25
++    },
++    "cushion": {
++     "cushionLower": 375000,
++     "cushionLiq": "5808148479385630916"
++    },
++    "gapSkim": true
++   },
++   "expected": [
++    {
++     "side": "buy",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000",
++     "amountOut": "20111130635523282376"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000",
++     "amountOut": "20100974706542550744061"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000",
++     "amountOut": "2005281872349590947889379"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000",
++     "amountOut": "19645103980992304361841588"
++    },
++    {
++     "side": "buy",
++     "amountIn": "10000000000",
++     "amountOut": "114688923037703741956910460"
++    },
++    {
++     "side": "buy",
++     "amountIn": "50000000000",
++     "amountOut": "340123480047181803514990887"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000000",
++     "amountOut": "472909172526599722437549100"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000",
++     "amountOut": "48"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000",
++     "amountOut": "47045"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000000",
++     "amountOut": "47040527"
++    },
++    {
++     "side": "sell",
++     "amountIn": "10000000000000000000000000",
++     "amountOut": "470089505"
++    },
++    {
++     "side": "sell",
++     "amountIn": "50000000000000000000000000",
++     "amountOut": "2343456271"
++    },
++    {
++     "side": "sell",
++     "amountIn": "100000000000000000000000000",
++     "amountOut": null
++    }
++   ]
++  }
++ ]
++}
+diff --git a/pkg/liquidity-source/uniswap/v4/hooks/floor/testdata/base-usdc-currency1.json b/pkg/liquidity-source/uniswap/v4/hooks/floor/testdata/base-usdc-currency1.json
+new file mode 100644
+index 0000000..d1edc74
+--- /dev/null
++++ b/pkg/liquidity-source/uniswap/v4/hooks/floor/testdata/base-usdc-currency1.json
+@@ -0,0 +1,957 @@
++{
++ "chainId": 8453,
++ "label": "usdc-currency1",
++ "quote": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
++ "cases": [
++  {
++   "state": "fresh",
++   "block": "52567596",
++   "poolId": "0x5d47a90997de59d451c2b8effab879349b739e6c9fbe184c648f599c2365785d",
++   "snapshot": {
++    "pool": {
++     "sqrtPriceX96": "560251620315420645015",
++     "tick": -375363,
++     "liquidity": "0",
++     "tickSpacing": 60,
++     "protocolFee": 0,
++     "bitmap": [
++      [
++       -25,
++       "23171868057848225608001957267673688127307776"
++      ],
++      [
++       -24,
++       "16"
++      ],
++      [
++       -18,
++       "38685626227668133590597632"
++      ],
++      [
++       57,
++       "50216813883093446110686315385661331328818843555712276103168"
++      ]
++     ],
++     "liquidityNet": [
++      [
++       -375780,
++       "233949789722964659626"
++      ],
++      [
++       -375660,
++       "-233949789722964659626"
++      ],
++      [
++       -375360,
++       "1536506979824597517"
++      ],
++      [
++       -368400,
++       "5788417033539911680"
++      ],
++      [
++       -271380,
++       "6186529438248866613"
++      ],
++      [
++       887220,
++       "-13511453451613375810"
++      ]
++     ]
++    },
++    "quoteIsCurrency1": true,
++    "floorTick": 375780,
++    "rates": {
++     "skimBuyFarBps": 200,
++     "skimSellFarBps": 200,
++     "skimBuyAtFloorBps": 0,
++     "skimSellAtFloorBps": 300,
++     "creatorBuyBps": 75,
++     "creatorSellBps": 75,
++     "holderBuyBps": 0,
++     "holderSellBps": 0,
++     "teamFeeBps": 25
++    },
++    "cushion": {
++     "cushionLower": 0,
++     "cushionLiq": "0"
++    },
++    "gapSkim": true
++   },
++   "expected": [
++    {
++     "side": "buy",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000",
++     "amountOut": "19752385286347952243"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000",
++     "amountOut": "19733121291967385239134"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000",
++     "amountOut": "1955725884780553674970888"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000",
++     "amountOut": "18091510345418011355058589"
++    },
++    {
++     "side": "buy",
++     "amountIn": "10000000000",
++     "amountOut": "113538761058875813437374453"
++    },
++    {
++     "side": "buy",
++     "amountIn": "50000000000",
++     "amountOut": "341238849160466139127372762"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000000",
++     "amountOut": "474950733078198475250621200"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000",
++     "amountOut": "47"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000",
++     "amountOut": "46483"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000000",
++     "amountOut": "46481531"
++    },
++    {
++     "side": "sell",
++     "amountIn": "10000000000000000000000000",
++     "amountOut": "464691063"
++    },
++    {
++     "side": "sell",
++     "amountIn": "50000000000000000000000000",
++     "amountOut": "2320698576"
++    },
++    {
++     "side": "sell",
++     "amountIn": "100000000000000000000000000",
++     "amountOut": "4634523690"
++    }
++   ]
++  },
++  {
++   "state": "after 3 ETH buy",
++   "block": "52567596",
++   "poolId": "0x5d47a90997de59d451c2b8effab879349b739e6c9fbe184c648f599c2365785d",
++   "snapshot": {
++    "pool": {
++     "sqrtPriceX96": "713035609154695139092",
++     "tick": -370540,
++     "liquidity": "1536506979824597517",
++     "tickSpacing": 60,
++     "protocolFee": 0,
++     "bitmap": [
++      [
++       -25,
++       "23171868057848225608001957267673688127307776"
++      ],
++      [
++       -24,
++       "16"
++      ],
++      [
++       -18,
++       "38685626227668133590597632"
++      ],
++      [
++       57,
++       "50216813883093446110686315385661331328818843555712276103168"
++      ]
++     ],
++     "liquidityNet": [
++      [
++       -375780,
++       "233949789722964659626"
++      ],
++      [
++       -375660,
++       "-233949789722964659626"
++      ],
++      [
++       -375360,
++       "1536506979824597517"
++      ],
++      [
++       -368400,
++       "5788417033539911680"
++      ],
++      [
++       -271380,
++       "6186529438248866613"
++      ],
++      [
++       887220,
++       "-13511453451613375810"
++      ]
++     ]
++    },
++    "quoteIsCurrency1": true,
++    "floorTick": 375780,
++    "rates": {
++     "skimBuyFarBps": 200,
++     "skimSellFarBps": 200,
++     "skimBuyAtFloorBps": 0,
++     "skimSellAtFloorBps": 300,
++     "creatorBuyBps": 75,
++     "creatorSellBps": 75,
++     "holderBuyBps": 0,
++     "holderSellBps": 0,
++     "teamFeeBps": 25
++    },
++    "cushion": {
++     "cushionLower": 0,
++     "cushionLiq": "0"
++    },
++    "gapSkim": true
++   },
++   "expected": [
++    {
++     "side": "buy",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000",
++     "amountOut": "12124063047563391804"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000",
++     "amountOut": "12112599024866162505036"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000",
++     "amountOut": "1202811642771524355886289"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000",
++     "amountOut": "11310924590998882465822234"
++    },
++    {
++     "side": "buy",
++     "amountIn": "10000000000",
++     "amountOut": "91245415713571312843617505"
++    },
++    {
++     "side": "buy",
++     "amountIn": "50000000000",
++     "amountOut": "304711397269086260006763894"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000000",
++     "amountOut": "432877876878945872833573863"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000",
++     "amountOut": "78"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000",
++     "amountOut": "77821"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000000",
++     "amountOut": "77368220"
++    },
++    {
++     "side": "sell",
++     "amountIn": "10000000000000000000000000",
++     "amountOut": "734710424"
++    },
++    {
++     "side": "sell",
++     "amountIn": "50000000000000000000000000",
++     "amountOut": "2998979640"
++    },
++    {
++     "side": "sell",
++     "amountIn": "100000000000000000000000000",
++     "amountOut": "5319215685"
++    }
++   ]
++  },
++  {
++   "state": "after a ratchet",
++   "block": "52567600",
++   "poolId": "0x5d47a90997de59d451c2b8effab879349b739e6c9fbe184c648f599c2365785d",
++   "snapshot": {
++    "pool": {
++     "sqrtPriceX96": "713035609154695139092",
++     "tick": -370540,
++     "liquidity": "707243033761502402",
++     "tickSpacing": 60,
++     "protocolFee": 0,
++     "bitmap": [
++      [
++       -25,
++       "53919893334301279589334769583122250128247825388740122459443403161600"
++      ],
++      [
++       -24,
++       "16"
++      ],
++      [
++       -18,
++       "38685626227668133590597632"
++      ],
++      [
++       57,
++       "50216813883093446110686315385661331328818843555712276103168"
++      ]
++     ],
++     "liquidityNet": [
++      [
++       -375660,
++       "244010921914841906068"
++      ],
++      [
++       -375540,
++       "-237466905065396994135"
++      ],
++      [
++       -375360,
++       "707243033761502402"
++      ],
++      [
++       -375060,
++       "-6544016849444911933"
++      ],
++      [
++       -370500,
++       "845858023713557804"
++      ],
++      [
++       -368400,
++       "5771822955889448991"
++      ],
++      [
++       -271380,
++       "6186529438248866613"
++      ],
++      [
++       887220,
++       "-13511453451613375810"
++      ]
++     ]
++    },
++    "quoteIsCurrency1": true,
++    "floorTick": 375660,
++    "rates": {
++     "skimBuyFarBps": 200,
++     "skimSellFarBps": 200,
++     "skimBuyAtFloorBps": 0,
++     "skimSellAtFloorBps": 300,
++     "creatorBuyBps": 75,
++     "creatorSellBps": 75,
++     "holderBuyBps": 0,
++     "holderSellBps": 0,
++     "teamFeeBps": 25
++    },
++    "cushion": {
++     "cushionLower": 375060,
++     "cushionLiq": "6544016849444911933"
++    },
++    "gapSkim": true
++   },
++   "expected": [
++    {
++     "side": "buy",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000",
++     "amountOut": "12099369451130293989"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000",
++     "amountOut": "12082043554072412614638"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000",
++     "amountOut": "1197563536471540784646669"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000",
++     "amountOut": "11269601550382312020088511"
++    },
++    {
++     "side": "buy",
++     "amountIn": "10000000000",
++     "amountOut": "91038982783659047529055220"
++    },
++    {
++     "side": "buy",
++     "amountIn": "50000000000",
++     "amountOut": "304265113009132250294441581"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000000",
++     "amountOut": "432429234541527003587703145"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000",
++     "amountOut": "78"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000",
++     "amountOut": "77821"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000000",
++     "amountOut": "76828883"
++    },
++    {
++     "side": "sell",
++     "amountIn": "10000000000000000000000000",
++     "amountOut": "689473451"
++    },
++    {
++     "side": "sell",
++     "amountIn": "50000000000000000000000000",
++     "amountOut": "2676090820"
++    },
++    {
++     "side": "sell",
++     "amountIn": "100000000000000000000000000",
++     "amountOut": "5024075732"
++    }
++   ]
++  },
++  {
++   "state": "after a big buy above the cushion",
++   "block": "52567600",
++   "poolId": "0x5d47a90997de59d451c2b8effab879349b739e6c9fbe184c648f599c2365785d",
++   "snapshot": {
++    "pool": {
++     "sqrtPriceX96": "903680457588668585048",
++     "tick": -365801,
++     "liquidity": "7324924013364509197",
++     "tickSpacing": 60,
++     "protocolFee": 0,
++     "bitmap": [
++      [
++       -25,
++       "53919893334301279589334769583122250128247825388740122459443403161600"
++      ],
++      [
++       -24,
++       "16"
++      ],
++      [
++       -18,
++       "38685626227668133590597632"
++      ],
++      [
++       57,
++       "50216813883093446110686315385661331328818843555712276103168"
++      ]
++     ],
++     "liquidityNet": [
++      [
++       -375660,
++       "244010921914841906068"
++      ],
++      [
++       -375540,
++       "-237466905065396994135"
++      ],
++      [
++       -375360,
++       "707243033761502402"
++      ],
++      [
++       -375060,
++       "-6544016849444911933"
++      ],
++      [
++       -370500,
++       "845858023713557804"
++      ],
++      [
++       -368400,
++       "5771822955889448991"
++      ],
++      [
++       -271380,
++       "6186529438248866613"
++      ],
++      [
++       887220,
++       "-13511453451613375810"
++      ]
++     ]
++    },
++    "quoteIsCurrency1": true,
++    "floorTick": 375660,
++    "rates": {
++     "skimBuyFarBps": 200,
++     "skimSellFarBps": 200,
++     "skimBuyAtFloorBps": 0,
++     "skimSellAtFloorBps": 300,
++     "creatorBuyBps": 75,
++     "creatorSellBps": 75,
++     "holderBuyBps": 0,
++     "holderSellBps": 0,
++     "teamFeeBps": 25
++    },
++    "cushion": {
++     "cushionLower": 375060,
++     "cushionLiq": "6544016849444911933"
++    },
++    "gapSkim": true
++   },
++   "expected": [
++    {
++     "side": "buy",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000",
++     "amountOut": "7455917870845670199"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000",
++     "amountOut": "7450220370479242107384"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000",
++     "amountOut": "744167925181496485709566"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000",
++     "amountOut": "7364870491771795950502927"
++    },
++    {
++     "side": "buy",
++     "amountIn": "10000000000",
++     "amountOut": "66758295232128512664110824"
++    },
++    {
++     "side": "buy",
++     "amountIn": "50000000000",
++     "amountOut": "235759682291173509208649951"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000000",
++     "amountOut": "344901112090708722080037418"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000",
++     "amountOut": "126"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000",
++     "amountOut": "125374"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000000",
++     "amountOut": "125179022"
++    },
++    {
++     "side": "sell",
++     "amountIn": "10000000000000000000000000",
++     "amountOut": "1234303047"
++    },
++    {
++     "side": "sell",
++     "amountIn": "50000000000000000000000000",
++     "amountOut": "5811494037"
++    },
++    {
++     "side": "sell",
++     "amountIn": "100000000000000000000000000",
++     "amountOut": "10773647165"
++    }
++   ]
++  },
++  {
++   "state": "after selling half the bag",
++   "block": "52567606",
++   "poolId": "0x5d47a90997de59d451c2b8effab879349b739e6c9fbe184c648f599c2365785d",
++   "snapshot": {
++    "pool": {
++     "sqrtPriceX96": "555315514759569531105",
++     "tick": -375540,
++     "liquidity": "6544016849444911933",
++     "tickSpacing": 60,
++     "protocolFee": 0,
++     "bitmap": [
++      [
++       -25,
++       "53919893334301279589334769583122250128247825388740122459443403161600"
++      ],
++      [
++       -24,
++       "16"
++      ],
++      [
++       -18,
++       "38685626227668133590597632"
++      ],
++      [
++       57,
++       "50216813883093446110686315385661331328818843555712276103168"
++      ]
++     ],
++     "liquidityNet": [
++      [
++       -375660,
++       "226787396660629491875"
++      ],
++      [
++       -375540,
++       "-220243379811184579942"
++      ],
++      [
++       -375360,
++       "707243033761502402"
++      ],
++      [
++       -375060,
++       "-6544016849444911933"
++      ],
++      [
++       -370500,
++       "845858023713557804"
++      ],
++      [
++       -368400,
++       "5771822955889448991"
++      ],
++      [
++       -271380,
++       "6186529438248866613"
++      ],
++      [
++       887220,
++       "-13511453451613375810"
++      ]
++     ]
++    },
++    "quoteIsCurrency1": true,
++    "floorTick": 375660,
++    "rates": {
++     "skimBuyFarBps": 200,
++     "skimSellFarBps": 200,
++     "skimBuyAtFloorBps": 0,
++     "skimSellAtFloorBps": 300,
++     "creatorBuyBps": 75,
++     "creatorSellBps": 75,
++     "holderBuyBps": 0,
++     "holderSellBps": 0,
++     "teamFeeBps": 25
++    },
++    "cushion": {
++     "cushionLower": 375060,
++     "cushionLiq": "6544016849444911933"
++    },
++    "gapSkim": true
++   },
++   "expected": [
++    {
++     "side": "buy",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000",
++     "amountOut": "20111130690407873294"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000",
++     "amountOut": "20101029535963491291371"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000",
++     "amountOut": "2005827689641807011058356"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000",
++     "amountOut": "19691306771418430901900448"
++    },
++    {
++     "side": "buy",
++     "amountIn": "10000000000",
++     "amountOut": "114755239436629566624565884"
++    },
++    {
++     "side": "buy",
++     "amountIn": "50000000000",
++     "amountOut": "340189796431871109095985707"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000000",
++     "amountOut": "472975488904264286136502821"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000",
++     "amountOut": "48"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000",
++     "amountOut": "47045"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000000",
++     "amountOut": "47042588"
++    },
++    {
++     "side": "sell",
++     "amountIn": "10000000000000000000000000",
++     "amountOut": "470295388"
++    },
++    {
++     "side": "sell",
++     "amountIn": "50000000000000000000000000",
++     "amountOut": "2348581681"
++    },
++    {
++     "side": "sell",
++     "amountIn": "100000000000000000000000000",
++     "amountOut": "4689945258"
++    }
++   ]
++  },
++  {
++   "state": "after a deep sell",
++   "block": "52567606",
++   "poolId": "0x5d47a90997de59d451c2b8effab879349b739e6c9fbe184c648f599c2365785d",
++   "snapshot": {
++    "pool": {
++     "sqrtPriceX96": "555315514759569531105",
++     "tick": -375540,
++     "liquidity": "6544016849444911933",
++     "tickSpacing": 60,
++     "protocolFee": 0,
++     "bitmap": [
++      [
++       -25,
++       "53919893334301279589334769583122250128247825388740122459443403161600"
++      ],
++      [
++       -24,
++       "16"
++      ],
++      [
++       -18,
++       "38685626227668133590597632"
++      ],
++      [
++       57,
++       "50216813883093446110686315385661331328818843555712276103168"
++      ]
++     ],
++     "liquidityNet": [
++      [
++       -375660,
++       "93772655236822806770"
++      ],
++      [
++       -375540,
++       "-87228638387377894837"
++      ],
++      [
++       -375360,
++       "707243033761502402"
++      ],
++      [
++       -375060,
++       "-6544016849444911933"
++      ],
++      [
++       -370500,
++       "845858023713557804"
++      ],
++      [
++       -368400,
++       "5771822955889448991"
++      ],
++      [
++       -271380,
++       "6186529438248866613"
++      ],
++      [
++       887220,
++       "-13511453451613375810"
++      ]
++     ]
++    },
++    "quoteIsCurrency1": true,
++    "floorTick": 375660,
++    "rates": {
++     "skimBuyFarBps": 200,
++     "skimSellFarBps": 200,
++     "skimBuyAtFloorBps": 0,
++     "skimSellAtFloorBps": 300,
++     "creatorBuyBps": 75,
++     "creatorSellBps": 75,
++     "holderBuyBps": 0,
++     "holderSellBps": 0,
++     "teamFeeBps": 25
++    },
++    "cushion": {
++     "cushionLower": 375060,
++     "cushionLiq": "6544016849444911933"
++    },
++    "gapSkim": true
++   },
++   "expected": [
++    {
++     "side": "buy",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000",
++     "amountOut": "20111130690407873294"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000",
++     "amountOut": "20101029535963491291371"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000",
++     "amountOut": "2005827689641807011058356"
++    },
++    {
++     "side": "buy",
++     "amountIn": "1000000000",
++     "amountOut": "19691306771418430901900448"
++    },
++    {
++     "side": "buy",
++     "amountIn": "10000000000",
++     "amountOut": "114755239436629566624565884"
++    },
++    {
++     "side": "buy",
++     "amountIn": "50000000000",
++     "amountOut": "340189796431871109095985707"
++    },
++    {
++     "side": "buy",
++     "amountIn": "100000000000",
++     "amountOut": "472975488904264286136502821"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1",
++     "amountOut": "0"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000",
++     "amountOut": "48"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000",
++     "amountOut": "47045"
++    },
++    {
++     "side": "sell",
++     "amountIn": "1000000000000000000000000",
++     "amountOut": "47040530"
++    },
++    {
++     "side": "sell",
++     "amountIn": "10000000000000000000000000",
++     "amountOut": "470089881"
++    },
++    {
++     "side": "sell",
++     "amountIn": "50000000000000000000000000",
++     "amountOut": "2343465602"
++    },
++    {
++     "side": "sell",
++     "amountIn": "100000000000000000000000000",
++     "amountOut": null
++    }
++   ]
++  }
++ ]
++}
+diff --git a/pkg/liquidity-source/uniswap/v4/hooks/floor/testdata/go.mod b/pkg/liquidity-source/uniswap/v4/hooks/floor/testdata/go.mod
+new file mode 100644
+index 0000000..c01735a
+--- /dev/null
++++ b/pkg/liquidity-source/uniswap/v4/hooks/floor/testdata/go.mod
+@@ -0,0 +1,8 @@
++// This is a nested module boundary, not a real Go module: pure test-fixture data, no .go files.
++// Go's module-zip packer excludes any subdirectory containing its own go.mod, so this directory
++// is skipped entirely when this repo is fetched as a dependency (go get/go mod download) by
++// downstream services -- only a full git clone of this repo still includes it. See AGENTS.md
++// "Test data size".
++module github.com/KyberNetwork/kyberswap-dex-lib/pkg/liquidity-source/uniswap/v4/hooks/floor/testdata
++
++go 1.25.10
+diff --git a/pkg/liquidity-source/uniswap/v4/hooks/floor/type.go b/pkg/liquidity-source/uniswap/v4/hooks/floor/type.go
+new file mode 100644
+index 0000000..b25d4e7
+--- /dev/null
++++ b/pkg/liquidity-source/uniswap/v4/hooks/floor/type.go
+@@ -0,0 +1,151 @@
++package floor
++
++import (
++	"math/big"
++
++	"github.com/ethereum/go-ethereum/common"
++)
++
++// Rates are the pool's own fee rates in bps, copied into its state when the launch was created and never changed.
++type Rates struct {
++	SkimBuyFar      uint16 `json:"sbf,omitempty"`
++	SkimSellFar     uint16 `json:"ssf,omitempty"`
++	SkimBuyAtFloor  uint16 `json:"sba,omitempty"`
++	SkimSellAtFloor uint16 `json:"ssa,omitempty"`
++	CreatorBuy      uint16 `json:"cb,omitempty"`
++	CreatorSell     uint16 `json:"cs,omitempty"`
++	HolderBuy       uint16 `json:"hb,omitempty"`
++	HolderSell      uint16 `json:"hs,omitempty"`
++	TeamFee         uint16 `json:"tf,omitempty"`
++}
++
++// Extra is the hook state kept per pool. Ticks (FloorTick, CushionLower) are in the engine frame: the quote at
++// currency0 for every pool, so a dearer launch token is a lower tick.
++type Extra struct {
++	// TickSpacing is poolState.tickSpacing; 0 means the pool was never read or is not trading yet (not graduated).
++	TickSpacing      int32 `json:"tS,omitempty"`
++	QuoteIsCurrency1 bool  `json:"q1,omitempty"`
++	FloorTick        int32 `json:"fT,omitempty"`
++	Rates            Rates `json:"r"`
++	// CushionLower is stairs().cushionLower, the cushion's dear edge; HasCushion is stairs().cushionLiq != 0.
++	CushionLower int32 `json:"cL,omitempty"`
++	HasCushion   bool  `json:"c,omitempty"`
++	// ProtocolFee is the PoolManager's packed protocol fee (slot0.protocolFee): zeroForOne in the low 12 bits.
++	ProtocolFee uint32 `json:"pF,omitempty"`
++}
++
++// SwapInfo carries a quote's post-swap tick to UpdateBalance, and whether the swap was a sell that reached the bid
++// band (the hook then re-places its bid inside that swap).
++type SwapInfo struct {
++	Tick        int  `json:"t"`
++	BandReached bool `json:"b,omitempty"`
++}
++
++// poolStateRPC is the ethrpc decode target for SingletonFloorHook.poolState(id). go-ethereum copies a returned tuple
++// field by field, by position, so every field of the contract's PoolState is listed, in order.
++type poolStateRPC struct {
++	PoolInitializer common.Address
++	SkimBuyFarBps   *big.Int
++	SkimSellFarBps  *big.Int
++	PoolKey         struct {
++		Currency0   common.Address
++		Currency1   common.Address
++		Fee         *big.Int
++		TickSpacing *big.Int
++		Hooks       common.Address
++	}
++	PoolBound             bool
++	TickSpacing           *big.Int
++	VaultEth              *big.Int
++	BidEthDeployed        *big.Int
++	InventoryTokens       *big.Int
++	FloorTick             *big.Int
++	BidLower              *big.Int
++	BidLiquidity          *big.Int
++	CumulativeVolumeEth   *big.Int
++	UnpaidSkim            *big.Int
++	NeedsRatchet          bool
++	WallShape             *big.Int
++	SeedLiq               *big.Int
++	SeedLower             *big.Int
++	SeedUpper             *big.Int
++	SeedFeesSweptEth      *big.Int
++	SeedFeesSweptTokens   *big.Int
++	LadderUpper           *big.Int
++	LadderTokensRemaining *big.Int
++	LadderProceedsEth     *big.Int
++	LadderSeeded          bool
++	Token                 common.Address
++	PlatformVault         common.Address
++	PlatformPaidEth       *big.Int
++	CreatorSlotCount      *big.Int
++	CreatorBuyBps         *big.Int
++	CreatorSellBps        *big.Int
++	CreatorPendingMask    *big.Int
++	RecipientClaims       common.Address
++	CreatorFeesOwed       *big.Int
++	CreatorFeesPaid       *big.Int
++	HolderRewards         common.Address
++	HolderBuyBps          *big.Int
++	HolderSellBps         *big.Int
++	HolderPaidEth         *big.Int
++	QuoteToken            common.Address
++	QuoteIsCurrency1      bool
++	CustodyVault          common.Address
++	SkimBuyAtFloorBps     *big.Int
++	SkimSellAtFloorBps    *big.Int
++	BidWidth              *big.Int
++	Referrer              common.Address
++	ReferralFeesPaid      *big.Int
++	QuoteUnit             *big.Int
++	HolderOwedEth         *big.Int
++	ReferralFeesOwed      *big.Int
++	TeamFeesOwed          *big.Int
++	TeamFeesPaid          *big.Int
++	TeamFeeBps            *big.Int
++}
++
++// stairsRPC is the decode target for the pool's stairs() view, read through execute(poolId, stairs()).
++type stairsRPC struct {
++	Next         uint8
++	Placed       bool
++	Base         *big.Int
++	TailCheap    *big.Int
++	TailLiq      *big.Int
++	TailTokens   *big.Int
++	RelistLower  *big.Int
++	RelistUpper  *big.Int
++	RelistTokens *big.Int
++	RelistLiq    *big.Int
++	CushionLower *big.Int
++	CushionUpper *big.Int
++	CushionLiq   *big.Int
++	CushionQuote *big.Int
++	CushionFed   *big.Int
++	Pending      *big.Int
++	Step         [16]struct {
++		Cheap  *big.Int
++		Liq    *big.Int
++		Tokens *big.Int
++	}
++	BoughtTokens       *big.Int
++	BoughtCost         *big.Int
++	SweptQuote         *big.Int
++	CushionFees        *big.Int
++	CushionBasisTokens *big.Int
++	CushionBasisCost   *big.Int
++	CushionInPool      *big.Int
++}
++
++// poolStateResp and stairsResp hold a single returned tuple: go-ethereum copies a lone output into the first field.
++type poolStateResp struct{ PoolState poolStateRPC }
++
++type stairsResp struct{ Stairs stairsRPC }
++
++// slot0RPC is the decode target for StateView.getSlot0(poolId).
++type slot0RPC struct {
++	SqrtPriceX96 *big.Int
++	Tick         *big.Int
++	ProtocolFee  *big.Int
++	LpFee        *big.Int
++}
+diff --git a/pkg/liquidity-source/uniswap/v4/pool_simulator.go b/pkg/liquidity-source/uniswap/v4/pool_simulator.go
+index 8f11499..4d98fca 100644
+--- a/pkg/liquidity-source/uniswap/v4/pool_simulator.go
++++ b/pkg/liquidity-source/uniswap/v4/pool_simulator.go
+@@ -219,6 +219,7 @@ func (p *PoolSimulator) CalcAmountOut(param pool.CalcAmountOutParams) (swapResul
+ 			AmountIn:         amountIn,
+ 			AmountOut:        swapResult.TokenAmountOut.Amount,
+ 			BeforeSwapResult: beforeSwapResult,
++			PoolSwapInfo:     poolSwapInfoOf(swapResult.SwapInfo),
+ 		})
+ 		if err != nil {
+ 			return nil, fmt.Errorf("[AfterSwap] %w", err)
+@@ -363,6 +364,7 @@ func (p *PoolSimulator) CalcAmountIn(param pool.CalcAmountInParams) (swapResult
+ 			AmountIn:         swapResult.TokenAmountIn.Amount,
+ 			AmountOut:        amountOut,
+ 			BeforeSwapResult: beforeSwapResult,
++			PoolSwapInfo:     poolSwapInfoOf(swapResult.SwapInfo),
+ 		}); err != nil {
+ 			return nil, fmt.Errorf("[AfterSwap] %w", err)
+ 		} else if err = ValidateAfterSwapResult(afterSwapResult); err != nil {
+@@ -373,6 +375,14 @@ func (p *PoolSimulator) CalcAmountIn(param pool.CalcAmountInParams) (swapResult
+ 	return
+ }
+ 
++// poolSwapInfoOf returns the v3 math's post-swap state from a swap result's SwapInfo, or nil.
++func poolSwapInfoOf(swapInfo any) *PoolSwapInfo {
++	if si, ok := swapInfo.(PoolSwapInfo); ok {
++		return &si
++	}
++	return nil
++}
++
+ func (p *PoolSimulator) CanSwapFrom(address string) []string {
+ 	return p.CanSwapTo(address)
+ }
+diff --git a/pkg/msgpack/register_pool_types.gen.go b/pkg/msgpack/register_pool_types.gen.go
+index a44445b..7b07048 100644
+--- a/pkg/msgpack/register_pool_types.gen.go
++++ b/pkg/msgpack/register_pool_types.gen.go
+@@ -221,6 +221,7 @@ import (
+ 	pkg_liquiditysource_uniswap_v4_hooks_fables "github.com/KyberNetwork/kyberswap-dex-lib/pkg/liquidity-source/uniswap/v4/hooks/fables"
+ 	pkg_liquiditysource_uniswap_v4_hooks_few_hook "github.com/KyberNetwork/kyberswap-dex-lib/pkg/liquidity-source/uniswap/v4/hooks/few/hook"
+ 	pkg_liquiditysource_uniswap_v4_hooks_flaunch "github.com/KyberNetwork/kyberswap-dex-lib/pkg/liquidity-source/uniswap/v4/hooks/flaunch"
++	pkg_liquiditysource_uniswap_v4_hooks_floor "github.com/KyberNetwork/kyberswap-dex-lib/pkg/liquidity-source/uniswap/v4/hooks/floor"
+ 	pkg_liquiditysource_uniswap_v4_hooks_gluehook "github.com/KyberNetwork/kyberswap-dex-lib/pkg/liquidity-source/uniswap/v4/hooks/gluehook"
+ 	pkg_liquiditysource_uniswap_v4_hooks_hyfiprop "github.com/KyberNetwork/kyberswap-dex-lib/pkg/liquidity-source/uniswap/v4/hooks/hyfiprop"
+ 	pkg_liquiditysource_uniswap_v4_hooks_idle "github.com/KyberNetwork/kyberswap-dex-lib/pkg/liquidity-source/uniswap/v4/hooks/idle"
+@@ -516,6 +517,7 @@ func init() {
+ 	_ = msgpack.RegisterConcreteType(&pkg_liquiditysource_uniswap_v4_hooks_fables.Hook{})
+ 	_ = msgpack.RegisterConcreteType(&pkg_liquiditysource_uniswap_v4_hooks_few_hook.Hook{})
+ 	_ = msgpack.RegisterConcreteType(&pkg_liquiditysource_uniswap_v4_hooks_flaunch.Hook{})
++	_ = msgpack.RegisterConcreteType(&pkg_liquiditysource_uniswap_v4_hooks_floor.Hook{})
+ 	_ = msgpack.RegisterConcreteType(&pkg_liquiditysource_uniswap_v4_hooks_gluehook.Hook{})
+ 	_ = msgpack.RegisterConcreteType(&pkg_liquiditysource_uniswap_v4_hooks_hyfiprop.Hook{})
+ 	_ = msgpack.RegisterConcreteType(&pkg_liquiditysource_uniswap_v4_hooks_idle.Hook{})
+diff --git a/pkg/valueobject/exchange.go b/pkg/valueobject/exchange.go
+index c37fcf6..99d6064 100644
+--- a/pkg/valueobject/exchange.go
++++ b/pkg/valueobject/exchange.go
+@@ -344,6 +344,7 @@ const (
+ 	ExchangeUniswapV4Fables             = "uniswap-v4-fables"
+ 	ExchangeUniswapV4FairFlow           = "uniswap-v4-fairflow"
+ 	ExchangeUniswapV4Flaunch            = "uniswap-v4-flaunch"
++	ExchangeUniswapV4Floor              = "uniswap-v4-floor"
+ 	ExchangeUniswapV4GlueHook           = "uniswap-v4-gluehook"
+ 	ExchangeUniswapV4HyFiProp           = "uniswap-v4-hyfiprop"
+ 	ExchangeUniswapV4Inverse            = "uniswap-v4-inverse"

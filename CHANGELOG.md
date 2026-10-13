@@ -10,6 +10,7 @@ while the version is `0.x`, a minor release may change the API.
 - `@floor/sdk`: the approved quote assets per live chain (`APPROVED_QUOTE_TOKENS`, `isApprovedQuote`, `approvedQuoteSymbol`).
 - `@floor/sdk`: `dex`, the DEX adapter's pair model and event mapping (GeckoTerminal / DEX Screener integration API).
 - `integrations/defillama`: a treasury adapter.
+- `integrations/kyberswap`: the FLOOR hook for KyberSwap's `kyberswap-dex-lib`, tested against the same V4Quoter fixtures.
 - `@floor/sdk-evm`: `simulateSwap` and `readSwapSnapshot`, an off-chain simulator of a swap on a FLOOR pool (Uniswap v4's
   swap with the FLOOR hook's fees), tested against Uniswap's V4Quoter on pools created on a fork of Base.
 - `@floor/sdk-evm`: event decoders (`decodeFloorLog`, `decodeFloorLogs`, `floorEventTopics`, `FLOOR_EVENTS`).

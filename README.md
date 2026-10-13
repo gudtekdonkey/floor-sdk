@@ -15,6 +15,7 @@ team steps and governance are not part of them; the ABIs and IDLs they ship are 
 | [`rust/`](rust) | Rust crates: `floor-types` (layouts, seeds, constants), `floor-math` (the mechanism's math), `floor-quote` (the FLOOR hook's quoter for Carpenter's `HookQuoter`), `floor-quote-wasm` (the wasm build `@floor/sdk-solana` ships) |
 | [`jupiter/`](jupiter) | `floor-sale-amm`: a `jupiter-amm-interface` `Amm` for FLOOR bonding sales; its own Cargo workspace |
 | [`docs/evm-events.md`](docs/evm-events.md) | How FLOOR's EVM events become launches, pools, trades, the floor and candles |
+| [`integrations/kyberswap/`](integrations/kyberswap) | The FLOOR hook for KyberSwap's `kyberswap-dex-lib` (Go): its files at their upstream paths and `upstream.patch` |
 | [`integrations/defillama/`](integrations/defillama) | DefiLlama's TVL and volume adapters for FLOOR, kept here and copied into DefiLlama's repositories |
 | [`scripts/build-wasm.sh`](scripts/build-wasm.sh) | builds the quoter wasm reproducibly from `rust/crates/floor-quote-wasm` |
 
