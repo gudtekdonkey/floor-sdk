@@ -34,6 +34,13 @@ export interface Deployment {
   factory: Address;
   /** FLOOR's `FloorVesting`. `ABSENT` where FLOOR is not deployed. */
   vesting: Address;
+  /** The chain's one singleton FLOOR hook: every FLOOR pool on the chain is a v4 pool keyed by this hook (an indexer finds
+   *  them by it in the PoolManager's `Initialize`). Optional. */
+  singletonHook?: Address;
+  /** The timelock that owns the set's upgrades. Optional. */
+  upgradeTimelock?: Address;
+  /** The platform treasury. Optional. */
+  platformTreasury?: Address;
   /** `FloorRecipientClaims`. Optional: missing means "not part of this deployment". */
   recipientClaims?: Address;
   /** The chain's one `FloorHolderRewards` proxy. Optional. */
@@ -179,6 +186,9 @@ export const EVM_DEPLOYMENTS: Readonly<Record<number, Deployment>> = {
     registry: '0x623c349ac8cBBD796f1E9540f902b9BfA9cD5804',
     factory: '0x594A1A3D81b16c52e57e12975E32aF66D641Ed5F',
     vesting: '0xa826B75Ca94206C51De45c8112c5ce8541e357A3',
+    singletonHook: '0xe44886ffe0a894c6C5900d77A51c7d49732C60Cc',
+    upgradeTimelock: '0xf1dBe7312CF4E0E33f26074f64dEc1844B3D536E',
+    platformTreasury: '0x6134E81DB1C853354E5D6B0cd70C5d04a4A6508c',
     recipientClaims: '0x830E0853d08aBD7Ef2181b6e171Fa673E0B51d40',
     holderRewards: '0xc6257aF57c2A92812D87AD43834eb24e1Cd711dD',
     teamTreasury: '0x062B6c421E37579728877337B47Cf528AE4d49bb',
@@ -201,6 +211,9 @@ export const EVM_DEPLOYMENTS: Readonly<Record<number, Deployment>> = {
     registry: '0x623c349ac8cBBD796f1E9540f902b9BfA9cD5804',
     factory: '0x594A1A3D81b16c52e57e12975E32aF66D641Ed5F',
     vesting: '0xa826B75Ca94206C51De45c8112c5ce8541e357A3',
+    singletonHook: '0xe44886ffe0a894c6C5900d77A51c7d49732C60Cc',
+    upgradeTimelock: '0xf1dBe7312CF4E0E33f26074f64dEc1844B3D536E',
+    platformTreasury: '0x6134E81DB1C853354E5D6B0cd70C5d04a4A6508c',
     recipientClaims: '0x830E0853d08aBD7Ef2181b6e171Fa673E0B51d40',
     holderRewards: '0xc6257aF57c2A92812D87AD43834eb24e1Cd711dD',
     teamTreasury: '0x062B6c421E37579728877337B47Cf528AE4d49bb',
@@ -223,6 +236,9 @@ export const EVM_DEPLOYMENTS: Readonly<Record<number, Deployment>> = {
     registry: '0x623c349ac8cBBD796f1E9540f902b9BfA9cD5804',
     factory: '0x594A1A3D81b16c52e57e12975E32aF66D641Ed5F',
     vesting: '0xa826B75Ca94206C51De45c8112c5ce8541e357A3',
+    singletonHook: '0xe44886ffe0a894c6C5900d77A51c7d49732C60Cc',
+    upgradeTimelock: '0xf1dBe7312CF4E0E33f26074f64dEc1844B3D536E',
+    platformTreasury: '0x6134E81DB1C853354E5D6B0cd70C5d04a4A6508c',
     recipientClaims: '0x830E0853d08aBD7Ef2181b6e171Fa673E0B51d40',
     holderRewards: '0xc6257aF57c2A92812D87AD43834eb24e1Cd711dD',
     teamTreasury: '0x062B6c421E37579728877337B47Cf528AE4d49bb',
@@ -248,6 +264,9 @@ export const EVM_DEPLOYMENTS: Readonly<Record<number, Deployment>> = {
     registry: '0x623c349ac8cBBD796f1E9540f902b9BfA9cD5804',
     factory: '0x594A1A3D81b16c52e57e12975E32aF66D641Ed5F',
     vesting: '0xa826B75Ca94206C51De45c8112c5ce8541e357A3',
+    singletonHook: '0xe44886ffe0a894c6C5900d77A51c7d49732C60Cc',
+    upgradeTimelock: '0xf1dBe7312CF4E0E33f26074f64dEc1844B3D536E',
+    platformTreasury: '0x6134E81DB1C853354E5D6B0cd70C5d04a4A6508c',
     recipientClaims: '0x830E0853d08aBD7Ef2181b6e171Fa673E0B51d40',
     holderRewards: '0xc6257aF57c2A92812D87AD43834eb24e1Cd711dD',
     teamTreasury: '0x062B6c421E37579728877337B47Cf528AE4d49bb',
@@ -271,6 +290,9 @@ export const EVM_DEPLOYMENTS: Readonly<Record<number, Deployment>> = {
     registry: '0x623c349ac8cBBD796f1E9540f902b9BfA9cD5804',
     factory: '0x594A1A3D81b16c52e57e12975E32aF66D641Ed5F',
     vesting: '0xa826B75Ca94206C51De45c8112c5ce8541e357A3',
+    singletonHook: '0xe44886ffe0a894c6C5900d77A51c7d49732C60Cc',
+    upgradeTimelock: '0xf1dBe7312CF4E0E33f26074f64dEc1844B3D536E',
+    platformTreasury: '0x6134E81DB1C853354E5D6B0cd70C5d04a4A6508c',
     recipientClaims: '0x830E0853d08aBD7Ef2181b6e171Fa673E0B51d40',
     holderRewards: '0xc6257aF57c2A92812D87AD43834eb24e1Cd711dD',
     teamTreasury: '0x062B6c421E37579728877337B47Cf528AE4d49bb',
