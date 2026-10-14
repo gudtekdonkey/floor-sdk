@@ -14,8 +14,8 @@ import {
   type FieldKind,
   EXTENSION_TYPES,
   ADDRESS_LOOKUP_TABLE_PROGRAM_ID,
-} from '@floorsupply/carpenter-sdk';
-import * as CARPENTER from '@floorsupply/carpenter-sdk';
+} from '@floorlaunchpad/carpenter-sdk';
+import * as CARPENTER from '@floorlaunchpad/carpenter-sdk';
 import * as FLOOR_CONSTANTS from '../src/constants.ts';
 
 const C = { ...CARPENTER, ...FLOOR_CONSTANTS };

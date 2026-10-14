@@ -1,7 +1,7 @@
 /**
  * What FLOOR's builders share: `BuiltTransaction` (its `main` a FLOOR instruction), the quote-mint spec, and `finalize` /
  * `lockCount` / `sumCu` over THIS package's `CU_LIMITS` / `HEAP_FRAMES` (Carpenter's rows plus FLOOR's).
- * `TooManyAccountsError`, `uniqueAccounts` and `finalizeUnits` are `@floorsupply/carpenter-sdk`'s.
+ * `TooManyAccountsError`, `uniqueAccounts` and `finalizeUnits` are `@floorlaunchpad/carpenter-sdk`'s.
  */
 
 import type { Address, Instruction } from '@solana/kit';
@@ -16,7 +16,7 @@ import {
   WSOL_MINT,
   requestHeapFrameIx,
   setComputeUnitLimitIx,
-} from '@floorsupply/carpenter-sdk';
+} from '@floorlaunchpad/carpenter-sdk';
 import { CU_LIMITS, HEAP_FRAMES, type CuLimitKey } from '../constants.ts';
 import type { FloorInstruction } from './instructions.ts';
 

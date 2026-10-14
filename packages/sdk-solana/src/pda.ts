@@ -1,6 +1,6 @@
 /**
  * FLOOR's PDAs (`floor_hook`, `floor_launch`), derived exactly as the programs derive them. `ProgramIds` here EXTENDS
- * `@floorsupply/carpenter-sdk`'s with FLOOR's program ids.
+ * `@floorlaunchpad/carpenter-sdk`'s with FLOOR's program ids.
  * ⛔ Integers in seeds are LITTLE-endian. ⛔ A pool PDA takes the mints already sorted; `sortMints` is the one place
  *    that sorts.
  */
@@ -15,7 +15,7 @@ import {
   addressToBytes,
   u64le,
   CARPENTER_AMM_PROGRAM_ID,
-} from '@floorsupply/carpenter-sdk';
+} from '@floorlaunchpad/carpenter-sdk';
 import { FLOOR_HOLDERS_PROGRAM_ID, FLOOR_HOOK_PROGRAM_ID, FLOOR_LAUNCH_PROGRAM_ID, SEEDS } from './constants.ts';
 
 /** Program ids, overridable per deployment (tests, a redeployed cluster). */

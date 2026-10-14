@@ -54,7 +54,7 @@ import {
   floorToSpacing,
   getSqrtPriceAtTick,
   tickArrayStartIndex,
-} from '@floorsupply/carpenter-sdk';
+} from '@floorlaunchpad/carpenter-sdk';
 import type { FloorPool, Launch,  } from './layouts.ts';
 import {
   DEFAULT_PROGRAM_IDS,

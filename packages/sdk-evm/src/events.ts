@@ -1,5 +1,5 @@
 /**
- * Event decoders for every FLOOR contract on EVM chains: the twin of `@floorsupply/sdk-solana`'s `events.ts`.
+ * Event decoders for every FLOOR contract on EVM chains: the twin of `@floorlaunchpad/sdk-solana`'s `events.ts`.
  *
  * A log is identified by its first topic, the event's selector. Across all of this package's ABIs each selector names
  * exactly one event layout (the tests hold that), so one table decodes any FLOOR log without knowing which contract

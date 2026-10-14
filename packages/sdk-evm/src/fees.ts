@@ -11,7 +11,7 @@
  * ⛔ Every rate is READ per launch / per pool (each copied its rates at creation). Nothing here holds a rate.
  * ⛔ The 2.5% `$FLOOR` cut is NOT a take: it is a split of the skim the trader already paid. It is never in a quote.
  */
-import type { FeePart } from '@floorsupply/sdk';
+import type { FeePart } from '@floorlaunchpad/sdk';
 import { RateAboveCap } from './errors.js';
 import { LP_FEE_PIPS, SKIM_RAMP_TICKS } from './pool.js';
 

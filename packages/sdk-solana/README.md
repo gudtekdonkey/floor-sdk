@@ -1,21 +1,21 @@
-# @floorsupply/sdk-solana
+# @floorlaunchpad/sdk-solana
 
-FLOOR on Solana: read FLOOR launches, quote trades and build unsigned trade transactions. It implements `@floorsupply/sdk`'s
+FLOOR on Solana: read FLOOR launches, quote trades and build unsigned trade transactions. It implements `@floorlaunchpad/sdk`'s
 `FloorChainAdapter` (`createSolanaAdapter`), so the same `FloorClient` serves Solana and EVM launches.
 
 FLOOR runs as four Solana programs — `floor_hook` (an approved hook of the Carpenter AMM), `floor_launch` (the bonding
 sale and graduation), `floor_holders` (the holder tally, a Token-2022 transfer hook) and `floor_vesting` — on top of
-Carpenter (`carpenter_amm`). This package is built on [`@floorsupply/carpenter-sdk`](https://github.com/gudtekdonkey/carpenter-sdk/tree/main/packages/sdk) and adds:
+Carpenter (`carpenter_amm`). This package is built on [`@floorlaunchpad/carpenter-sdk`](https://github.com/gudtekdonkey/carpenter-sdk/tree/main/packages/sdk) and adds:
 
 - the four programs' IDLs and [Codama](https://github.com/codama-idl/codama) clients (`floorHook`, `floorLaunch`,
   `floorHolders`, `floorVesting`);
 - FLOOR's account layouts, PDAs and event decoders, and read helpers (`stateView`, `getLaunch`, `listLaunches`);
 - the sale buy (with the graduation `prepare` step it needs) and sell-back, and swaps on graduated FLOOR pools;
 - the wasm quoter (`initQuote`): the sale's own arithmetic and the AMM walk with FLOOR's hook callbacks;
-- `createSolanaAdapter` and, re-exported from `@floorsupply/carpenter-sdk`, `sendSolanaTransactions`.
+- `createSolanaAdapter` and, re-exported from `@floorlaunchpad/carpenter-sdk`, `sendSolanaTransactions`.
 
 Launch creation, claims, vesting, team steps, `$FLOOR`'s raise, liquidity and governance are not in this package
-(liquidity on any Carpenter pool is `@floorsupply/carpenter-sdk`'s `buildModifyLiquidity`; on a launch with holder rewards pass it
+(liquidity on any Carpenter pool is `@floorlaunchpad/carpenter-sdk`'s `buildModifyLiquidity`; on a launch with holder rewards pass it
 this package's `transferHookAccounts`). The IDLs and generated clients are complete.
 
 ## Program version
@@ -39,18 +39,18 @@ errors are otherwise complete. `IDL_SHA256` is the hash of these files as shippe
 ## Install
 
 ```sh
-npm install @floorsupply/sdk @floorsupply/sdk-solana @solana/kit
+npm install @floorlaunchpad/sdk @floorlaunchpad/sdk-solana @solana/kit
 ```
 
-`@floorsupply/carpenter-sdk` (`^0.1.0`) is installed with it. `@solana/kit` is a peer dependency (`^8.3.0`). The quoter wasm is
+`@floorlaunchpad/carpenter-sdk` (`^0.1.0`) is installed with it. `@solana/kit` is a peer dependency (`^8.3.0`). The quoter wasm is
 shipped in the package (`wasm/`), so installing needs no Rust toolchain.
 
 ## Example
 
 ```ts
-import { FloorClient, solanaRef } from '@floorsupply/sdk';
-import { createSolanaAdapter, sendSolanaTransactions } from '@floorsupply/sdk-solana';
-import { initQuote } from '@floorsupply/sdk-solana/quote/wasm';
+import { FloorClient, solanaRef } from '@floorlaunchpad/sdk';
+import { createSolanaAdapter, sendSolanaTransactions } from '@floorlaunchpad/sdk-solana';
+import { initQuote } from '@floorlaunchpad/sdk-solana/quote/wasm';
 import { createSolanaRpc } from '@solana/kit';
 
 const rpc = createSolanaRpc('https://api.mainnet-beta.solana.com');
@@ -140,15 +140,15 @@ removed from the build copy, so the output does not depend on where the checkout
 ## Develop
 
 From the repository root, with [`carpenter-sdk`](https://github.com/gudtekdonkey/carpenter-sdk) checked out beside it
-(the root `package.json` overrides `@floorsupply/carpenter-sdk` with that checkout for local development):
+(the root `package.json` overrides `@floorlaunchpad/carpenter-sdk` with that checkout for local development):
 
 ```sh
 npm install
-npm run generate -w @floorsupply/sdk-solana     # idl/ + deployments.json → src/generated/ (Codama clients)
-npm run build-wasm -w @floorsupply/sdk-solana   # the quoter wasm, from source → wasm/
-npm run typecheck -w @floorsupply/sdk-solana
-npm test -w @floorsupply/sdk-solana
-npm pack -w @floorsupply/sdk-solana             # builds dist/ first (prepack)
+npm run generate -w @floorlaunchpad/sdk-solana     # idl/ + deployments.json → src/generated/ (Codama clients)
+npm run build-wasm -w @floorlaunchpad/sdk-solana   # the quoter wasm, from source → wasm/
+npm run typecheck -w @floorlaunchpad/sdk-solana
+npm test -w @floorlaunchpad/sdk-solana
+npm pack -w @floorlaunchpad/sdk-solana             # builds dist/ first (prepack)
 ```
 
 Some tests compare the SDK with the Rust program source; they run when `FLOOR_PROGRAM_SOURCE` names a checkout of it and

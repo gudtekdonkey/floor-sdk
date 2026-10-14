@@ -11,7 +11,7 @@ approved hook.
 | | |
 |---|---|
 | Release | `v0.1.0` |
-| npm | `@floorsupply/sdk`, `@floorsupply/sdk-evm`, `@floorsupply/sdk-solana` |
+| npm | `@floorlaunchpad/sdk`, `@floorlaunchpad/sdk-evm`, `@floorlaunchpad/sdk-solana` |
 | Integration facts | [`docs/integration-facts.md`](docs/integration-facts.md): every chain, address, live pool, sample transaction, event and endpoint in one page |
 | Rust | git dependencies at tag `v0.1.0` (not on crates.io) |
 | Docs | [floor.supply/developers/sdk](https://floor.supply/developers/sdk) · [REST API](https://floor.supply/developers) · [contracts](https://floor.supply/developers/contracts) |
@@ -37,11 +37,11 @@ governance. The ABIs and IDLs shipped here are complete, so those calls can be b
 ## Install
 
 ```sh
-npm install @floorsupply/sdk @floorsupply/sdk-evm viem              # EVM
-npm install @floorsupply/sdk @floorsupply/sdk-solana @solana/kit    # Solana
+npm install @floorlaunchpad/sdk @floorlaunchpad/sdk-evm viem              # EVM
+npm install @floorlaunchpad/sdk @floorlaunchpad/sdk-solana @solana/kit    # Solana
 ```
 
-Peer dependencies: `viem` `^2.56.3`, `@solana/kit` `^8.3.0`. `@floorsupply/sdk-solana` installs `@floorsupply/carpenter-sdk` `^0.1.0`.
+Peer dependencies: `viem` `^2.56.3`, `@solana/kit` `^8.3.0`. `@floorlaunchpad/sdk-solana` installs `@floorlaunchpad/carpenter-sdk` `^0.1.0`.
 The Solana quoter is a wasm file shipped in the package, so no Rust toolchain is needed.
 
 ```toml
@@ -59,21 +59,21 @@ FLOOR's site serves these; the SDK does not wrap them.
 |---|---|
 | [`https://floor.supply/api/v1/openapi.json`](https://floor.supply/api/v1/openapi.json) | The partner API's OpenAPI spec (the API is `https://floor.supply/api/v1`, keyed; [docs](https://floor.supply/developers)) |
 | `https://floor.supply/api/tokens/<chainId>` | A [token list](https://tokenlists.org) of the chain's FLOOR launches, e.g. `https://floor.supply/api/tokens/8453` for Base |
-| `https://floor.supply/api/dex/<chain>/{latest-block, asset, pair, events}` | GeckoTerminal's Integration API Standard (DEX Screener reads the same shape); `<chain>` is `eth`, `base`, `bsc`, `rh`, `arc` or `sol`. The same model as code: `@floorsupply/sdk`'s `dex` |
+| `https://floor.supply/api/dex/<chain>/{latest-block, asset, pair, events}` | GeckoTerminal's Integration API Standard (DEX Screener reads the same shape); `<chain>` is `eth`, `base`, `bsc`, `rh`, `arc` or `sol`. The same model as code: `@floorlaunchpad/sdk`'s `dex` |
 
 ## Read launches
 
 ```ts
-import { FloorClient, evmRef, solanaRef } from '@floorsupply/sdk';
-import { createEvmAdapter, sendEvmCalls } from '@floorsupply/sdk-evm';
-import { createSolanaAdapter, sendSolanaTransactions } from '@floorsupply/sdk-solana';
-import { initQuote } from '@floorsupply/sdk-solana/quote/wasm';
+import { FloorClient, evmRef, solanaRef } from '@floorlaunchpad/sdk';
+import { createEvmAdapter, sendEvmCalls } from '@floorlaunchpad/sdk-evm';
+import { createSolanaAdapter, sendSolanaTransactions } from '@floorlaunchpad/sdk-solana';
+import { initQuote } from '@floorlaunchpad/sdk-solana/quote/wasm';
 import { createSolanaRpc } from '@solana/kit';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 
 // Solana: the quoter is wasm. In Node read the shipped file; in a browser fetch it and pass the bytes.
-const wasm = readFileSync(createRequire(import.meta.url).resolve('@floorsupply/sdk-solana/floor_quote_bg.wasm'));
+const wasm = readFileSync(createRequire(import.meta.url).resolve('@floorlaunchpad/sdk-solana/floor_quote_bg.wasm'));
 const quoter = await initQuote(wasm);
 const rpc = createSolanaRpc('https://api.mainnet-beta.solana.com');
 
@@ -186,31 +186,31 @@ name, never given a zero address.
 
 | What | Where | Import |
 |---|---|---|
-| Solana IDLs: `floor_hook`, `floor_launch`, `floor_holders`, `floor_vesting` | [`packages/sdk-solana/idl/`](packages/sdk-solana/idl) | `@floorsupply/sdk-solana/idl/floor_hook.json` |
-| Solana Codama clients | `packages/sdk-solana/src/generated/` | `floorHook`, `floorLaunch`, `floorHolders`, `floorVesting` from `@floorsupply/sdk-solana` |
-| Carpenter IDL (`carpenter_amm`) | [`carpenter-sdk`](https://github.com/gudtekdonkey/carpenter-sdk/tree/main/packages/sdk/idl) | `@floorsupply/carpenter-sdk` |
-| EVM ABIs (hook, launch / sale, token, factory, registry, claims, vesting, rewards, referrals, zap, swap ratchet, every FLOOR error) | [`packages/sdk-evm/src/abi/`](packages/sdk-evm/src/abi) | `HOOK_ABI`, `LAUNCH_ABI`, `TOKEN_ABI`, `FACTORY_ABI`, `REGISTRY_ABI`, `FLOOR_ERRORS_ABI`, … from `@floorsupply/sdk-evm` |
+| Solana IDLs: `floor_hook`, `floor_launch`, `floor_holders`, `floor_vesting` | [`packages/sdk-solana/idl/`](packages/sdk-solana/idl) | `@floorlaunchpad/sdk-solana/idl/floor_hook.json` |
+| Solana Codama clients | `packages/sdk-solana/src/generated/` | `floorHook`, `floorLaunch`, `floorHolders`, `floorVesting` from `@floorlaunchpad/sdk-solana` |
+| Carpenter IDL (`carpenter_amm`) | [`carpenter-sdk`](https://github.com/gudtekdonkey/carpenter-sdk/tree/main/packages/sdk/idl) | `@floorlaunchpad/carpenter-sdk` |
+| EVM ABIs (hook, launch / sale, token, factory, registry, claims, vesting, rewards, referrals, zap, swap ratchet, every FLOOR error) | [`packages/sdk-evm/src/abi/`](packages/sdk-evm/src/abi) | `HOOK_ABI`, `LAUNCH_ABI`, `TOKEN_ABI`, `FACTORY_ABI`, `REGISTRY_ABI`, `FLOOR_ERRORS_ABI`, … from `@floorlaunchpad/sdk-evm` |
 
 The Solana IDLs ship without their `docs` fields; instructions, accounts, types, events and errors are complete.
 `IDL_SHA256` is their hash as shipped. The EVM ABIs are generated from the contracts' build artifacts.
 
 ### Events
 
-- **EVM**: `decodeFloorLog`, `decodeFloorLogs` and `floorEventTopics` from `@floorsupply/sdk-evm` decode every FLOOR event
+- **EVM**: `decodeFloorLog`, `decodeFloorLogs` and `floorEventTopics` from `@floorlaunchpad/sdk-evm` decode every FLOOR event
   (`FLOOR_EVENTS` lists them): `LaunchCreated` (factory: token, hook, launch, pool id, mode, creator), `Graduated`
   (launch), `Ratcheted` (hook, keyed by pool id: the new floor tick), the hook's `HookFee`, and Uniswap v4's `Swap` on the
   PoolManager for pool trades. How they become launches, pools, trades, the floor and candles:
   [`docs/evm-events.md`](docs/evm-events.md).
-- **Solana**: `decodeInnerInstructionEvents`, `decodeEmitCpiData` and `decodeEventPayload` from `@floorsupply/sdk-solana`
+- **Solana**: `decodeInnerInstructionEvents`, `decodeEmitCpiData` and `decodeEventPayload` from `@floorlaunchpad/sdk-solana`
   decode every event of the four programs and `carpenter_amm`; `EVENT_NAMES` lists them per program.
 
 ## Repository
 
 | Path | What |
 |---|---|
-| [`packages/sdk`](packages/sdk) | `@floorsupply/sdk`: chain-neutral types (`ChainRef`, `LaunchRef`, `Launch`, `Quote`, `UnsignedTx`), `FloorChainAdapter` and `FloorClient` |
-| [`packages/sdk-evm`](packages/sdk-evm) | `@floorsupply/sdk-evm`: ABIs, per-chain deployments, reads, quotes and trade builders over viem, `sendEvmCalls` |
-| [`packages/sdk-solana`](packages/sdk-solana) | `@floorsupply/sdk-solana`: IDLs and Codama clients, layouts, PDAs, events, sale and pool trade builders, the quoter wasm |
+| [`packages/sdk`](packages/sdk) | `@floorlaunchpad/sdk`: chain-neutral types (`ChainRef`, `LaunchRef`, `Launch`, `Quote`, `UnsignedTx`), `FloorChainAdapter` and `FloorClient` |
+| [`packages/sdk-evm`](packages/sdk-evm) | `@floorlaunchpad/sdk-evm`: ABIs, per-chain deployments, reads, quotes and trade builders over viem, `sendEvmCalls` |
+| [`packages/sdk-solana`](packages/sdk-solana) | `@floorlaunchpad/sdk-solana`: IDLs and Codama clients, layouts, PDAs, events, sale and pool trade builders, the quoter wasm |
 | [`rust/`](rust) | `floor-types` (layouts, seeds, constants, program ids), `floor-math` (the mechanism's math), `floor-quote` (`FloorHookQuoter`), `floor-quote-wasm` |
 | [`jupiter/`](jupiter) | `floor-sale-amm`: a `jupiter-amm-interface` `Amm` for FLOOR bonding sales |
 | [`docs/`](docs) | [`integration-facts.md`](docs/integration-facts.md) (every chain, address, live pool and endpoint) and [`evm-events.md`](docs/evm-events.md) |

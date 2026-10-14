@@ -4,8 +4,8 @@ Everything an aggregator, indexer or data site needs to list FLOOR, in one place
 live on mainnet; the figures were read from the chains on 2026-10-13.
 
 - Site: https://floor.supply · Technical write-up: https://floor.supply/technical · X: https://x.com/floordotsupply
-- SDKs: this repo (`@floorsupply/sdk`, `@floorsupply/sdk-evm`, `@floorsupply/sdk-solana`) and
-  [carpenter-sdk](https://github.com/gudtekdonkey/carpenter-sdk) (`@floorsupply/carpenter-sdk`, Carpenter's AMM on Solana).
+- SDKs: this repo (`@floorlaunchpad/sdk`, `@floorlaunchpad/sdk-evm`, `@floorlaunchpad/sdk-solana`) and
+  [carpenter-sdk](https://github.com/gudtekdonkey/carpenter-sdk) (`@floorlaunchpad/carpenter-sdk`, Carpenter's AMM on Solana).
 
 ## What FLOOR is
 
@@ -130,8 +130,8 @@ Permit2 is `0x000000000022D473030F116dDEE9F6B43aC78BA3` everywhere.
 Each treasury account owns the token accounts its fees are swept into; DefiLlama's treasury adapters read them.
 
 A launch is `["entry", u64le(i)]` under `floor_launch` for i < `LaunchConfig.registry_count`. Account layouts, PDAs and
-the events (`emit_cpi`, decoded from the instruction data) are in `@floorsupply/sdk-solana` and
-`@floorsupply/carpenter-sdk`.
+the events (`emit_cpi`, decoded from the instruction data) are in `@floorlaunchpad/sdk-solana` and
+`@floorlaunchpad/carpenter-sdk`.
 
 ## FLOOR's public DEX endpoint
 
@@ -144,11 +144,11 @@ GeckoTerminal's Integration API Standard (DEX Screener reads the same shape), se
 
 Example: https://floor.supply/api/dex/base/pair?id=0x5259c52ce22be9d859d73e8b29bed5d316053fe4b9afab637d986812041d89ff
 
-The same pair model and event mapping, as code: `@floorsupply/sdk`'s `dex` namespace.
+The same pair model and event mapping, as code: `@floorlaunchpad/sdk`'s `dex` namespace.
 
 ## Quoting off-chain
 
-`@floorsupply/sdk-evm` has `readSwapSnapshot(client, chainId, poolId)` and `simulateSwap(snapshot, side, amountIn)`:
+`@floorlaunchpad/sdk-evm` has `readSwapSnapshot(client, chainId, poolId)` and `simulateSwap(snapshot, side, amountIn)`:
 Uniswap v4's swap ported from v4-core with the hook's fees around it. Checked against the V4Quoter:
 
 - 100 of 100 quotes exact on the live pools of Ethereum, BSC, Robinhood Chain, Arc and Base, at one block each

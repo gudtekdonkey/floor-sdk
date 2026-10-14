@@ -50,7 +50,7 @@ import {
   
 
   
-} from '@floorsupply/carpenter-sdk';
+} from '@floorlaunchpad/carpenter-sdk';
 import { decodeEventPayload, eventDiscriminator } from '../src/events.ts';
 import { PLATFORM_TREASURY, decodePlatformTreasury } from '../src/layouts.ts';
 import { DEFAULT_PROGRAM_IDS, findPlatformTreasury, findTeamTreasury } from '../src/pda.ts';

@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { CARPENTER_ROOT } from './helpers.ts';
 import { test } from './node-test.ts';
 
-import * as CARPENTER from '@floorsupply/carpenter-sdk';
+import * as CARPENTER from '@floorlaunchpad/carpenter-sdk';
 import * as FLOOR_LAYOUTS from '../src/layouts.ts';
 
 const layouts = { ...CARPENTER, ...FLOOR_LAYOUTS };
@@ -69,7 +69,7 @@ import {
   type QuoteMint,
   type TickArray,
   type TickArrayBitmap,
-} from '@floorsupply/carpenter-sdk';
+} from '@floorlaunchpad/carpenter-sdk';
 
 const GUARDED: readonly (readonly [LayoutDef, Record<string, true>])[] = [
   [AMM_CONFIG, {
@@ -213,7 +213,7 @@ test('every decodeAccount table decodes exactly the keys its interface names', (
 });
 
 test('GUARDED holds one row for every table layouts.ts passes to decodeAccount', () => {
-  // Both packages' layouts: `@floorsupply/carpenter-sdk`'s codec and AMM tables, then this package's FLOOR tables.
+  // Both packages' layouts: `@floorlaunchpad/carpenter-sdk`'s codec and AMM tables, then this package's FLOOR tables.
   const src = [join(CARPENTER_ROOT, 'src/layouts.ts'), fileURLToPath(new URL('../src/layouts.ts', import.meta.url))].map((f) => readFileSync(f, 'utf8')).join('\n');
   const called = [...new Set([...src.matchAll(/decodeAccount<[^(]*>\(\s*([A-Z_]+)\s*,/g)].map((m) => m[1]!))].sort();
   const byLayout = new Map(Object.entries(layouts).filter(([, v]) => GUARDED.some(([l]) => l === v)).map(([k, v]) => [v, k]));

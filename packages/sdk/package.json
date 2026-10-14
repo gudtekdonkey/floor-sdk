@@ -1,7 +1,7 @@
 {
-  "name": "@floorsupply/sdk",
+  "name": "@floorlaunchpad/sdk",
   "version": "0.1.0",
-  "description": "FLOOR: one API for FLOOR launches on every chain. Chain adapters: @floorsupply/sdk-evm, @floorsupply/sdk-solana.",
+  "description": "FLOOR: one API for FLOOR launches on every chain. Chain adapters: @floorlaunchpad/sdk-evm, @floorlaunchpad/sdk-solana.",
   "license": "Apache-2.0",
   "engines": {
     "node": ">=20.18"

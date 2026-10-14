@@ -1,5 +1,5 @@
 /**
- * `createSolanaAdapter`: the `@floorsupply/sdk` `FloorChainAdapter` for FLOOR launches on Solana clusters.
+ * `createSolanaAdapter`: the `@floorlaunchpad/sdk` `FloorChainAdapter` for FLOOR launches on Solana clusters.
  *
  * - `getLaunch` / `listLaunches` read the `Launch` account (and, once graduated, its `FloorPool`) and the mint's
  *   Token-2022 metadata.
@@ -8,7 +8,7 @@
  * - `buildTrade` returns EVERY transaction one trade needs, in send order, in ONE `UnsignedTx`: `[link?, prepare?, trade]`.
  *   `link` rides first when `traderLink` returns an attestation for a trader with no link yet (and the attestation is not
  *   about to expire); `prepare` rides in front of a sale buy while the launch's graduation accounts are not prepared.
- *   Sign the list in one wallet prompt and send it with `sendSolanaTransactions` (re-exported from `@floorsupply/carpenter-sdk`),
+ *   Sign the list in one wallet prompt and send it with `sendSolanaTransactions` (re-exported from `@floorlaunchpad/carpenter-sdk`),
  *   which sends in order and STOPS at the first failure: a failed `link` step means the trade is not sent, and the caller
  *   builds the trade again (the rebuilt list carries no link once the trader is linked, or no attestation is served).
  * - `TradeParams.deadline` is not used: a Solana transaction expires with its recent blockhash (~60–90 s).
@@ -29,8 +29,8 @@
  * ⛔ Amounts are bigints in base units; a mint is never case-folded.
  */
 
-import type { Amount, ChainRef, FeePart, FloorChainAdapter, Launch as FloorLaunch, LaunchPhase, LaunchRef, Quote, Side, SolanaCluster, TradeParams, UnsignedTx } from '@floorsupply/sdk';
-import { chainKey, solanaRef } from '@floorsupply/sdk';
+import type { Amount, ChainRef, FeePart, FloorChainAdapter, Launch as FloorLaunch, LaunchPhase, LaunchRef, Quote, Side, SolanaCluster, TradeParams, UnsignedTx } from '@floorlaunchpad/sdk';
+import { chainKey, solanaRef } from '@floorlaunchpad/sdk';
 import {
   compileSendable,
   decodeLookupTable,
@@ -49,7 +49,7 @@ import {
   type LookupTableContents,
   type RawAccount,
   type SolanaRpc,
-} from '@floorsupply/carpenter-sdk';
+} from '@floorlaunchpad/carpenter-sdk';
 import { address, getBase64EncodedWireTransaction, type Address, type GetLatestBlockhashApi, type Rpc } from '@solana/kit';
 
 import { FLOOR_CALLBACK_ACCOUNTS, LAUNCH_STATE_BONDING, LAUNCH_STATE_GRADUATED, TOKEN_DECIMALS } from './constants.ts';
@@ -86,7 +86,7 @@ export interface SolanaClusterConfig {
 
 export interface SolanaAdapterOptions {
   readonly clusters: Partial<Record<SolanaCluster, SolanaClusterConfig>>;
-  /** The quoter over `floor_quote_bg.wasm` (`initQuote` from `@floorsupply/sdk-solana/quote/wasm`, or `createQuoter(fns)`). */
+  /** The quoter over `floor_quote_bg.wasm` (`initQuote` from `@floorlaunchpad/sdk-solana/quote/wasm`, or `createQuoter(fns)`). */
   readonly quoter: Quoter;
   /** The launch's own lookup table, by mint (the launchpad records it at creation). Required for sale trades only. */
   readonly launchTable?: (ref: LaunchRef) => Promise<string | null>;

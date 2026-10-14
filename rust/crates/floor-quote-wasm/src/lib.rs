@@ -1,6 +1,6 @@
 //! `floor-quote-wasm`: the JavaScript surface of `floor-quote`, bound with wasm-bindgen.
 //!
-//! The contract with the TypeScript wrapper (`@floorsupply/sdk-solana`'s `createQuoter` / `initQuote`):
+//! The contract with the TypeScript wrapper (`@floorlaunchpad/sdk-solana`'s `createQuoter` / `initQuote`):
 //! - Accounts go in as their raw bytes (`Uint8Array`), exactly as `getAccountInfo` returns them.
 //!   Tick arrays go in CONCATENATED, each its 3,888-byte body in a 3,888-byte stride. An empty
 //!   `bitmap` / `floor_pool` means "not supplied".

@@ -31,7 +31,7 @@ import {
   findQuoteMint,
   findVault,
   type Pda,
-} from '@floorsupply/carpenter-sdk';
+} from '@floorlaunchpad/carpenter-sdk';
 import { FLOOR_TICK_SPACING, HOLDERS_SEEDS, SALT_BID, SALT_SEED } from './constants.ts';
 import {
   DEFAULT_PROGRAM_IDS,

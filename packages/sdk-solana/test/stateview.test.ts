@@ -43,7 +43,7 @@ import {
 
   
   bitmapBit,
-} from '@floorsupply/carpenter-sdk';
+} from '@floorlaunchpad/carpenter-sdk';
 import { LAUNCH, LAUNCH_CONFIG, QUOTE_POLICY, REGISTRY_ENTRY, FLOOR_POOL } from '../src/layouts.ts';
 import {
   DEFAULT_PROGRAM_IDS,

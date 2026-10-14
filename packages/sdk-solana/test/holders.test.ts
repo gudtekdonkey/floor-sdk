@@ -30,7 +30,7 @@ import {
   encodeAccount,
   findAta,
   findVault,
-} from '@floorsupply/carpenter-sdk';
+} from '@floorlaunchpad/carpenter-sdk';
 import { CU_LIMITS, FLOOR_HOLDERS_PROGRAM_ID } from '../src/constants.ts';
 import {
   withoutAccountsAlreadyIn,
@@ -47,7 +47,7 @@ import {
   HOLDER_RECORD,
 } from '../src/layouts.ts';
 import { DEFAULT_PROGRAM_IDS,  } from '../src/pda.ts';
-import { buildModifyLiquidity as carpenterBuildModifyLiquidity } from '@floorsupply/carpenter-sdk';
+import { buildModifyLiquidity as carpenterBuildModifyLiquidity } from '@floorlaunchpad/carpenter-sdk';
 import { buildBuy, buildSellBack, buildSwap } from '../src/tx/builders.ts';
 import type { QuoteSpec } from '../src/tx/common.ts';
 import type { FloorInstruction } from '../src/tx/instructions.ts';
@@ -193,7 +193,7 @@ test('an OFF-CURVE trader (a PDA wallet) buys on a hooked launch WITHOUT touch â
   assert.ok(kinds(onBuy).includes('touch'));
 });
 
-test('liquidity on a hooked FLOOR pool: @floorsupply/carpenter-sdk\'s buildModifyLiquidity carries transferHookAccounts\' extra accounts', async () => {
+test('liquidity on a hooked FLOOR pool: @floorlaunchpad/carpenter-sdk\'s buildModifyLiquidity carries transferHookAccounts\' extra accounts', async () => {
   const f = await fixtureLaunch();
   const owner = onCurve(150);
   const poolState = {

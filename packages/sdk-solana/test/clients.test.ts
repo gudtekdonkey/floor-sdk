@@ -16,9 +16,9 @@ test('every generated client names its IDL\'s program, which is the mainnet row\
   assert.equal(floorVesting.FLOOR_VESTING_PROGRAM_ADDRESS, row.programs.floorVesting);
 });
 
-test('the one-prompt sender is @floorsupply/carpenter-sdk\'s, re-exported — not a second copy', async () => {
+test('the one-prompt sender is @floorlaunchpad/carpenter-sdk\'s, re-exported — not a second copy', async () => {
   const floor = await import('../src/index.ts');
-  const carpenter = await import('@floorsupply/carpenter-sdk');
+  const carpenter = await import('@floorlaunchpad/carpenter-sdk');
   assert.equal(floor.sendSolanaTransactions, carpenter.sendSolanaTransactions);
   assert.equal(floor.SolanaSendError, carpenter.SolanaSendError);
 });

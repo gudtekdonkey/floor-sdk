@@ -1,5 +1,5 @@
 /**
- * `stateView`: FLOOR's reads (`floor_hook`, `floor_launch`, `floor_holders`) beside `@floorsupply/carpenter-sdk`'s — `stateView`
+ * `stateView`: FLOOR's reads (`floor_hook`, `floor_launch`, `floor_holders`) beside `@floorlaunchpad/carpenter-sdk`'s — `stateView`
  * here spreads Carpenter's object. Every helper takes an `AccountSource` and returns the decoded value WITH the slot it
  * was read at.
  *
@@ -18,7 +18,7 @@ import {
   type AccountSource,
   type RawAccount,
   decodeTokenAccount,
-} from '@floorsupply/carpenter-sdk';
+} from '@floorlaunchpad/carpenter-sdk';
 
 import {
   BUYER_POSITION,
@@ -266,7 +266,7 @@ export async function getHolderPayoutInputs(src: AccountSource, a: {
 }) {
   const ids = a.ids ?? DEFAULT_PROGRAM_IDS;
   const { findHolderBook, findHolderRecord } = await import('./holders.ts');
-  const { findAta } = await import('@floorsupply/carpenter-sdk');
+  const { findAta } = await import('@floorlaunchpad/carpenter-sdk');
   const { decodeHolderBook, decodeHolderRecord } = await import('./layouts.ts');
   const tokenAccount = (await findAta(a.owner, a.mint, TOKEN_2022_PROGRAM_ID)).address;
   const [book, record] = await Promise.all([findHolderBook(a.mint, ids), findHolderRecord(a.mint, tokenAccount, ids)]);

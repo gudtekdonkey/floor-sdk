@@ -1,7 +1,7 @@
 /**
  * FLOOR's deployments on Solana: `floor_hook` / `floor_launch` / `floor_holders` / `floor_vesting` per cluster, keyed by
  * CAIP-2 id, with FLOOR's singleton accounts, the deployment address lookup table and the hook roster's quote terms.
- * `carpenter_amm`'s rows are `@floorsupply/carpenter-sdk`'s `deployments.json`.
+ * `carpenter_amm`'s rows are `@floorlaunchpad/carpenter-sdk`'s `deployments.json`.
  *
  * ⛔ `deploymentFor` returns the JOINED row — Carpenter's row and FLOOR's for the same cluster (`programs.carpenterAmm`
  *    beside FLOOR's ids) — because every FLOOR builder names the AMM it is hooked on. It throws BY NAME when EITHER file
@@ -18,11 +18,11 @@ import {
   DEPLOYMENTS as CARPENTER_DEPLOYMENTS,
   type ClusterDeployment as CarpenterClusterDeployment,
   type DeploymentsFile as CarpenterDeploymentsFile,
-} from '@floorsupply/carpenter-sdk';
+} from '@floorlaunchpad/carpenter-sdk';
 
 import { DEPLOYMENTS } from './generated/deployments.ts';
 
-export type { AnchorIdl, AnchorIdlAccountItem, AnchorIdlInstruction } from '@floorsupply/carpenter-sdk';
+export type { AnchorIdl, AnchorIdlAccountItem, AnchorIdlInstruction } from '@floorlaunchpad/carpenter-sdk';
 export { DEPLOYMENTS };
 
 /**
@@ -134,11 +134,11 @@ export function joinDeployment(carpenter: CarpenterClusterDeployment, floor: Flo
 export function deploymentFor(clusterKey: string, file: DeploymentsFile = DEPLOYMENTS, carpenterFile: CarpenterDeploymentsFile = CARPENTER_DEPLOYMENTS): ClusterDeployment {
   const row = file.clusters[clusterKey];
   if (!row) {
-    throw new Error(`@floorsupply/sdk-solana: no deployment for cluster "${clusterKey}" (known: ${Object.keys(file.clusters).join(', ')})`);
+    throw new Error(`@floorlaunchpad/sdk-solana: no deployment for cluster "${clusterKey}" (known: ${Object.keys(file.clusters).join(', ')})`);
   }
   const amm = carpenterFile.clusters[clusterKey];
   if (!amm) {
-    throw new Error(`@floorsupply/sdk-solana: @floorsupply/carpenter-sdk has no deployment for cluster "${clusterKey}" (known: ${Object.keys(carpenterFile.clusters).join(', ')})`);
+    throw new Error(`@floorlaunchpad/sdk-solana: @floorlaunchpad/carpenter-sdk has no deployment for cluster "${clusterKey}" (known: ${Object.keys(carpenterFile.clusters).join(', ')})`);
   }
   return joinDeployment(amm, row);
 }

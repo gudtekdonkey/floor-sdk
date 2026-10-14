@@ -1,7 +1,7 @@
 /**
  * `emit_cpi!` event decoders for all five programs a FLOOR transaction touches — `carpenter_amm`, `floor_hook`,
  * `floor_launch`, `floor_holders` and `floor_vesting`. FLOOR's four programs' schemas live here; `carpenter_amm`'s are
- * `@floorsupply/carpenter-sdk`'s (`EVENT_SCHEMAS.carpenter_amm`), spread into this table so one decoder reads every event.
+ * `@floorlaunchpad/carpenter-sdk`'s (`EVENT_SCHEMAS.carpenter_amm`), spread into this table so one decoder reads every event.
  *
  * `emit_cpi!` is a self-CPI whose instruction data is `EVENT_IX_TAG (8 B) ‖ sha256("event:<Name>")[..8] ‖ borsh(event)`,
  * signed by the program's `__event_authority` PDA — the hook CALLBACKS' events included (`decodeInnerInstructionEvents`
@@ -26,10 +26,10 @@ import {
   BorshReader,
   base64ToBytes,
   equalBytes,
-} from '@floorsupply/carpenter-sdk';
+} from '@floorlaunchpad/carpenter-sdk';
 import type { Address } from '@solana/kit';
 
-export type { EventFieldKind, EventSchema, F, Schema } from '@floorsupply/carpenter-sdk';
+export type { EventFieldKind, EventSchema, F, Schema } from '@floorlaunchpad/carpenter-sdk';
 
 export type ProgramKey = 'carpenter_amm' | 'floor_hook' | 'floor_launch' | 'floor_holders' | 'floor_vesting';
 

@@ -1,7 +1,7 @@
 {
-  "name": "@floorsupply/sdk-solana",
+  "name": "@floorlaunchpad/sdk-solana",
   "version": "0.1.0",
-  "description": "FLOOR on Solana: the floor_hook / floor_launch / floor_holders / floor_vesting IDLs and Codama clients, account layouts, PDAs and events, sale buy / sell-back and graduated-pool trade builders, the quoter, sendSolanaTransactions, and createSolanaAdapter for @floorsupply/sdk. Built on @floorsupply/carpenter-sdk.",
+  "description": "FLOOR on Solana: the floor_hook / floor_launch / floor_holders / floor_vesting IDLs and Codama clients, account layouts, PDAs and events, sale buy / sell-back and graduated-pool trade builders, the quoter, sendSolanaTransactions, and createSolanaAdapter for @floorlaunchpad/sdk. Built on @floorlaunchpad/carpenter-sdk.",
   "license": "Apache-2.0",
   "engines": {
     "node": ">=20.18"
@@ -57,8 +57,8 @@
     "check-wasm": "bash ../../scripts/build-wasm.sh --check"
   },
   "dependencies": {
-    "@floorsupply/carpenter-sdk": "^0.1.0",
-    "@floorsupply/sdk": "^0.1.0"
+    "@floorlaunchpad/carpenter-sdk": "^0.1.0",
+    "@floorlaunchpad/sdk": "^0.1.0"
   },
   "peerDependencies": {
     "@solana/kit": "^8.3.0"

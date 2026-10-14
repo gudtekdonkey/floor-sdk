@@ -1,6 +1,6 @@
 /**
  * Raw encoders for FLOOR's programs' instructions a trade needs: `discriminator ‖ borsh(args)` and the account list in
- * the program's `#[derive(Accounts)]` order, on `@floorsupply/carpenter-sdk`'s encoder machinery. `DISC` here is the union (`amm` is
+ * the program's `#[derive(Accounts)]` order, on `@floorlaunchpad/carpenter-sdk`'s encoder machinery. `DISC` here is the union (`amm` is
  * Carpenter's table) and `FloorInstruction` is Carpenter's `ProgramInstruction`.
  *
  * ⛔ Account order is the wire format. Each instruction also carries `accountNames`, the Rust field names in order;
@@ -25,14 +25,14 @@ import {
   type Slot,
   BorshWriter,
   SYSTEM_PROGRAM_ID,
-} from '@floorsupply/carpenter-sdk';
+} from '@floorlaunchpad/carpenter-sdk';
 
-/** Every encoder's return shape — `@floorsupply/carpenter-sdk`'s `ProgramInstruction`. */
+/** Every encoder's return shape — `@floorlaunchpad/carpenter-sdk`'s `ProgramInstruction`. */
 export type FloorInstruction = ProgramInstruction;
 
 const d = (...b: number[]): Uint8Array => new Uint8Array(b);
 
-/** Every instruction's Anchor discriminator, `sha256("global:<name>")[..8]`, per program (`amm` is `@floorsupply/carpenter-sdk`'s). */
+/** Every instruction's Anchor discriminator, `sha256("global:<name>")[..8]`, per program (`amm` is `@floorlaunchpad/carpenter-sdk`'s). */
 export const DISC = {
   amm: CARPENTER_DISC.amm,
   hook: {

@@ -4,7 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { chainKeyFromGenesisHash, DEVNET_CHAIN_KEY, MAINNET_CHAIN_KEY } from '@floorsupply/carpenter-sdk';
+import { chainKeyFromGenesisHash, DEVNET_CHAIN_KEY, MAINNET_CHAIN_KEY } from '@floorlaunchpad/carpenter-sdk';
 
 import { deploymentFor, PROGRAM_NAMES, type DeploymentsFile } from '../src/deployments.ts';
 import { REPO_ROOT } from './helpers.ts';
@@ -31,8 +31,8 @@ test('every cluster row is complete and keyed by a CAIP-2 id or `local`', () => 
     // The round distributor is deleted: no row may name it again, in either table.
     assert.equal((row.programs as Record<string, unknown>)['floorRewards'], undefined, `${key}.programs.floorRewards is deleted`);
     assert.equal((row.programDataHash as Record<string, unknown>)['floorRewards'], undefined, `${key}.programDataHash.floorRewards is deleted`);
-    // A FLOOR row names no Carpenter program: that is `@floorsupply/carpenter-sdk`'s file.
-    assert.equal((row.programs as Record<string, unknown>)['carpenterAmm'], undefined, `${key}: carpenterAmm lives in @floorsupply/carpenter-sdk`);
+    // A FLOOR row names no Carpenter program: that is `@floorlaunchpad/carpenter-sdk`'s file.
+    assert.equal((row.programs as Record<string, unknown>)['carpenterAmm'], undefined, `${key}: carpenterAmm lives in @floorlaunchpad/carpenter-sdk`);
     for (const a of ['hookConfig', 'launchConfig'] as const) assert.match(row.accounts[a], B58, `${key}.accounts.${a}`);
     assert.ok(row.alt === null || typeof row.alt === 'string');
   }

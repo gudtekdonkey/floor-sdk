@@ -1,7 +1,7 @@
 /**
  * FLOOR's tick arithmetic: `open_tick`, the staircase edges, the tranche price and the quote lineage's conversions.
  * The AMM's tick math (`getSqrtPriceAtTick`, `getTickAtSqrtPrice`, the spacing snaps, tick-array starts) is
- * `@floorsupply/carpenter-sdk`'s.
+ * `@floorlaunchpad/carpenter-sdk`'s.
  */
 
 import {
@@ -13,7 +13,7 @@ import {
   MAX_SQRT_PRICE_X64,
   MIN_SQRT_PRICE_X64,
   ceilToSpacing,
-} from '@floorsupply/carpenter-sdk';
+} from '@floorlaunchpad/carpenter-sdk';
 
 /**
  *  `open_tick(price_x64)`: `sqrt = isqrt(2^192 / price_x64)` (U256), then

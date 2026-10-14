@@ -1,4 +1,4 @@
-# Third-party code in `@floorsupply/sdk-solana`
+# Third-party code in `@floorlaunchpad/sdk-solana`
 
 No third-party source is copied into this package. What it ships beside its own TypeScript:
 
@@ -15,8 +15,8 @@ No third-party source is copied into this package. What it ships beside its own 
 
 | Package | Range | Licence | Kind |
 |---|---|---|---|
-| `@floorsupply/carpenter-sdk` | `^0.1.0` | Apache-2.0 | dependency |
-| `@floorsupply/sdk` | `^0.1.0` | Apache-2.0 | dependency |
+| `@floorlaunchpad/carpenter-sdk` | `^0.1.0` | Apache-2.0 | dependency |
+| `@floorlaunchpad/sdk` | `^0.1.0` | Apache-2.0 | dependency |
 | `@solana/kit` | `^8.3.0` | MIT | peer dependency |
 | `codama`, `@codama/nodes-from-anchor`, `@codama/renderers-js` | `1.10.2`, `1.5.5`, `2.4.0` | MIT | development only (client generation) |
 | `@types/node` | `24.13.4` | MIT | development only |

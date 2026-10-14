@@ -19,7 +19,7 @@
  *    tranche's price. The pool calls carry the minimum on chain (TAKE_ALL / `minOut`).
  */
 import { encodeFunctionData, getAddress, type Address, type Hex } from 'viem';
-import type { EvmCall, UnsignedTx } from '@floorsupply/sdk';
+import type { EvmCall, UnsignedTx } from '@floorlaunchpad/sdk';
 import { FLOOR_SWAP_RATCHET_ABI, LAUNCH_ABI, PERMIT2_ABI, TOKEN_ABI, UNIVERSAL_ROUTER_ABI } from './abi/index.js';
 import { FloorEvmError } from './errors.js';
 import { NATIVE, poolIdOfKey, poolKey, quoteAtCurrency1 } from './pool.js';
@@ -52,7 +52,7 @@ function positive(n: bigint, what: string): bigint {
 
 const call = (to: Address, data: Hex, value = 0n): EvmCall => ({ to, data, value });
 
-/** One user action's calls, in order, as `@floorsupply/sdk`'s `UnsignedTx`. */
+/** One user action's calls, in order, as `@floorlaunchpad/sdk`'s `UnsignedTx`. */
 export function evmTx(chainId: number, calls: readonly EvmCall[]): UnsignedTx {
   if (calls.length === 0) throw new FloorEvmError('bad_params', 'a transaction with no calls');
   return { family: 'evm', chainId, calls };

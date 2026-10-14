@@ -1,8 +1,8 @@
 /**
- * `@floorsupply/sdk-solana`: FLOOR on Solana — the `floor_hook` / `floor_launch` / `floor_holders` / `floor_vesting` IDLs and
+ * `@floorlaunchpad/sdk-solana`: FLOOR on Solana — the `floor_hook` / `floor_launch` / `floor_holders` / `floor_vesting` IDLs and
  * their Codama clients, FLOOR's layouts, PDAs and events, the read helpers (`stateView`), the sale buy / sell-back and
- * graduated-pool trade builders, the quoter, and `createSolanaAdapter` — the `@floorsupply/sdk` `FloorChainAdapter`.
- * Built on `@floorsupply/carpenter-sdk` (the AMM), whose one-prompt sender it re-exports.
+ * graduated-pool trade builders, the quoter, and `createSolanaAdapter` — the `@floorlaunchpad/sdk` `FloorChainAdapter`.
+ * Built on `@floorlaunchpad/carpenter-sdk` (the AMM), whose one-prompt sender it re-exports.
  */
 
 export * from './constants.ts';
@@ -44,7 +44,7 @@ export {
   type SolanaWallet,
   type WalletStandardAccount,
   type WalletStandardSigner,
-} from '@floorsupply/carpenter-sdk';
+} from '@floorlaunchpad/carpenter-sdk';
 /** The Codama-generated `@solana/kit` clients for FLOOR's four programs. */
 export * as floorHook from './generated/client/floor_hook/index.js';
 export * as floorLaunch from './generated/client/floor_launch/index.js';

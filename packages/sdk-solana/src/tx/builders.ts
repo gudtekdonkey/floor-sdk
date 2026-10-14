@@ -1,8 +1,8 @@
 /**
  * FLOOR's transaction builders: the sale buy (with the graduation accounts and, while unprepared, the `prepare` step)
- * and sell-back, and `buildSwap` for FLOOR pools — `@floorsupply/carpenter-sdk`'s swap encoder with FLOOR's defaults (the hook
+ * and sell-back, and `buildSwap` for FLOOR pools — `@floorlaunchpad/carpenter-sdk`'s swap encoder with FLOOR's defaults (the hook
  * slice, the holders transfer-hook leg, the buyer's record, the FLOOR CU rows). Liquidity on any pool is
- * `@floorsupply/carpenter-sdk`'s.
+ * `@floorlaunchpad/carpenter-sdk`'s.
  * Each returns `{ instructions, accounts, cuLimit, addressCount }`; signing and sending stay with the caller.
  *
  * Every builder:
@@ -46,7 +46,7 @@ import {
   createAtaIdempotentIx,
   revokeIx,
   tempWsol,
-} from '@floorsupply/carpenter-sdk';
+} from '@floorlaunchpad/carpenter-sdk';
 // the slot list's check and words.
 import {  TOKEN_DECIMALS, type CuLimitKey } from '../constants.ts';
 import { findHolderBook, findHolderRecord, touchIx, transferHookAccounts, withoutAccountsAlreadyIn } from '../holders.ts';
@@ -71,7 +71,7 @@ import { finalize,  sumCu,  type BuiltTransaction, type QuoteSpec,  } from './co
 // The shared shape lives in `./common.ts` so `../holders.ts` can use it without importing
 // this module (which imports `../holders.ts`). Re-exported here.
 export { finalize, lockCount, sumCu, WSOL_QUOTE } from './common.ts';
-export { finalizeUnits, TooManyAccountsError, uniqueAccounts } from '@floorsupply/carpenter-sdk';
+export { finalizeUnits, TooManyAccountsError, uniqueAccounts } from '@floorlaunchpad/carpenter-sdk';
 export type { BuiltTransaction, QuoteSpec } from './common.ts';
 
 const isDefault = (a: Address) => a === NO_HOOK;

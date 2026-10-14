@@ -93,7 +93,7 @@ export interface EvmCall {
  * - Solana: `transactions` are signed together with ONE `signAllTransactions`, then sent in order, each confirmed before
  *   the next. Signing them one by one costs one prompt each.
  * - EVM: `calls` (e.g. an approval, then the trade) go to the wallet as ONE EIP-5792 `wallet_sendCalls` batch where the
- *   wallet supports it (`sendEvmCalls` in `@floorsupply/sdk-evm` does this and falls back to one transaction per call, one
+ *   wallet supports it (`sendEvmCalls` in `@floorlaunchpad/sdk-evm` does this and falls back to one transaction per call, one
  *   prompt each, where it does not). The SDK never asks for an off-chain signature (e.g. a Permit2 permit) when an
  *   on-chain call in the same batch does the job, so a batch is always one prompt.
  */

@@ -1,12 +1,12 @@
 /**
- * `createEvmAdapter` — `@floorsupply/sdk`'s `FloorChainAdapter` for EVM chains.
+ * `createEvmAdapter` — `@floorlaunchpad/sdk`'s `FloorChainAdapter` for EVM chains.
  *
  * One adapter serves any number of chains; each chain needs a FLOOR set in its deployment row (`floorDeploymentFor` refuses
  * the others by name at construction) and a transport. Reads go through viem `PublicClient`s; `build*` returns unsigned
  * transactions and never signs.
  */
 import { createPublicClient, getAddress, http, type Address, type PublicClient, type Transport } from 'viem';
-import type { Amount, ChainRef, FloorChainAdapter, LaunchRef, Quote, Side, TradeParams, UnsignedTx } from '@floorsupply/sdk';
+import type { Amount, ChainRef, FloorChainAdapter, LaunchRef, Quote, Side, TradeParams, UnsignedTx } from '@floorlaunchpad/sdk';
 import { V4_QUOTER_ABI } from './abi/index.js';
 import { EVM_DEPLOYMENTS, checkDeployment, floorDeploymentFor, permit2For, rulesOf, swapRatchetOf, swapRouterOf, type Deployment } from './deployments.js';
 import { FloorEvmError } from './errors.js';

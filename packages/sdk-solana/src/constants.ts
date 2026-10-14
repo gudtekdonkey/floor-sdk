@@ -3,13 +3,13 @@
  * seeds, the account and fee constants a reader or a trade needs, and the compute-unit rows. Every value is a copy of the
  * programs' Rust constants (`crates/floor-types`); `test/rust-parity.test.ts` checks them when the program source is
  * present.
- * ⚠ `SEEDS` and `CU_LIMITS` here are the UNION — `@floorsupply/carpenter-sdk`'s rows spread first, then FLOOR's — so one table
+ * ⚠ `SEEDS` and `CU_LIMITS` here are the UNION — `@floorlaunchpad/carpenter-sdk`'s rows spread first, then FLOOR's — so one table
  *   serves every builder.
  */
 
 import { address, type Address } from '@solana/kit';
 
-import { CU_LIMITS as CARPENTER_CU_LIMITS, SEEDS as CARPENTER_SEEDS, MAX_TICK, MIN_TICK } from '@floorsupply/carpenter-sdk';
+import { CU_LIMITS as CARPENTER_CU_LIMITS, SEEDS as CARPENTER_SEEDS, MAX_TICK, MIN_TICK } from '@floorlaunchpad/carpenter-sdk';
 
 // ---- program ids ----------------
 export const FLOOR_HOOK_PROGRAM_ID: Address = address('9uXLyyZginMWdUeu22kp7XV7cpV8183xfsVqUxKi5Viy');

@@ -18,7 +18,7 @@ bash scripts/build-wasm.sh --check     # rebuild the quoter wasm; it must equal 
 FLOOR's Solana side is a hook on Carpenter, and Carpenter's SDK is its own repository,
 [`carpenter-sdk`](https://github.com/gudtekdonkey/carpenter-sdk):
 
-- `@floorsupply/sdk-solana` depends on `@floorsupply/carpenter-sdk` (npm, `^0.1.0`).
+- `@floorlaunchpad/sdk-solana` depends on `@floorlaunchpad/carpenter-sdk` (npm, `^0.1.0`).
 - `floor-types` and `floor-quote` depend on `carpenter-types`, `carpenter-clmm-math` and `carpenter-quote`;
   `floor-quote` implements `carpenter_quote::HookQuoter`. `carpenter-sdk`'s Jupiter adapter depends back on `floor-quote`.
 
@@ -32,7 +32,7 @@ carpenter-quote = { git = "https://github.com/gudtekdonkey/carpenter-sdk", rev =
 floor-quote = { git = "https://github.com/gudtekdonkey/floor-sdk", rev = "72399c843d3177333ef3cbf8b06a6d78ec53f1be" }
 ```
 
-For local development the root `package.json` overrides `@floorsupply/carpenter-sdk` with a `carpenter-sdk` checkout
+For local development the root `package.json` overrides `@floorlaunchpad/carpenter-sdk` with a `carpenter-sdk` checkout
 beside this one, so the TypeScript build needs both repositories side by side.
 
 Both repositories must point at the same release: Cargo treats `carpenter-quote` from two sources as two crates, and
@@ -42,8 +42,8 @@ Both repositories must point at the same release: Cargo treats `carpenter-quote`
 
 `packages/sdk-solana/wasm/floor_quote_bg.wasm` is `rust/crates/floor-quote-wasm` compiled to wasm and bound with
 `wasm-bindgen --target web`. It is committed, with its glue, so an install needs no Rust. `npm run build-wasm -w
-@floorsupply/sdk-solana` rebuilds it (`scripts/build-wasm.sh`: Rust 1.98.1 with `wasm32-unknown-unknown`,
-`wasm-bindgen-cli` 0.2.128); `npm run check-wasm -w @floorsupply/sdk-solana` rebuilds it and fails unless the bytes equal
+@floorlaunchpad/sdk-solana` rebuilds it (`scripts/build-wasm.sh`: Rust 1.98.1 with `wasm32-unknown-unknown`,
+`wasm-bindgen-cli` 0.2.128); `npm run check-wasm -w @floorlaunchpad/sdk-solana` rebuilds it and fails unless the bytes equal
 the committed ones. The build is reproducible: paths are remapped and doc comments removed from the build copy.
 
 ## Adding a cluster
@@ -75,9 +75,9 @@ Carpenter's row already added in `carpenter-sdk` (its `CONTRIBUTING.md`, "Adding
 3. Regenerate and rebuild:
 
    ```sh
-   npm run generate -w @floorsupply/sdk-solana        # validates deployments.json → src/generated/
-   npm run build-wasm -w @floorsupply/sdk-solana      # the quoter wasm → packages/sdk-solana/wasm
-   npm run check-wasm -w @floorsupply/sdk-solana      # a rebuild equals the committed wasm
+   npm run generate -w @floorlaunchpad/sdk-solana        # validates deployments.json → src/generated/
+   npm run build-wasm -w @floorlaunchpad/sdk-solana      # the quoter wasm → packages/sdk-solana/wasm
+   npm run check-wasm -w @floorlaunchpad/sdk-solana      # a rebuild equals the committed wasm
    npm run typecheck && npm test && (cd rust && cargo test --workspace) && (cd jupiter && cargo test)
    ```
 

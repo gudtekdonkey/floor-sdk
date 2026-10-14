@@ -50,7 +50,7 @@ import {
   ceilToSpacing,
   floorToSpacing,
   tickArrayStartIndex,
-} from '@floorsupply/carpenter-sdk';
+} from '@floorlaunchpad/carpenter-sdk';
 import {
   DEFAULT_PROGRAM_IDS,
   findFloorPool,

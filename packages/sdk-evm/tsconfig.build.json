@@ -1,1 +1,1 @@
-{ "extends": "../../tsconfig.base.json", "compilerOptions": { "rootDir": "src", "outDir": "dist", "paths": { "@floorsupply/sdk": ["../sdk/dist/index.d.ts"] } }, "include": ["src"], "exclude": ["src/**/*.test.ts"] }
+{ "extends": "../../tsconfig.base.json", "compilerOptions": { "rootDir": "src", "outDir": "dist", "paths": { "@floorlaunchpad/sdk": ["../sdk/dist/index.d.ts"] } }, "include": ["src"], "exclude": ["src/**/*.test.ts"] }
