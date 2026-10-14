@@ -21,6 +21,12 @@ Not counted in TVL. The same address on Ethereum, Base, BSC, Robinhood Chain and
 - Platform treasury: `0x6134E81DB1C853354E5D6B0cd70C5d04a4A6508c`
 - Team treasury: `0x062B6c421E37579728877337B47Cf528AE4d49bb`
 
+On Solana, two accounts of the `floor_hook` program (`9uXLyyZginMWdUeu22kp7XV7cpV8183xfsVqUxKi5Viy`), which own the token accounts the fees land in:
+- Platform treasury (`["platform_treasury"]`): `B8SRexSGm2p2nJFpMmVQPB9PepHSXeB3oQMzyaqrsGvC`
+- Team treasury (`["team_treasury"]`): `CqQXgHT6MsUmEaXgwuUZURwRvfF7w5wkcD1BzWNt7vi9`
+
+All four are in `projects/treasury/floor-launchpad.js`.
+
 ##### Chain:
 Ethereum, Base, BSC, Robinhood Chain, Arc, Solana
 
@@ -63,6 +69,10 @@ gudtekdonkey
 
 ##### Does this project have a referral program?
 Yes, three tiers: a launch creator's referrers share 10% of the creator fee, and a trader's referrers earn part of the FLOOR Platform fee that trader's trades pay.
+
+##### Contract addresses
+- EVM (Ethereum, Base, BSC, Robinhood Chain, Arc): hook `SingletonFloorHook` `0xe44886ffe0a894c6C5900d77A51c7d49732C60Cc`, registry `0x623c349ac8cBBD796f1E9540f902b9BfA9cD5804`, factory `0x594A1A3D81b16c52e57e12975E32aF66D641Ed5F` (the same on every chain)
+- Solana programs: `floor_launch` `8vfdPWfaA3b9GtJoFUwc36JKDaMfVCJ4oT9HrCrQ6Tdi`, `floor_hook` `9uXLyyZginMWdUeu22kp7XV7cpV8183xfsVqUxKi5Viy`, Carpenter AMM `DdeiDx4ncHo9DXGZm1GrPe7mFKv7kNU3yx95uQEV2APA`
 
 ##### Everything else an integrator may need
 Every chain, contract address, live pool, sample transaction, event and endpoint, and how this adapter was checked against the chain: https://github.com/gudtekdonkey/floor-sdk/blob/main/docs/integration-facts.md
