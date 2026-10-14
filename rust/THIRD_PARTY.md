@@ -25,7 +25,7 @@ version.
 
 | Crate | Pin | Locked | Source | Licence |
 |---|---|---|---|---|
-| `floor-quote` | path `../floor-quote` | 0.1.0 | this repository | Apache-2.0 |
+| `floor-quote` | path `../floor-quote` | 0.1.1 | this repository | Apache-2.0 |
 | `wasm-bindgen` | `=0.2.128` (equal to the `wasm-bindgen-cli` the build script requires) | 0.2.128 | crates.io | MIT OR Apache-2.0 |
 | `bytemuck` | `1` (dev only) | 1.25.2 | crates.io | Zlib OR Apache-2.0 OR MIT |
 

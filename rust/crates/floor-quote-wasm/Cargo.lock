@@ -117,7 +117,7 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 
 [[package]]
 name = "floor-math"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bytemuck",
  "carpenter-clmm-math",
@@ -125,7 +125,7 @@ dependencies = [
 
 [[package]]
 name = "floor-quote"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bytemuck",
  "carpenter-quote",
@@ -135,7 +135,7 @@ dependencies = [
 
 [[package]]
 name = "floor-quote-wasm"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bytemuck",
  "floor-quote",
@@ -144,7 +144,7 @@ dependencies = [
 
 [[package]]
 name = "floor-types"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "borsh",
  "bytemuck",

@@ -3,12 +3,15 @@
 Notable changes to the packages and crates in this repository. Versions follow [Semantic Versioning](https://semver.org);
 while the version is `0.x`, a minor release may change the API.
 
-## Unreleased
+## 0.1.1
 
 ### Changed
 
 - The packages are published under the `@floorlaunchpad` npm scope: `@floorlaunchpad/sdk`, `@floorlaunchpad/sdk-evm`, `@floorlaunchpad/sdk-solana`.
-- The Carpenter crates are pinned to `carpenter-sdk`'s `0.1.0` tag, and `@floorlaunchpad/carpenter-sdk` comes from npm (no sibling checkout). The rebuilt quoter wasm differs from 0.1.0's only in the embedded source paths, so `WASM_SHA256` changes.
+- The Carpenter crates are pinned to `carpenter-sdk`'s `0.1.0` tag (0.1.0 pinned them by commit), so a project that also
+  depends on `carpenter-sdk` at that tag resolves one `carpenter-quote`. `@floorlaunchpad/carpenter-sdk` comes from npm (no
+  sibling checkout). The rebuilt quoter wasm differs from 0.1.0's in the embedded source paths and its reported version, so
+  `WASM_SHA256` changes.
 
 ### Added
 

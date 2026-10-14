@@ -13,7 +13,7 @@
 
 [package]
 name = "floor-sale-amm"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "FLOOR launch sales (Solana): a jupiter-amm-interface `Amm` over floor-quote's sale quote: buys, and sell-backs paid as wSOL."
 license = "Apache-2.0"

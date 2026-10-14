@@ -3,7 +3,7 @@
 # carpenter-clmm-math) from crates.io, plus the sibling crates and the Carpenter crates; no Solana
 # crate, no other git source.
 #
-# The Carpenter crates come from `carpenter-sdk` at the release tag with the same version (0.1.0).
+# The Carpenter crates come from `carpenter-sdk` at its release tag (0.1.0).
 # carpenter-sdk's own Jupiter adapter patches this source back to its local crates, so both
 # repositories build against ONE `carpenter-quote`.
 [workspace]
@@ -13,7 +13,7 @@ exclude = ["crates/floor-quote-wasm"]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 repository = "https://github.com/gudtekdonkey/floor-sdk"
 

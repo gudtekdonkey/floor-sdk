@@ -16,7 +16,7 @@ import {
 } from '@floorlaunchpad/carpenter-sdk';
 import { createQuoter, type QuoteFns } from '../src/quote/quoter.ts';
 
-const VERSION = '{"floor_quote_wasm":"0.1.0","hook_interface":1,"floor_hook_id":"22"}';
+const VERSION = '{"floor_quote_wasm":"0.1.1","hook_interface":1,"floor_hook_id":"22"}';
 
 /** A fake that records every call and answers from a table. */
 function fake(answers: Partial<Record<keyof QuoteFns, string | number>>): { fns: QuoteFns; calls: { fn: string; args: unknown[] }[] } {

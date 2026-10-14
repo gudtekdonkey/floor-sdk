@@ -10,7 +10,7 @@
 
 [package]
 name = "floor-quote-wasm"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "FLOOR's hook quoter for Carpenter pools, compiled to wasm for @floorlaunchpad/sdk-solana."
 license = "Apache-2.0"

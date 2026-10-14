@@ -1,6 +1,6 @@
 {
   "name": "@floorlaunchpad/sdk-evm",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "FLOOR on EVM: ABIs, per-chain deployments, viem reads, quotes and unsigned trade builders for FLOOR launches.",
   "license": "Apache-2.0",
   "engines": {
@@ -39,7 +39,7 @@
     "test": "vitest run"
   },
   "peerDependencies": {
-    "@floorlaunchpad/sdk": "^0.1.0",
+    "@floorlaunchpad/sdk": "^0.1.1",
     "viem": "^2.56.3"
   }
 }

@@ -1107,7 +1107,7 @@ dependencies = [
 
 [[package]]
 name = "floor-math"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bytemuck",
  "carpenter-clmm-math",
@@ -1115,7 +1115,7 @@ dependencies = [
 
 [[package]]
 name = "floor-quote"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bytemuck",
  "carpenter-quote",
@@ -1125,7 +1125,7 @@ dependencies = [
 
 [[package]]
 name = "floor-sale-amm"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "base64",
  "bincode",
@@ -1152,7 +1152,7 @@ dependencies = [
 
 [[package]]
 name = "floor-types"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "borsh",
  "bytemuck",

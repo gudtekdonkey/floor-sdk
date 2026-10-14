@@ -21,17 +21,18 @@ FLOOR's Solana side is a hook on Carpenter, and Carpenter's SDK is its own repos
 - `floor-types` and `floor-quote` depend on `carpenter-types`, `carpenter-clmm-math` and `carpenter-quote`;
   `floor-quote` implements `carpenter_quote::HookQuoter`. `carpenter-sdk`'s Jupiter adapter depends back on `floor-quote`.
 
-The Rust workspace takes the Carpenter crates from `carpenter-sdk` at the release tag with the same version
-(`rust/Cargo.toml`, `[workspace.dependencies]`), and `carpenter-sdk`'s Jupiter adapter takes `floor-quote` from this repository at a commit:
+The Rust workspace takes the Carpenter crates from `carpenter-sdk` at its release tag
+(`rust/Cargo.toml`, `[workspace.dependencies]`), and `carpenter-sdk`'s Jupiter adapter takes `floor-quote` from this repository at a release tag, with a `[patch]` that
+points the Carpenter crates back to its own:
 
 ```toml
 # rust/Cargo.toml
 carpenter-quote = { git = "https://github.com/gudtekdonkey/carpenter-sdk", tag = "0.1.0" }
 # carpenter-sdk/jupiter/Cargo.toml
-floor-quote = { git = "https://github.com/gudtekdonkey/floor-sdk", rev = "72399c843d3177333ef3cbf8b06a6d78ec53f1be" }
+floor-quote = { git = "https://github.com/gudtekdonkey/floor-sdk", tag = "0.1.0" }
 ```
 
-Both repositories must point at the same release: Cargo treats `carpenter-quote` from two sources as two crates, and
+A project that depends on both repositories must take the Carpenter crates from the same source this workspace does: Cargo treats `carpenter-quote` from two sources as two crates, and
 `floor-quote`'s `HookQuoter` would then not be the trait Carpenter's adapter calls.
 
 ## The quoter wasm
