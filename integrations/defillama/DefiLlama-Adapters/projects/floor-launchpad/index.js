@@ -5,8 +5,8 @@ const { getMultipleAccounts, sumTokens2 } = require('../helper/solana')
 
 // FLOOR launchpad (https://floor.supply). Each launch sells on a flat-price sale (`FloorLaunch`) until it sells out, then
 // graduates into a Uniswap v4 pool run by the chain's FLOOR hook, which holds the pool's backing in the launch's quote asset.
-// Every launch is listed by the chain's registry; both registries are read (the current set and the one before it).
-const REGISTRIES = ['0x623c349ac8cBBD796f1E9540f902b9BfA9cD5804', '0x1FC800959Edd950D53c87dC415994dFC8c7692d1']
+// Every launch is listed by the chain's registry (the live set's; the set before it listed no launch on any chain).
+const REGISTRIES = ['0x623c349ac8cBBD796f1E9540f902b9BfA9cD5804']
 
 // `quotes`: the ERC-20 quote assets FLOOR lists on the chain, lower-cased. Only a launch quoted in the chain's native asset
 // or in one of these is counted; any other launch is not shown on FLOOR and is not counted here either.
