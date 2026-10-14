@@ -27,11 +27,11 @@ raise becomes a protocol-owned bid under the price (the floor), and the floor on
 
 ## Live pools
 
-The same launch exists on each EVM chain (the factory deploys every launch at a deterministic address ending `…B1D`).
+One launch per EVM chain sits at the same addresses on every chain (the factory deploys every launch at a deterministic address ending `…B1D`), but it is a different token on each: Soft Blue (SBLUE) on Ethereum, Blue (BLUE) on Base, Yellow (YELLOW) on BSC, Green (GREEN) on Robinhood Chain, Vivid Blue (VBLUE) on Arc.
 
 | | |
 |---|---|
-| Token | `0x7935f6EcC173913aC06186d2892BfA73e2FBdB1D` (Blue, $BLUE, 18 decimals) |
+| Token | `0x7935f6EcC173913aC06186d2892BfA73e2FBdB1D` (18 decimals; name and symbol per chain, above) |
 | Sale (FloorLaunch) | `0xc0A603ad69e4487e9Cb557Aab87F4Cc82a58f2Ea` |
 | Pool id (Uniswap v4) | `0x5259c52ce22be9d859d73e8b29bed5d316053fe4b9afab637d986812041d89ff` |
 | Quote | the chain's native asset (`0x000…000` at currency0; on Arc, native USDC, 18 decimals) |
