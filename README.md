@@ -10,10 +10,10 @@ approved hook.
 
 | | |
 |---|---|
-| Release | `v0.1.0` |
+| Release | `0.1.0` |
 | npm | `@floorlaunchpad/sdk`, `@floorlaunchpad/sdk-evm`, `@floorlaunchpad/sdk-solana` |
 | Integration facts | [`docs/integration-facts.md`](docs/integration-facts.md): every chain, address, live pool, sample transaction, event and endpoint in one page |
-| Rust | git dependencies at tag `v0.1.0` (not on crates.io) |
+| Rust | git dependencies at tag `0.1.0` (not on crates.io) |
 | Docs | [floor.supply/developers/sdk](https://floor.supply/developers/sdk) · [REST API](https://floor.supply/developers) · [contracts](https://floor.supply/developers/contracts) |
 | Licence | Apache-2.0 |
 
@@ -47,8 +47,8 @@ The Solana quoter is a wasm file shipped in the package, so no Rust toolchain is
 ```toml
 # Rust
 [dependencies]
-floor-types = { git = "https://github.com/gudtekdonkey/floor-sdk", tag = "v0.1.0" }
-floor-quote = { git = "https://github.com/gudtekdonkey/floor-sdk", tag = "v0.1.0" }
+floor-types = { git = "https://github.com/gudtekdonkey/floor-sdk", tag = "0.1.0" }
+floor-quote = { git = "https://github.com/gudtekdonkey/floor-sdk", tag = "0.1.0" }
 ```
 
 ## Public endpoints
