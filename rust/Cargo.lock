@@ -61,7 +61,7 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 [[package]]
 name = "carpenter-clmm-math"
 version = "0.1.0"
-source = "git+https://github.com/gudtekdonkey/carpenter-sdk?rev=6996086514a27c348189f150916fedaa8536c5b5#6996086514a27c348189f150916fedaa8536c5b5"
+source = "git+https://github.com/gudtekdonkey/carpenter-sdk?tag=0.1.0#cc36ad348a8cda20d0a166ac9687439df40504b3"
 dependencies = [
  "uint",
 ]
@@ -69,7 +69,7 @@ dependencies = [
 [[package]]
 name = "carpenter-quote"
 version = "0.1.0"
-source = "git+https://github.com/gudtekdonkey/carpenter-sdk?rev=6996086514a27c348189f150916fedaa8536c5b5#6996086514a27c348189f150916fedaa8536c5b5"
+source = "git+https://github.com/gudtekdonkey/carpenter-sdk?tag=0.1.0#cc36ad348a8cda20d0a166ac9687439df40504b3"
 dependencies = [
  "bytemuck",
  "carpenter-clmm-math",
@@ -79,7 +79,7 @@ dependencies = [
 [[package]]
 name = "carpenter-types"
 version = "0.1.0"
-source = "git+https://github.com/gudtekdonkey/carpenter-sdk?rev=6996086514a27c348189f150916fedaa8536c5b5#6996086514a27c348189f150916fedaa8536c5b5"
+source = "git+https://github.com/gudtekdonkey/carpenter-sdk?tag=0.1.0#cc36ad348a8cda20d0a166ac9687439df40504b3"
 dependencies = [
  "borsh",
  "bytemuck",

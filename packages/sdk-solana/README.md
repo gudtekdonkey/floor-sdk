@@ -139,8 +139,7 @@ removed from the build copy, so the output does not depend on where the checkout
 
 ## Develop
 
-From the repository root, with [`carpenter-sdk`](https://github.com/gudtekdonkey/carpenter-sdk) checked out beside it
-(the root `package.json` overrides `@floorlaunchpad/carpenter-sdk` with that checkout for local development):
+From the repository root:
 
 ```sh
 npm install

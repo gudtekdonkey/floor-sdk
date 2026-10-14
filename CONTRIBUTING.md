@@ -5,7 +5,6 @@ How this repository is built, tested and extended. For using the SDKs, see [`REA
 ## Build and test
 
 ```sh
-# with carpenter-sdk checked out beside this repository (for the npm workspace)
 npm install
 npm run typecheck && npm test
 (cd rust && cargo test --workspace)
@@ -22,18 +21,15 @@ FLOOR's Solana side is a hook on Carpenter, and Carpenter's SDK is its own repos
 - `floor-types` and `floor-quote` depend on `carpenter-types`, `carpenter-clmm-math` and `carpenter-quote`;
   `floor-quote` implements `carpenter_quote::HookQuoter`. `carpenter-sdk`'s Jupiter adapter depends back on `floor-quote`.
 
-The Rust workspace takes the Carpenter crates from `carpenter-sdk` at the release commit with the same version
-(`rust/Cargo.toml`, `[workspace.dependencies]`), and `carpenter-sdk`'s Jupiter adapter takes `floor-quote` the same way:
+The Rust workspace takes the Carpenter crates from `carpenter-sdk` at the release tag with the same version
+(`rust/Cargo.toml`, `[workspace.dependencies]`), and `carpenter-sdk`'s Jupiter adapter takes `floor-quote` from this repository at a commit:
 
 ```toml
 # rust/Cargo.toml
-carpenter-quote = { git = "https://github.com/gudtekdonkey/carpenter-sdk", rev = "6996086514a27c348189f150916fedaa8536c5b5" }
+carpenter-quote = { git = "https://github.com/gudtekdonkey/carpenter-sdk", tag = "0.1.0" }
 # carpenter-sdk/jupiter/Cargo.toml
 floor-quote = { git = "https://github.com/gudtekdonkey/floor-sdk", rev = "72399c843d3177333ef3cbf8b06a6d78ec53f1be" }
 ```
-
-For local development the root `package.json` overrides `@floorlaunchpad/carpenter-sdk` with a `carpenter-sdk` checkout
-beside this one, so the TypeScript build needs both repositories side by side.
 
 Both repositories must point at the same release: Cargo treats `carpenter-quote` from two sources as two crates, and
 `floor-quote`'s `HookQuoter` would then not be the trait Carpenter's adapter calls.

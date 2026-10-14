@@ -13,7 +13,7 @@ plugs into Carpenter's quoter through `carpenter_quote::HookQuoter`.
 
 No crate depends on a Solana crate. The Carpenter crates come from
 [`carpenter-sdk`](https://github.com/gudtekdonkey/carpenter-sdk), as git dependencies pinned to its
-release commit (`Cargo.toml`, `[workspace.dependencies]`).
+release tag (`Cargo.toml`, `[workspace.dependencies]`).
 
 ## Quoting a FLOOR pool
 

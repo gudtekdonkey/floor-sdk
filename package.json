@@ -18,8 +18,5 @@
   },
   "dependencies": {
     "@solana/kit": "^8.3.0"
-  },
-  "overrides": {
-    "@floorlaunchpad/carpenter-sdk": "file:../carpenter-sdk/packages/sdk"
   }
 }

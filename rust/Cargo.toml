@@ -3,7 +3,7 @@
 # carpenter-clmm-math) from crates.io, plus the sibling crates and the Carpenter crates; no Solana
 # crate, no other git source.
 #
-# The Carpenter crates come from `carpenter-sdk` at the release commit with the same version (v0.1.0).
+# The Carpenter crates come from `carpenter-sdk` at the release tag with the same version (0.1.0).
 # carpenter-sdk's own Jupiter adapter patches this source back to its local crates, so both
 # repositories build against ONE `carpenter-quote`.
 [workspace]
@@ -18,9 +18,9 @@ edition = "2021"
 repository = "https://github.com/gudtekdonkey/floor-sdk"
 
 [workspace.dependencies]
-carpenter-types = { git = "https://github.com/gudtekdonkey/carpenter-sdk", rev = "6996086514a27c348189f150916fedaa8536c5b5" }
-carpenter-clmm-math = { git = "https://github.com/gudtekdonkey/carpenter-sdk", rev = "6996086514a27c348189f150916fedaa8536c5b5" }
-carpenter-quote = { git = "https://github.com/gudtekdonkey/carpenter-sdk", rev = "6996086514a27c348189f150916fedaa8536c5b5" }
+carpenter-types = { git = "https://github.com/gudtekdonkey/carpenter-sdk", tag = "0.1.0" }
+carpenter-clmm-math = { git = "https://github.com/gudtekdonkey/carpenter-sdk", tag = "0.1.0" }
+carpenter-quote = { git = "https://github.com/gudtekdonkey/carpenter-sdk", tag = "0.1.0" }
 floor-types = { path = "crates/floor-types" }
 floor-math = { path = "crates/floor-math" }
 

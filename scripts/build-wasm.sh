@@ -13,7 +13,7 @@
 # and wasm-bindgen-cli at the version the crate pins (0.2.128):
 #   rustup target add wasm32-unknown-unknown --toolchain 1.98.1
 #   cargo install wasm-bindgen-cli --version 0.2.128 --locked
-# The Carpenter crates are fetched from carpenter-sdk at the commit `rust/Cargo.toml` names (a sibling checkout is
+# The Carpenter crates are fetched from carpenter-sdk at the tag `rust/Cargo.toml` names (a sibling checkout is
 # used instead while that file names one by path).
 #
 # Reproducibility: the crate is built from a COPY whose `///` and `//!` lines are removed (wasm-bindgen
