@@ -121,6 +121,13 @@ Permit2 is `0x000000000022D473030F116dDEE9F6B43aC78BA3` everywhere.
 | floor_vesting | `HHiwbXs3egRwtgEPEKx1PHpBU8gq5VSbhfrGrcCd4CSC` |
 | LaunchConfig (registry count) | `Ck9wU4tSb4dLtaW4PyEfg8NYrRJkCS6daBVu13cxtVQz` |
 | Carpenter AmmConfig | `85S8wiRLyv9Urc6g9tF8gDC56F5Fq4JBu9Zub3BEtyuV` |
+| HookConfig | `CfhjSM2zTcxnKggQvHjUzYPTc6W9QxC2cABJnCHq4Cxx` |
+| Platform treasury (`["platform_treasury"]` under `floor_hook`) | `B8SRexSGm2p2nJFpMmVQPB9PepHSXeB3oQMzyaqrsGvC` |
+| Team treasury (`["team_treasury"]` under `floor_hook`) | `CqQXgHT6MsUmEaXgwuUZURwRvfF7w5wkcD1BzWNt7vi9` |
+| Carpenter protocol treasury (under `carpenter_amm`) | `G7URMTZpyVendaTXEki7emtvvB1UirZFfdvruYy8h66r` |
+| Address lookup table | `GLu7tLCby32SPS43p9wdHW7EbV7ZoaEfyeCWx6hkxAr3` |
+
+Each treasury account owns the token accounts its fees are swept into; DefiLlama's treasury adapters read them.
 
 A launch is `["entry", u64le(i)]` under `floor_launch` for i < `LaunchConfig.registry_count`. Account layouts, PDAs and
 the events (`emit_cpi`, decoded from the instruction data) are in `@floorsupply/sdk-solana` and
