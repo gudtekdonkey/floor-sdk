@@ -1,8 +1,11 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { MAX_SQRT, MAX_TICK, MIN_SQRT, MIN_TICK, sqrtPriceAtTick } from '../src/pool.js';
-import { computeSwapStepExactIn, getTickAtSqrtPrice, simulateSwap, type SwapSnapshot } from '../src/simulate.js';
+import { encodeAbiParameters, encodeFunctionData, encodeFunctionResult, type Hex } from 'viem';
+import { HOOK_ABI, POOL_ABI, POOL_STATE_COMPONENTS } from '../src/abi/index.js';
+import { hookTakes, skimBpsAt } from '../src/fees.js';
+import { bandTicks, LP_FEE_PIPS, marketTick, MAX_SQRT, MAX_TICK, MIN_SQRT, MIN_TICK, sqrtPriceAtTick } from '../src/pool.js';
+import { computeSwapStepExactIn, getTickAtSqrtPrice, simulateSwap, simulateSwapLive, swapFeeParts, v4SwapExactIn, type SwapSnapshot } from '../src/simulate.js';
 
 // Each fixture: a FLOOR pool read at one or more states, with what Uniswap's V4Quoter answered for each swap at that block
 // (`null` = the quoter reverted). `base-*.json`: pools created and graduated on a fork of Base, at several states, recorded by
@@ -42,6 +45,108 @@ describe('simulateSwap against the V4Quoter (recorded on a fork and on live pool
         }
       });
     }
+  }
+});
+
+/** A client that answers `simulateSwapLive`'s reads off a fixture snapshot, counting the bitmap words it is asked for. */
+function fixtureClient(j: any) {
+  const snap = snapshotOf(j);
+  const zero = (t: string): unknown => (t === 'address' ? '0x0000000000000000000000000000000000000000' : t === 'bool' ? false : /^u?int(8|16|24)$/.test(t) ? 0 : 0n);
+  const st: Record<string, unknown> = {};
+  for (const c of POOL_STATE_COMPONENTS) st[c.name] = 'components' in c ? Object.fromEntries(c.components.map((x) => [x.name, zero(x.type)])) : zero(c.type);
+  const r = snap.rates;
+  Object.assign(st, {
+    tickSpacing: snap.pool.tickSpacing, floorTick: snap.floorTick, quoteIsCurrency1: snap.quoteIsCurrency1,
+    skimBuyFarBps: BigInt(r.skimBuyFarBps), skimSellFarBps: BigInt(r.skimSellFarBps), skimBuyAtFloorBps: BigInt(r.skimBuyAtFloorBps), skimSellAtFloorBps: BigInt(r.skimSellAtFloorBps),
+    creatorBuyBps: BigInt(r.creatorBuyBps), creatorSellBps: BigInt(r.creatorSellBps), holderBuyBps: BigInt(r.holderBuyBps), holderSellBps: BigInt(r.holderSellBps), teamFeeBps: BigInt(r.teamFeeBps),
+  });
+  const stairsOut = (POOL_ABI.find((f) => f.type === 'function' && f.name === 'stairs') as { outputs: readonly { components: readonly { name: string; type: string; components?: readonly { name: string; type: string }[] }[] }[] }).outputs[0]!;
+  const stairs: Record<string, unknown> = {};
+  for (const c of stairsOut.components) stairs[c.name] = c.type === 'tuple[16]' ? Array.from({ length: 16 }, () => Object.fromEntries(c.components!.map((x) => [x.name, zero(x.type)]))) : zero(c.type);
+  Object.assign(stairs, { cushionLower: snap.cushion.cushionLower, cushionLiq: snap.cushion.cushionLiq });
+  const words: number[] = [];
+  const client = {
+    async call({ data }: { data: Hex }) {
+      if (data.slice(0, 10) === POOL_STATE_SELECTOR) return { data: encodeAbiParameters([{ type: 'tuple', components: POOL_STATE_COMPONENTS }] as never, [st] as never) };
+      const inner = encodeFunctionResult({ abi: POOL_ABI, functionName: 'stairs', result: stairs } as never);
+      return { data: encodeFunctionResult({ abi: HOOK_ABI, functionName: 'execute', result: inner } as never) };
+    },
+    async readContract({ functionName, args }: { functionName: string; args: readonly unknown[] }) {
+      if (functionName === 'getSlot0') return [snap.pool.sqrtPriceX96, snap.pool.tick, snap.pool.protocolFee, 0];
+      if (functionName === 'getLiquidity') return snap.pool.liquidity;
+      if (functionName === 'getTickBitmap') { words.push(Number(args[1])); return snap.pool.bitmap.get(Number(args[1])) ?? 0n; }
+      if (functionName === 'getTickLiquidity') return [0n, snap.pool.liquidityNet.get(Number(args[1])) ?? 0n];
+      throw new Error(`no fake for ${functionName}`);
+    },
+  };
+  return { client, snap, words };
+}
+
+const POOL_ID = ('0x' + '11'.repeat(32)) as Hex;
+const POOL_STATE_SELECTOR = encodeFunctionData({ abi: HOOK_ABI, functionName: 'poolState', args: [POOL_ID] }).slice(0, 10);
+const SRC = { hook: '0x0000000000000000000000000000000000000001', stateView: '0x0000000000000000000000000000000000000002' } as const;
+
+describe('a pool swap\'s fee parts on the recorded pools', () => {
+  it('a sell\'s hook takes are charged at the POST-swap tick, off the swap\'s whole quote leg; the pre-swap figure falls short', () => {
+    let rampedPast = 0;
+    for (const f of fixtures) for (const c of f.cases) {
+      const snap = snapshotOf(c.snapshot);
+      const dear = snap.floorTick - bandTicks(snap.pool.tickSpacing);
+      for (const e of c.expected) {
+        if (e.side !== 'sell' || e.amountOut === null) continue;
+        const r = simulateSwap(snap, 'sell', BigInt(e.amountIn));
+        const swap = v4SwapExactIn(snap.pool, snap.quoteIsCurrency1, BigInt(e.amountIn), LP_FEE_PIPS);
+        const post = skimBpsAt('sell', dear - marketTick(swap.tick, snap.quoteIsCurrency1), snap.rates);
+        const pre = skimBpsAt('sell', dear - marketTick(snap.pool.tick, snap.quoteIsCurrency1), snap.rates);
+        expect(r.skimBps).toBe(post);
+        if (post > pre) rampedPast++;
+        const t = hookTakes('sell', swap.amountOut, post, snap.rates);
+        const { fees, exact } = swapFeeParts(r);
+        const by = Object.fromEntries(fees.map((x) => [x.kind, x.amount]));
+        expect(by).toMatchObject({ floorSkim: t.floorSkim, creator: t.creator, holder: t.holder, floorPlatform: t.floorPlatform });
+        expect(r.amountOut + t.total).toBe(swap.amountOut);
+        expect(r.amountOut).toBe(BigInt(e.amountOut));
+        // the LP fee is the token's, stated in quote at the walk's average price
+        const consumed = BigInt(e.amountIn) - swap.lpFee;
+        expect(by.lp).toBe(consumed > 0n ? (swap.lpFee * swap.amountOut) / consumed : 0n);
+        expect(exact).toBe(swap.lpFee === 0n);
+      }
+    }
+    expect(rampedPast).toBeGreaterThan(0);
+  });
+
+  it('a buy\'s five parts are the walk\'s own: the hook\'s four off the quote paid in, the LP fee in the quote', () => {
+    for (const f of fixtures) for (const c of f.cases) {
+      const snap = snapshotOf(c.snapshot);
+      for (const e of c.expected) {
+        if (e.side !== 'buy' || e.amountOut === null) continue;
+        const r = simulateSwap(snap, 'buy', BigInt(e.amountIn));
+        const { fees, exact } = swapFeeParts(r);
+        expect(exact).toBe(snap.pool.protocolFee === 0);
+        const total = fees.filter((x) => x.kind !== 'lp').reduce((a, x) => a + x.amount, 0n);
+        const swap = v4SwapExactIn(snap.pool, !snap.quoteIsCurrency1, BigInt(e.amountIn) - total, LP_FEE_PIPS);
+        expect(fees.find((x) => x.kind === 'lp')!.amount).toBe(swap.lpFee);
+        expect(swap.amountOut).toBe(BigInt(e.amountOut));
+      }
+    }
+  });
+
+  for (const f of fixtures) {
+    it(`${f.label}: simulateSwapLive reads only the words the walk crosses and answers what the whole map does`, async () => {
+      for (const c of f.cases) {
+        for (const e of c.expected) {
+          const { client, snap, words } = fixtureClient(c.snapshot);
+          const src = { ...SRC, gapSkim: snap.gapSkim };
+          if (e.amountOut === null) {
+            await expect(simulateSwapLive(client as never, src, POOL_ID, e.side, BigInt(e.amountIn))).rejects.toThrow();
+            continue;
+          }
+          const live = await simulateSwapLive(client as never, src, POOL_ID, e.side, BigInt(e.amountIn));
+          expect(live).toEqual(simulateSwap(snap, e.side, BigInt(e.amountIn)));
+          expect(new Set(words).size).toBe(words.length);
+        }
+      }
+    });
   }
 });
 

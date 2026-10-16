@@ -145,7 +145,7 @@ const ceilDiv = (a: bigint, b: bigint): bigint => (a + b - 1n) / b;
  *   is the leg less them, so the leg is the least value whose remainder covers `amountOut`. The LP fee was charged on the
  *   TOKEN input and is stated in quote at the swap's own rate, `leg × fee / (1e6 − fee)` — an estimate.
  * ⚠ A sell's skim is charged at the POST-swap tick (further up the ramp toward the floor); `skimBps` here is whatever the caller
- *   read. Pass the pre-trade figure and the skim part is a MINIMUM.
+ *   read. Pass the pre-trade figure and the skim part is a MINIMUM. A simulated swap's own parts are `swapFeeParts`.
  * A buy's `skimBps` is the figure the engine charges: on contracts with the gap buy skim, `gapSkimBps(skimBpsAt(...), ...)`.
  */
 export function poolFeeParts(side: 'buy' | 'sell', amountIn: bigint, amountOut: bigint, skimBps: number, r: PoolRates): FeePart[] {
@@ -169,7 +169,8 @@ export function bondingFeeParts(floorPlatform: bigint): FeePart[] {
   return feeList(0n, { floorSkim: 0n, creator: 0n, holder: 0n, floorPlatform });
 }
 
-function feeList(lp: bigint, t: { floorSkim: bigint; creator: bigint; holder: bigint; floorPlatform: bigint }): FeePart[] {
+/** The five EVM parts in their listed order (`EVM_FEE_KINDS`). */
+export function feeList(lp: bigint, t: { floorSkim: bigint; creator: bigint; holder: bigint; floorPlatform: bigint }): FeePart[] {
   return [
     { kind: 'lp', amount: lp },
     { kind: 'floorSkim', amount: t.floorSkim },

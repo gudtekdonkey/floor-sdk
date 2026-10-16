@@ -12,6 +12,7 @@ import { EVM_DEPLOYMENTS, checkDeployment, floorDeploymentFor, permit2For, rules
 import { FloorEvmError } from './errors.js';
 import { assertWholeTake, bondingFeeParts, gapSkimBps, poolFeeParts, skimBpsAt } from './fees.js';
 import { bandTicks, marketTick } from './pool.js';
+import { simulateSwapLive, swapFeeParts, type FloorSwapResult } from './simulate.js';
 import { launchOfToken, readCushion, readLaunchFromEntry, readRegistryCount, readRegistryPage, readSalePosition, readSlot0, REGISTRY_PAGE_MAX, type EvmLaunch, type RegistryEntry } from './reads.js';
 import { quoteParamsForKey } from './router.js';
 import { saleBuyQuote, sellBackQuote } from './sale.js';
@@ -22,9 +23,13 @@ export interface EvmQuote extends Quote {
   /** `sale` before graduation (the bonding sale), `pool` after (the v4 pool). */
   readonly venue: 'sale' | 'pool';
   /**
-   * True when every fee part is the contracts' own integer arithmetic (a bonding trade). False on a pool swap: `amountOut` is
-   * the V4Quoter's simulation, but the parts are computed from the pool's rates at the PRE-trade tick — a sell's skim is
-   * charged at the post-swap tick (a minimum here) and the LP fee is stated in the quote at the swap's own rate.
+   * True when every fee part is the contracts' own integer arithmetic. A bonding trade: always. A pool swap: `amountOut` is
+   * the V4Quoter's answer, and the parts come from the SDK's own walk of the pool (`simulateSwapLive`) at the same block —
+   * a buy's four hook takes at the pre-swap tick, a sell's at the POST-swap tick, as `_takeFees` charges them. When that walk
+   * gives the quoter's `amountOut`, a buy's five parts are exact (true); a sell's four hook parts are exact but its LP fee,
+   * charged in the token, is stated in quote at the walk's average price (false). Where the walk cannot be run (no StateView
+   * recorded) or disagrees with the quoter, the parts come from the pool's rates at the pre-swap tick (false; a sell's skim
+   * then is a minimum).
    */
   readonly feesExact: boolean;
   /** A bonding buy past what the sale has left: the quote the sale refunds. 0 otherwise. */
@@ -193,19 +198,32 @@ export function createEvmAdapter(options: EvmAdapterOptions): EvmAdapter {
     if (!d.quoter) throw new FloorEvmError('no_quote', `chain ${chainId} records no V4Quoter: a pool trade cannot be priced`);
     const buying = side === 'buy';
     const zeroForOne = buying ? !L.raw.quoteIsCurrency1 : L.raw.quoteIsCurrency1;
-    const [sim, slot0] = await Promise.all([
-      client.simulateContract({ address: d.quoter, abi: V4_QUOTER_ABI, functionName: 'quoteExactInputSingle', args: [quoteParamsForKey(L.raw.poolKey, zeroForOne, amountIn)] }).catch((e: unknown) => {
+    /* ⛔ One block for every read: the quoter's answer and the parts are the same pool. */
+    const blockNumber = await client.getBlockNumber();
+    const [sim, slot0, walk] = await Promise.all([
+      client.simulateContract({ address: d.quoter, abi: V4_QUOTER_ABI, functionName: 'quoteExactInputSingle', args: [quoteParamsForKey(L.raw.poolKey, zeroForOne, amountIn)], blockNumber }).catch((e: unknown) => {
         throw new FloorEvmError('no_quote', `the V4Quoter could not price ${side} ${amountIn} on pool ${L.raw.poolId}`, { cause: e });
       }),
-      readSlot0(client, d.poolManager, L.raw.poolId),
+      readSlot0(client, d.poolManager, L.raw.poolId, blockNumber),
+      /* The SDK's own walk of the pool, for the parts the quoter does not report (a sell's post-swap skim above all). A walk
+         that cannot be read is not an answer about the trade: the parts fall back to the rates below. */
+      d.stateView
+        ? simulateSwapLive(client, { hook: L.raw.hook, stateView: d.stateView, gapSkim: rulesOf(d).gapSkim }, L.raw.poolId, side, amountIn, { blockNumber }).catch((): FloorSwapResult | null => null)
+        : Promise.resolve(null),
     ]);
     const [amountOut] = sim.result;
     if (amountOut <= 0n) throw new FloorEvmError('no_quote', `the V4Quoter priced ${side} ${amountIn} at nothing`);
+    if (walk && walk.amountOut === amountOut) {
+      const { fees, exact } = swapFeeParts(walk);
+      assertWholeTake(fees);
+      return { launch: L.ref, side, amountIn, amountOut, fees, venue: 'pool', feesExact: exact, refund: 0n, graduates: false };
+    }
     const dearEdge = L.raw.floorTick - bandTicks(L.raw.poolState.tickSpacing);
     const current = marketTick(slot0.tick, L.raw.quoteIsCurrency1);
-    let skim = skimBpsAt(side, dearEdge - current, L.raw.poolRates);
+    /* A sell's skim is charged at the POST-swap tick: the walk's figure where it ran, else the pre-swap one (a minimum). */
+    let skim = !buying && walk ? walk.skimBps : skimBpsAt(side, dearEdge - current, L.raw.poolRates);
     /* The engine scales a buy's skim by the cushion gap on contracts that carry the rule (`_takeFees` → `_gapSkim`). */
-    if (buying && rulesOf(d).gapSkim) skim = gapSkimBps(skim, await readCushion(client, L.raw.hook, L.raw.poolId), current);
+    if (buying && rulesOf(d).gapSkim) skim = gapSkimBps(skim, await readCushion(client, L.raw.hook, L.raw.poolId, blockNumber), current);
     const fees = poolFeeParts(side, amountIn, amountOut, skim, L.raw.poolRates);
     assertWholeTake(fees);
     return { launch: L.ref, side, amountIn, amountOut, fees, venue: 'pool', feesExact: false, refund: 0n, graduates: false };

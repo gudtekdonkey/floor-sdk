@@ -16,9 +16,10 @@
  * that reached the band (`SwapResult.reachedBand`).
  */
 import type { Address, Hex, PublicClient } from 'viem';
+import type { FeePart } from '@floorlaunchpad/sdk';
 import { floorDeploymentFor, rulesOf, type Deployment } from './deployments.js';
 import { FloorEvmError } from './errors.js';
-import { gapSkimBps, hookTakes, skimBpsAt, type CushionEdge, type PoolRates } from './fees.js';
+import { feeList, gapSkimBps, hookTakes, skimBpsAt, type CushionEdge, type PoolRates } from './fees.js';
 import { bandTicks, LP_FEE_PIPS, marketTick, MAX_SQRT, MAX_TICK, MIN_SQRT, MIN_TICK, sqrtPriceAtTick } from './pool.js';
 import { poolRatesOf, readCushion, readPoolState } from './reads.js';
 
@@ -298,6 +299,101 @@ export function simulateSwap(s: SwapSnapshot, side: 'buy' | 'sell', amountIn: bi
     fees: { lp: swap.lpFee, protocol: swap.protocolFee, floorSkim: takes.floorSkim, creator: takes.creator, holder: takes.holder, floorPlatform: takes.floorPlatform },
     sqrtPriceX96After: swap.sqrtPriceX96, tickAfter: swap.tick, reachedBand: post >= dearEdge,
   };
+}
+
+/**
+ * A simulated swap's five parts, in the QUOTE's smallest unit, and whether every part is the contracts' own figure.
+ * - The hook's four (`floorSkim`, `creator`, `holder`, `floorPlatform`) are exactly what `_takeFees` takes: on a buy off the
+ *   quote paid in at the pre-swap tick, on a sell off the swap's quote output at the POST-swap tick.
+ * - `lp` on a buy is the walk's own LP fee, already in the quote. On a sell the pool charges it in the TOKEN (the input), so
+ *   it is stated in quote at the walk's average price (the gross quote leg over the tokens the curve consumed): an estimate,
+ *   and `exact` is false whenever it is not zero.
+ * - v4's protocol fee (0 unless the PoolManager's owner set one) is none of the five; a non-zero one makes `exact` false.
+ */
+export function swapFeeParts(r: FloorSwapResult): { fees: FeePart[]; exact: boolean } {
+  const f = r.fees;
+  const hook = f.floorSkim + f.creator + f.holder + f.floorPlatform;
+  if (r.side === 'buy') return { fees: feeList(f.lp, f), exact: f.protocol === 0n };
+  const leg = r.amountOut + hook;
+  const consumed = r.amountIn - f.lp - f.protocol;
+  const lp = f.lp > 0n && consumed > 0n ? (f.lp * leg) / consumed : 0n;
+  return { fees: feeList(lp, f), exact: f.lp === 0n && f.protocol === 0n };
+}
+
+/** Where a pool is read from: its hook, the chain's StateView, and whether the set charges the gap buy skim. */
+export interface PoolSource {
+  hook: Address;
+  stateView: Address;
+  gapSkim: boolean;
+}
+
+/** Bitmap words read past each word a walk needs, in its direction. */
+const PREFETCH_WORDS = 2;
+
+/**
+ * Read and simulate one swap in a single pass, reading only the tick-bitmap words the walk crosses (plus a few ahead) instead
+ * of the whole map: `readSwapSnapshot` + `simulateSwap` for one trade. Every read is at `blockNumber` when given, so the answer
+ * is the pool at that block and can be checked against a V4Quoter call at the same block.
+ */
+export async function simulateSwapLive(
+  client: Pick<PublicClient, 'call' | 'readContract'>, src: PoolSource, poolId: Hex, side: 'buy' | 'sell', amountIn: bigint,
+  opts: { readonly blockNumber?: bigint } = {},
+): Promise<FloorSwapResult> {
+  const at = opts.blockNumber !== undefined ? { blockNumber: opts.blockNumber } : {};
+  const sv = src.stateView;
+  const noCushion: CushionEdge = { cushionLower: 0, cushionLiq: 0n };
+  const [st, cushion, slot0, liquidity] = await Promise.all([
+    readPoolState(client, src.hook, poolId, opts.blockNumber),
+    /* Only a buy's skim reads the cushion (`_takeFees` → `_gapSkim` on `zeroForOne` = buying). */
+    side === 'buy' && src.gapSkim ? readCushion(client, src.hook, poolId, opts.blockNumber) : Promise.resolve(noCushion),
+    client.readContract({ address: sv, abi: STATE_VIEW_ABI, functionName: 'getSlot0', args: [poolId], ...at }),
+    client.readContract({ address: sv, abi: STATE_VIEW_ABI, functionName: 'getLiquidity', args: [poolId], ...at }),
+  ]);
+  const spacing = Number(st.tickSpacing);
+  const minWord = compress(MIN_TICK, spacing) >> 8;
+  const maxWord = compress(MAX_TICK, spacing) >> 8;
+  const zeroForOne = side === 'buy' ? !st.quoteIsCurrency1 : st.quoteIsCurrency1;
+  const step = zeroForOne ? -1 : 1;
+  const bitmap = new Map<number, bigint>();
+  const liquidityNet = new Map<number, bigint>();
+
+  async function load(from: readonly number[]): Promise<void> {
+    const want = new Set<number>();
+    for (const w0 of from) for (let i = 0, w = w0; i <= PREFETCH_WORDS && w >= minWord && w <= maxWord; i++, w += step) if (!bitmap.has(w)) want.add(w);
+    const words = [...want];
+    const values = await Promise.all(words.map((w) => client.readContract({ address: sv, abi: STATE_VIEW_ABI, functionName: 'getTickBitmap', args: [poolId, w], ...at })));
+    const ticks: number[] = [];
+    words.forEach((w, i) => {
+      const word = values[i]!;
+      bitmap.set(w, word);
+      for (let bit = 0; bit < 256; bit++) if ((word >> BigInt(bit)) & 1n) ticks.push(((w << 8) + bit) * spacing);
+    });
+    const nets = await Promise.all(ticks.map((t) => client.readContract({ address: sv, abi: STATE_VIEW_ABI, functionName: 'getTickLiquidity', args: [poolId, t], ...at })));
+    ticks.forEach((t, i) => liquidityNet.set(t, nets[i]![1]));
+  }
+
+  await load([compress(slot0[1], spacing) >> 8]);
+  for (;;) {
+    const missed = new Set<number>();
+    /* The walk reads the bitmap through `get` only; a word not read yet is recorded and the walk is run again with it. */
+    const recording = { get: (w: number) => { if (!bitmap.has(w)) missed.add(w); return bitmap.get(w); } } as unknown as ReadonlyMap<number, bigint>;
+    const snap: SwapSnapshot = {
+      pool: { sqrtPriceX96: slot0[0], tick: slot0[1], liquidity, tickSpacing: spacing, protocolFee: slot0[2], bitmap: recording, liquidityNet },
+      quoteIsCurrency1: st.quoteIsCurrency1, floorTick: Number(st.floorTick), rates: poolRatesOf(st), cushion, gapSkim: src.gapSkim,
+    };
+    let result: FloorSwapResult | null = null;
+    let failure: unknown = null;
+    try {
+      result = simulateSwap(snap, side, amountIn);
+    } catch (e) {
+      failure = e;
+    }
+    if (missed.size === 0) {
+      if (failure !== null) throw failure;
+      return result!;
+    }
+    await load([...missed]);
+  }
 }
 
 // ---------------------------------------------------------------- reading a snapshot

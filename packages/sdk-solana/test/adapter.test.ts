@@ -369,7 +369,10 @@ test('swapToQuote: six parts; a sell converts the token-side LP fee to quote and
   assert.deepEqual(buy.fees.map((x) => [x.kind, x.amount]), [['lp', 30n], ['floorSkim', 4n], ['creator', 3n], ['holder', 2n], ['floorPlatform', 5n], ['carpenterPlatform', 6n]]);
   assert.equal(buy.feesExact, true);
   const sell = swapToQuote(ref, 'sell', { ...SWAP_QUOTE, amountIn: 1_000n, amountOut: 500n, fees });
-  assert.equal(sell.fees[0]!.amount, 15n);
+  // the walk's average price: (500 out + 4 + 3 + 2 + 5 hook + 6 Carpenter) quote over (1,000 − 30) tokens consumed
+  assert.equal(sell.fees[0]!.amount, (30n * 520n) / 970n);
+  // the platform cut is inside the skim, never listed beside it
+  assert.equal(sell.fees.find((x) => x.kind === 'floorSkim')!.amount, 4n);
   assert.equal(sell.feesExact, false);
   const { holder: _h, ...partial } = fees;
   assert.throws(() => swapToQuote(ref, 'buy', { ...SWAP_QUOTE, fees: partial } as unknown as SwapQuote), SolanaAdapterError);

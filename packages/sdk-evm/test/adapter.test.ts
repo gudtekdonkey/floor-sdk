@@ -4,7 +4,7 @@ import {
   FACTORY_ABI, FLOOR_SWAP_RATCHET_ABI, HOOK_ABI, LAUNCH_ABI, PERMIT2_ABI, PERMIT2, POOL_ABI, POOL_STATE_ABI, POOL_STATE_COMPONENTS, REGISTRY_ABI, TOKEN_ABI, UNIVERSAL_ROUTER_ABI, V4_QUOTER_ABI, WALLET_SCAN_ABI,
   EVM_DEPLOYMENTS, FloorEvmError, assertWholeTake, createEvmAdapter, decodePoolState, poolIdOf, poolStateSlot, priceX18AtTick, saleBuyQuote,
   BOND_BUY_GAS_FLOOR, PERMIT2_MAX_EXPIRATION, isRevert, launchOfToken, readQuoteAsset, readSale, readSalePosition,
-  OLDER_RULES, type Deployment, type PoolStateTuple,
+  OLDER_RULES, STATE_VIEW_ABI, gapSkimBps, hookTakes, marketTick, simulateSwap, skimBpsAt, sqrtPriceAtTick, type Deployment, type PoolStateTuple, type SwapSnapshot,
 } from '../src/index.js';
 
 const CHAIN = 11155111;
@@ -56,9 +56,25 @@ const ENTRIES = [ENTRY(GRAD, 100n), ENTRY(BOND, 200n)];
 const ENTRIES_WITH_QB = [ENTRY(QB, 50n), ...ENTRIES];
 const QUOTED_OUT = 123_456_789n;
 const TICK = 92100 - 120 - 8047; // half way up the ramp from the dear edge
+/** GRAD's pool as StateView answers it: one full-range position of `POOL_LIQ` and one narrow position just above the price. */
+const POOL_LIQ = 10n ** 24n;
+const NARROW = { lower: 84_000, upper: 84_600, liq: 3n * 10n ** 23n };
+const NETS = new Map<number, bigint>([[-887_220, POOL_LIQ], [887_220, -POOL_LIQ], [NARROW.lower, NARROW.liq], [NARROW.upper, -NARROW.liq]]);
+const BITMAP = (() => {
+  const m = new Map<number, bigint>();
+  for (const t of NETS.keys()) { const c = Math.floor(t / 60); m.set(c >> 8, (m.get(c >> 8) ?? 0n) | (1n << BigInt(c & 0xff))); }
+  return m;
+})();
+/** GRAD's pool as `simulateSwap` reads it whole, at `cushion`. */
+const gradSnapshot = (cushion = { cushionLower: 0, cushionLiq: 0n }, gapSkim = true): SwapSnapshot => ({
+  pool: { sqrtPriceX96: sqrtPriceAtTick(TICK), tick: TICK, liquidity: POOL_LIQ, tickSpacing: 60, protocolFee: 0, bitmap: BITMAP, liquidityNet: NETS },
+  quoteIsCurrency1: false, floorTick: 92100,
+  rates: { skimBuyFarBps: 100, skimSellFarBps: 100, skimBuyAtFloorBps: 0, skimSellAtFloorBps: 500, creatorBuyBps: 50, creatorSellBps: 75, holderBuyBps: 0, holderSellBps: 0, teamFeeBps: 25 },
+  cushion, gapSkim,
+});
 
 type Handler = { abi: Abi; fns: Record<string, (args: readonly unknown[]) => unknown> };
-function chain(chainId = CHAIN, allowance = { erc20: 0n, permit2: 0n }, o: { funded?: boolean; creator?: Address; cushion?: { lower: number; liq: bigint }; badPoolId?: boolean } = {}) {
+function chain(chainId = CHAIN, allowance = { erc20: 0n, permit2: 0n }, o: { funded?: boolean; creator?: Address; cushion?: { lower: number; liq: bigint }; badPoolId?: boolean; stateView?: boolean; quoter?: 'fixed' | 'pool' } = {}) {
   const entries = ENTRIES_WITH_QB;
   const tokenFns = (t: { token: Address; launch: Address }, sym: string): Handler => ({
     abi: [...TOKEN_ABI, ...WALLET_SCAN_ABI] as Abi,
@@ -83,7 +99,19 @@ function chain(chainId = CHAIN, allowance = { erc20: 0n, permit2: 0n }, o: { fun
       },
     } },
     [D.poolManager.toLowerCase()]: { abi: POOL_STATE_ABI as Abi, fns: { extsload: ([slot]) => (slot === poolStateSlot(poolIdOf(GRAD.token, HOOK)) ? `0x${slot0.toString(16).padStart(64, '0')}` : '0x' + '00'.repeat(32)) } },
-    [D.quoter!.toLowerCase()]: { abi: V4_QUOTER_ABI as Abi, fns: { quoteExactInputSingle: () => [QUOTED_OUT, 100_000n] } },
+    /* 'pool': the quoter answers what GRAD's pool gives (the whole-map simulation); 'fixed' (default): QUOTED_OUT. */
+    [D.quoter!.toLowerCase()]: { abi: V4_QUOTER_ABI as Abi, fns: { quoteExactInputSingle: ([p]) => {
+      if (o.quoter !== 'pool') return [QUOTED_OUT, 100_000n];
+      const { zeroForOne, exactAmount } = p as { zeroForOne: boolean; exactAmount: bigint };
+      const c = o.cushion ?? { lower: 0, liq: 0n };
+      return [simulateSwap(gradSnapshot({ cushionLower: c.lower, cushionLiq: c.liq }), zeroForOne ? 'buy' : 'sell', exactAmount).amountOut, 100_000n];
+    } } },
+    ...(o.stateView ? { [D.stateView!.toLowerCase()]: { abi: STATE_VIEW_ABI as Abi, fns: {
+      getSlot0: () => [sqrtPriceAtTick(TICK), TICK, 0, 0],
+      getLiquidity: () => POOL_LIQ,
+      getTickBitmap: ([, w]) => BITMAP.get(Number(w)) ?? 0n,
+      getTickLiquidity: ([, t]) => [0n, NETS.get(Number(t)) ?? 0n],
+    } } } : {}),
     [PERMIT2.toLowerCase()]: { abi: PERMIT2_ABI as Abi, fns: { allowance: () => [allowance.permit2, 2 ** 40, 0] } },
     [BOND.token.toLowerCase()]: tokenFns(BOND, 'BOND'),
     [GRAD.token.toLowerCase()]: tokenFns(GRAD, 'GRAD'),
@@ -98,6 +126,7 @@ function chain(chainId = CHAIN, allowance = { erc20: 0n, permit2: 0n }, o: { fun
   const transport = custom({
     async request({ method, params }: { method: string; params?: unknown }) {
       if (method === 'eth_chainId') return `0x${chainId.toString(16)}`;
+      if (method === 'eth_blockNumber') return '0x10';
       if (method !== 'eth_call') throw new Error(`unexpected ${method}`);
       const { to, data } = (params as [{ to: Address; data: Hex }])[0];
       if (to.toLowerCase() === BROKEN.toLowerCase()) throw new Error('fetch failed');
@@ -229,6 +258,48 @@ describe('createEvmAdapter over a mocked transport', () => {
     const oq = await olderOn(old).quote(localRef(GRAD.token), 'buy', E18);
     expect(oq.fees.find((f) => f.kind === 'floorSkim')!.amount).toBe(E18 * 50n / 10_000n);
     expect(old.calls).not.toContain('hook.execute');
+  });
+
+  it('a pool SELL\'s parts are charged at the POST-swap tick, read off the SDK\'s own walk at the quoter\'s block', async () => {
+    const amountIn = 2n * 10n ** 23n; // walks up past the narrow position, toward the floor
+    const c = chain(CHAIN, { erc20: 0n, permit2: 0n }, { stateView: true, quoter: 'pool' });
+    const q = await adapterOn(c).quote(ref(GRAD.token), 'sell', amountIn);
+    const sim = simulateSwap(gradSnapshot(), 'sell', amountIn);
+    expect(q.amountOut).toBe(sim.amountOut);
+    const pre = skimBpsAt('sell', 92100 - 120 - TICK, gradSnapshot().rates);
+    const post = skimBpsAt('sell', 92100 - 120 - marketTick(sim.tickAfter, false), gradSnapshot().rates);
+    expect(pre).toBe(300);
+    expect(post).toBeGreaterThan(pre);
+    const by = Object.fromEntries(q.fees.map((f) => [f.kind, f.amount]));
+    const leg = q.amountOut + by.floorSkim! + by.creator! + by.holder! + by.floorPlatform!;
+    expect(hookTakes('sell', leg, post, gradSnapshot().rates)).toMatchObject({ floorSkim: by.floorSkim, creator: by.creator, holder: by.holder, floorPlatform: by.floorPlatform });
+    // the LP fee was charged in the token: stated in quote at the walk's average price, so the breakdown is not exact
+    expect(by.lp).toBe((sim.fees.lp * leg) / (amountIn - sim.fees.lp));
+    expect(q.feesExact).toBe(false);
+    // the walk read only the bitmap words it crossed (and a few ahead), never the whole map
+    expect(c.calls.filter((x) => x.endsWith('.getTickBitmap')).length).toBeLessThan(10);
+    expect(c.calls).not.toContain('hook.execute');
+  });
+
+  it('a pool BUY whose walk gives the quoter\'s amount is exact: the hook\'s four at the pre-swap tick, the walk\'s own LP fee', async () => {
+    const cushion = { lower: TICK + 5_109, liq: 1n };
+    const q = await adapterOn(chain(CHAIN, { erc20: 0n, permit2: 0n }, { stateView: true, quoter: 'pool', cushion })).quote(ref(GRAD.token), 'buy', E18);
+    const sim = simulateSwap(gradSnapshot({ cushionLower: cushion.lower, cushionLiq: cushion.liq }), 'buy', E18);
+    expect(q).toMatchObject({ venue: 'pool', feesExact: true, amountOut: sim.amountOut });
+    const by = Object.fromEntries(q.fees.map((f) => [f.kind, f.amount]));
+    expect(sim.skimBps).toBe(gapSkimBps(50, { cushionLower: cushion.lower, cushionLiq: 1n }, TICK));
+    expect(by).toEqual({ lp: sim.fees.lp, floorSkim: E18 * 75n / 10_000n, creator: E18 * 50n / 10_000n, holder: 0n, floorPlatform: E18 * 25n / 10_000n });
+  });
+
+  it('a walk that disagrees with the quoter falls back to the rates; a sell then takes the walk\'s post-swap skim', async () => {
+    const amountIn = 2n * 10n ** 23n;
+    const q = await adapterOn(chain(CHAIN, { erc20: 0n, permit2: 0n }, { stateView: true })).quote(ref(GRAD.token), 'sell', amountIn);
+    expect(q).toMatchObject({ feesExact: false, amountOut: QUOTED_OUT });
+    const sim = simulateSwap(gradSnapshot(), 'sell', amountIn);
+    const by = Object.fromEntries(q.fees.map((f) => [f.kind, f.amount]));
+    const leg = QUOTED_OUT + by.floorSkim! + by.creator! + by.holder! + by.floorPlatform!;
+    expect(by.floorSkim).toBe(leg * BigInt(sim.skimBps) / 10_000n);
+    expect(sim.skimBps).toBeGreaterThan(300);
   });
 
   it('refuses a launch whose pool key does not hash to the hook\'s id', async () => {
