@@ -68,7 +68,10 @@ export interface Fees01 { in0: bigint; in1: bigint; out0: bigint; out1: bigint }
 export interface IxSwap {
   blockNumber: number; logIndex: number; txIndex: number; txHash: string; timestamp: number;
   token: string; side: 'buy' | 'sell';
-  quoteAmount: bigint; tokenAmount: bigint; quoteIsCurrency1: boolean; sqrtPriceX96: bigint;
+  quoteAmount: bigint; tokenAmount: bigint; sqrtPriceX96: bigint;
+  /** The pool's orientation where the row carries it (EVM). A Solana row carries none: `PairInfo.quoteIsCurrency1` states
+   *  it, and a swap whose orientation neither states is dropped and counted, never read in a default orientation. */
+  quoteIsCurrency1?: boolean;
   trader: string | null; txFrom: string;
   /** The square root's width: 96 (EVM, the default) or 64 (Carpenter's Q64.64). */
   sqrtBits?: 96 | 64;
@@ -232,6 +235,7 @@ export function mapEvents(swaps: readonly IxSwap[], fills: readonly IxFill[], in
     if (!p || p.poolPairId === null) continue;
     if (s.pool !== undefined && key(s.pool) !== key(p.poolPairId)) { dropped++; continue; }
     const q1 = p.quoteIsCurrency1 ?? s.quoteIsCurrency1;
+    if (q1 === undefined) { dropped++; continue; }
     const price = priceFromSqrt(s.sqrtPriceX96, q1, p.tokenDecimals, p.quoteDecimals, s.sqrtBits ?? 96);
     const [token, quote] = grossLegs(s, q1);
     const e: DexSwapEvent = {
@@ -448,7 +452,7 @@ export function decodeSolanaEventsBody(body: unknown): { swaps: IxSwap[]; fills:
       blockNumber: INT(r.slot), logIndex: INT(r.innerIxIndex), txIndex: INT(r.txIndex), txHash: SIG(r.signature), timestamp: INT(r.blockTime),
       token: B58(r.mint), side: BOOL(r.isBuy) ? 'buy' : 'sell',
       quoteAmount: BIG(r.quoteAmount), tokenAmount: BIG(r.tokenAmount),
-      quoteIsCurrency1: false, sqrtPriceX96: r.walkSqrtPriceX64 === null || r.walkSqrtPriceX64 === undefined ? BIG(r.postSqrtPriceX64) : BIG(r.walkSqrtPriceX64), sqrtBits: 64,
+      sqrtPriceX96: r.walkSqrtPriceX64 === null || r.walkSqrtPriceX64 === undefined ? BIG(r.postSqrtPriceX64) : BIG(r.walkSqrtPriceX64), sqrtBits: 64,
       trader, txFrom: trader,
       pool: B58(r.pool),
       reserves01: pair01(U64_OR_NULL(r.reserve0), U64_OR_NULL(r.reserve1)),
