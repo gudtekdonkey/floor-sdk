@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decimalize, evmFees, isJoinExitShape, isSwapShape, mapEvents, priceFromSqrt, ratioString, virtualReserves, type IxSwap, type PairInfo } from './dex-adapter.js';
+import { decimalize, decodeEventsBody, evmFees, grossLegs, isJoinExitShape, isSwapShape, mapEvents, priceFromSqrt, ratioString, solanaFees, type IxSwap, type PairInfo } from './dex-adapter.js';
 
 describe('dex adapter mapping', () => {
   it('decimalize is exact, with no exponent and no trailing zeros', () => {
@@ -26,14 +26,36 @@ describe('dex adapter mapping', () => {
     expect(priceFromSqrt(0n, true, 18, 18)).toBeNull();
   });
 
-  it('virtualReserves gives the in-range reserves of a liquidity at a price', () => {
-    const r = virtualReserves(10n ** 18n, 1n << 96n);
-    expect(r).toEqual([10n ** 18n, 10n ** 18n]);
+  it('an EVM row\'s reserves are the ones the indexer serves (every standing position), null where unknown', () => {
+    const body = (reserve0: unknown, reserve1: unknown) => ({
+      swaps: [{ blockNumber: 1, logIndex: 0, txIndex: 0, txHash: '0x' + '01'.repeat(32), timestamp: 1, token: '0x' + '33'.repeat(20), side: 'buy',
+        quoteAmount: '9398', tokenAmount: '1', quoteIsCurrency1: true, sqrtPriceX96: String(1n << 96n), trader: null,
+        txFrom: '0x' + '33'.repeat(20), poolId: '0x' + 'ab'.repeat(32), liquidity: '1', fee: 2500, hookFee: '602', reserve0, reserve1 }],
+      fills: [], liquidity: [],
+    });
+    expect(decodeEventsBody(body('11', '22')).swaps[0]!.reserves01).toEqual([11n, 22n]);
+    expect(decodeEventsBody(body(null, null)).swaps[0]!.reserves01).toBeNull();
+    expect(() => decodeEventsBody(body(undefined, undefined))).toThrow();
   });
 
-  it('evmFees books the hook take on the quote leg: in on a buy, out on a sell', () => {
-    expect(evmFees('buy', false, 7n, 0)).toEqual({ in0: 7n, in1: 0n, out0: 0n, out1: 0n });
-    expect(evmFees('sell', true, 7n, 0)).toEqual({ in0: 0n, in1: 0n, out0: 0n, out1: 7n });
+  it('evmFees books the hook take on the quote leg: in on a buy, out on a sell, whatever LP fee the Swap logged', () => {
+    expect(evmFees('buy', false, 7n)).toEqual({ in0: 7n, in1: 0n, out0: 0n, out1: 0n });
+    expect(evmFees('sell', true, 7n)).toEqual({ in0: 0n, in1: 0n, out0: 0n, out1: 7n });
+    const s = decodeEventsBody({
+      swaps: [{ blockNumber: 1, logIndex: 0, txIndex: 0, txHash: '0x' + '01'.repeat(32), timestamp: 1, token: '0x' + '33'.repeat(20), side: 'buy',
+        quoteAmount: '9398', tokenAmount: '1', quoteIsCurrency1: true, sqrtPriceX96: String(1n << 96n), trader: null,
+        txFrom: '0x' + '33'.repeat(20), poolId: '0x' + 'ab'.repeat(32), liquidity: '1', fee: 2500, hookFee: '602', reserve0: null, reserve1: null }],
+      fills: [], liquidity: [],
+    }).swaps[0]!;
+    expect(grossLegs(s, true)).toEqual([1n, 10_000n]);
+  });
+
+  it('a Solana trade\'s fees count the platform cut once (it is inside the skim), and a sell\'s output is the curve\'s', () => {
+    const z = { skim: '0', creator: '0', holder: '0', platform: '0', team: '0' };
+    const f = solanaFees({ zeroForOne: false, feeSplitKnown: true, feeSplit0: { skim: '10', creator: '5', holder: '0', platform: '2', team: '3' }, feeSplit1: z, lpFeeTotal: '7', protocolFeeTotal: '4', protocolFeeCurrency: 0 });
+    expect(f).toEqual({ in0: 0n, in1: 7n, out0: 22n, out1: 0n });
+    expect(grossLegs({ side: 'sell', tokenAmount: 5n, quoteAmount: 100n, fees01: f, legs: 'trader' }, false)).toEqual([5n, 122n]);
+    expect(grossLegs({ side: 'buy', tokenAmount: 5n, quoteAmount: 100n, fees01: { in0: 0n, in1: 0n, out0: 9n, out1: 0n }, legs: 'trader' }, true)).toEqual([14n, 100n]);
   });
 
   it('mapEvents orients a pool buy to (token, quote) and leaves out a launch that is not shown', () => {
