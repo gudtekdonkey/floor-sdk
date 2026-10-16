@@ -28,8 +28,8 @@ Marked `doublecounted` because graduated launches are Uniswap v4 pools.
 
 ##### Fees and revenue:
 The same adapters report fees and revenue, each part read from its own event (see the adapter's breakdown methodology):
-- Protocol revenue: the FLOOR Platform fee, and FLOOR's 2.5% cut (`PlatformCut`) of everything that enters a pool's backing: the skim, the raise at graduation, the staircase's sales and the swept LP fees.
-- Holders' revenue: the holder fee, the rest of the skim and the LP fee, which become the pool's backing (every position in a FLOOR pool is FLOOR's own).
+- Protocol revenue: the FLOOR Platform fee, and FLOOR's 2.5% cut (`PlatformCut`) of everything that enters a pool's backing: the skim, the raise at graduation, the staircase's sales and the swept LP fees paid in the quote.
+- Holders' revenue: the holder fee and the rest of the skim; the LP fee paid in the quote on a buy, which becomes the pool's backing; and the LP fee paid in the launch token on a sell, which joins the pool vault's inventory (not backing), stated in the quote at the swap's own rate. The LP fee is the hook's because the hook owns the pool's positions; the hook does not gate adding liquidity, so a position added by anyone else would earn a share the adapter cannot separate (none is known).
 - Supply side: the creator fee and its referral share.
 
 ##### Answers to the usual review questions:
