@@ -226,3 +226,27 @@ test('StairFeesSwept decodes pool, quote, tokens, bounty; a short or long body t
   assert.throws(() => decodeEventPayload(new Uint8Array([...eventDiscriminator('StairFeesSwept'), ...body, 0])), /trailing/);
   assert.throws(() => decodeEventPayload(new Uint8Array([...eventDiscriminator('StairFeesSwept'), ...body.subarray(0, 48)])), 'the pre-tip body is refused');
 });
+
+// ⛔ 2026-10-16 — THE STATED RE-PLACE: `BidReplaced` APPENDS `fromUpper`, `liquidityRemoved`, `toUpper`, `liquidityAdded`,
+// `salt` after `toLower` (104 B). The 56-byte body every earlier `floor_hook` emits still decodes — WITHOUT the five keys,
+// never zero-filled — and any other length throws.
+test('BidReplaced decodes the stated 104-byte body and the legacy 56-byte body, and nothing between', () => {
+  const head = new BorshWriter().pubkey(addr(1)).u64(5n).u64(6n).i32(-1200).i32(-1260).toBytes();
+  const tail = new BorshWriter().i32(-1080).u128((7n << 70n) + 1n).i32(-1140).u128(9n).u64(1n).toBytes();
+  assert.equal(head.length, 56, 'the legacy body');
+  assert.equal(head.length + tail.length, 104, 'the stated body');
+  const disc = eventDiscriminator('BidReplaced');
+  const stated = decodeEventPayload(new Uint8Array([...disc, ...head, ...tail]), 'floor_hook');
+  assert.equal(stated?.name, 'BidReplaced');
+  assert.deepEqual(
+    [stated?.data['fromLower'], stated?.data['fromUpper'], stated?.data['liquidityRemoved'], stated?.data['toLower'], stated?.data['toUpper'], stated?.data['liquidityAdded'], stated?.data['salt']],
+    [-1200, -1080, (7n << 70n) + 1n, -1260, -1140, 9n, 1n],
+  );
+  const legacy = decodeEventPayload(new Uint8Array([...disc, ...head]), 'floor_hook');
+  assert.equal(legacy?.data['toLower'], -1260);
+  assert.equal(legacy?.data['liquidityAdded'], undefined, 'a legacy body states no re-open');
+  for (const cut of [1, 16, 47]) {
+    assert.throws(() => decodeEventPayload(new Uint8Array([...disc, ...head, ...tail.subarray(0, tail.length - cut)]), 'floor_hook'), RangeError, `cut ${cut}`);
+  }
+  assert.throws(() => decodeEventPayload(new Uint8Array([...disc, ...head, ...tail, 0]), 'floor_hook'), RangeError, 'one byte past');
+});
