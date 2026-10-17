@@ -31,9 +31,20 @@ const abi = {
   getSlot0: 'function getSlot0(bytes32 poolId) view returns (uint160 sqrtPriceX96, int24 tick, uint24 protocolFee, uint24 lpFee)',
   getTickBitmap: 'function getTickBitmap(bytes32 poolId, int16 word) view returns (uint256)',
   getTickLiquidity: 'function getTickLiquidity(bytes32 poolId, int24 tick) view returns (uint128 liquidityGross, int128 liquidityNet)',
+  // ERC-6909 on the PoolManager: `id` is uint256(uint160(currency)), 0 for the native asset.
+  claims: 'function balanceOf(address owner, uint256 id) view returns (uint256)',
 }
 const CUSTODY_VAULT = 41
 const TICK_SPACING = 60 // every FLOOR pool's
+
+// Uniswap v4's PoolManager on each chain (the hook's ERC-6909 claims).
+const POOL_MANAGER = {
+  ethereum: '0x000000000004444c5dc75cB358380D2e3dE08A90',
+  base: '0x498581fF718922c3f8e6A244956aF099B2652b2b',
+  bsc: '0x28e2Ea090877bF75740558f6BFB36A5ffeE9e9dF',
+  robinhood: '0x8366a39CC670B4001A1121B8F6A443A643e40951',
+  arc: '0x8366a39CC670B4001A1121B8F6A443A643e40951',
+}
 
 // Uniswap v4's StateView on each chain: a pool's price, tick bitmap and ticks, by pool id.
 const STATE_VIEW = {
@@ -149,12 +160,34 @@ async function tvl(api) {
 
   // A graduated launch: the quote in its pool's liquidity (the bid, the protocol-owned liquidity, the cushion and any
   // step the price is in), plus its custody vault, which holds the rest of the backing and every fee not yet claimed.
+  // Not counted: the LP fees the pool's positions have earned but the hook has not yet swept (they sit in the PoolManager,
+  // outside the positions' liquidity, until the next ratchet or fee sweep). And the pool's liquidity is summed over every
+  // initialized tick, so a position added by anyone but the hook (the hook does not gate adding liquidity; none is known)
+  // would be counted too: separating one needs each hook position's range and salt, or the pool's ModifyLiquidity history.
   const pools = launches.map((l, i) => ({ l, i })).filter(({ i }) => graduated[i])
   const states = await api.multiCall({ abi: abi.poolState, calls: pools.map(({ l, i }) => ({ target: l.hook, params: [poolIds[i]] })) })
   for (const [j, { l, i }] of pools.entries()) {
     const quoteIsCurrency1 = BigInt(quotes[i]) > BigInt(l.token)
     addQuote(api, quotes[i], await poolQuote(api, poolIds[i], quoteIsCurrency1))
     held.push({ owner: states[j][CUSTODY_VAULT], quote: quotes[i] })
+  }
+
+  // The hook's ERC-6909 claims of the quote on the PoolManager: an in-swap bid re-place on a sell nets its credit and
+  // MINTS it to the hook as claims (`liftClaims`), which stay part of the pool's vault, in neither the pool's liquidity
+  // nor custody, until the next ratchet (or `closeExhausted`) burns them and takes the quote to custody. The PoolManager
+  // keeps one balance per (owner, currency): the chain's one hook holds every pool's claims of a quote together, so each
+  // (hook, quote) is read once. A currency that is also a counted launch's token is skipped: its claims would be that
+  // launch's inventory tokens, not quote.
+  const launchTokens = new Set(launches.map((l) => String(l.token).toLowerCase()))
+  const claimOf = new Map()
+  for (const { l, i } of pools) {
+    const quote = String(quotes[i]).toLowerCase()
+    if (!launchTokens.has(quote)) claimOf.set(`${String(l.hook).toLowerCase()}:${quote}`, { hook: l.hook, quote: quotes[i] })
+  }
+  const claimCalls = [...claimOf.values()]
+  if (claimCalls.length) {
+    const claims = await api.multiCall({ target: POOL_MANAGER[api.chain], abi: abi.claims, calls: claimCalls.map((c) => ({ params: [c.hook, BigInt(c.quote).toString()] })) })
+    claimCalls.forEach((c, k) => addQuote(api, c.quote, claims[k]))
   }
 
   const native = held.filter((h) => String(h.quote).toLowerCase() === NATIVE)
@@ -215,7 +248,7 @@ async function solanaTvl(api) {
 }
 
 module.exports = {
-  methodology: 'TVL is the quote asset FLOOR holds for its launches quoted in the chain\'s native asset or a quote asset FLOOR lists: the raise held by each sale until it sells out; then, for each graduated launch, the quote in its pool\'s liquidity (the bid, the protocol-owned liquidity and the cushion) and in its custody (the vault and every fee owed but not yet claimed). Launch tokens are not counted.',
+  methodology: 'TVL is the quote asset FLOOR holds for its launches quoted in the chain\'s native asset or a quote asset FLOOR lists: the raise held by each sale until it sells out; then, for each graduated launch, the quote in its pool\'s liquidity (the bid, the protocol-owned liquidity and the cushion), in its custody (the vault and every fee owed but not yet claimed) and, on the EVM chains, the hook\'s ERC-6909 claims of the quote on the Uniswap v4 PoolManager (vault quote an in-swap bid re-place left there until the next ratchet), read once per hook and quote. Launch tokens are not counted. On the EVM chains, LP fees earned but not yet swept by the hook are not counted.',
   // A graduated launch's liquidity sits in a Uniswap v4 pool on the EVM chains and in a Carpenter pool on Solana, which
   // those protocols count too.
   doublecounted: true,

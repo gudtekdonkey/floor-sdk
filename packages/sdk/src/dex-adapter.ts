@@ -68,19 +68,27 @@ export interface Fees01 { in0: bigint; in1: bigint; out0: bigint; out1: bigint }
 export interface IxSwap {
   blockNumber: number; logIndex: number; txIndex: number; txHash: string; timestamp: number;
   token: string; side: 'buy' | 'sell';
-  quoteAmount: bigint; tokenAmount: bigint; quoteIsCurrency1: boolean; sqrtPriceX96: bigint;
+  quoteAmount: bigint; tokenAmount: bigint; sqrtPriceX96: bigint;
+  /** The pool's orientation where the row carries it (EVM). A Solana row carries none: `PairInfo.quoteIsCurrency1` states
+   *  it, and a swap whose orientation neither states is dropped and counted, never read in a default orientation. */
+  quoteIsCurrency1?: boolean;
   trader: string | null; txFrom: string;
   /** The square root's width: 96 (EVM, the default) or 64 (Carpenter's Q64.64). */
   sqrtBits?: 96 | 64;
   /** The POOL the trade ran on — the v4 PoolId (EVM, lower-case) or the Carpenter pool
    *  account (Solana) — held to the launch's own (`PairInfo.poolPairId`). */
   pool?: string;
-  /** THE RESERVES after the trade, currency order, raw; `null` = unknown (left out, never 0). EVM: the in-range
-   *  VIRTUAL reserves off the `Swap` log's own `liquidity` and `sqrtPriceX96` (`virtualReserves`); Solana: the pool's two
-   *  VAULTS after the transaction. */
+  /** THE RESERVES after the trade, currency order, raw; `null` = unknown (left out). EVM: every standing position's
+   *  principal at the post-swap price, in range or not (the floor's bid band, the steps, the POL), as the indexer serves
+   *  it; Solana: the pool's two VAULTS after the transaction. */
   reserves01?: Pair01 | null;
   /** The trade's fees, currency order; `null` = not stateable exactly (left out). */
   fees01?: Fees01 | null;
+  /** WHAT `quoteAmount` / `tokenAmount` MEASURE. `pool` (EVM): the curve's own legs, the `Swap` log's -- a fee taken before
+   *  the curve (`fees01.in*`) is NOT in the input, one taken after it (`out*`) IS in the output. `trader` (Solana): what the
+   *  trader paid and received -- every input fee IS in the input, every output fee is NOT in the output. `mapEvents` states
+   *  both as GeckoTerminal's: the input GROSS (what the trader sent) and the output the CURVE's (before an output fee). */
+  legs?: 'pool' | 'trader';
 }
 
 /** One sale fill off the indexer's `/events` (`saleFillJson` + `txIndex`, `launch`, `token`, the running totals). */
@@ -173,17 +181,6 @@ export function isJoinExitShape(e: DexEvent): boolean {
   return AMOUNT(e.amount0) && AMOUNT(e.amount1) && (POSITIVE(e.amount0) || POSITIVE(e.amount1));
 }
 
-/**
- * A v4 / Carpenter pool's IN-RANGE VIRTUAL reserves, currency order, raw: `L / √P` and `L · √P` with √P in
- * Q64.96 (`bits` 96) or Q64.64 (`bits` 64), rounded down — the amounts a constant-product pool of the same liquidity would
- * hold at this price (their ratio IS the price). `null` for a zero liquidity or price (nothing to state).
- */
-export function virtualReserves(liquidity: bigint, sqrtPrice: bigint, bits: 96 | 64 = 96): Pair01 | null {
-  if (liquidity <= 0n || sqrtPrice <= 0n) return null;
-  const Q = 1n << BigInt(bits);
-  return [(liquidity * Q) / sqrtPrice, (liquidity * sqrtPrice) / Q];
-}
-
 const amounts = (side: 'buy' | 'sell', token: string, quote: string) =>
   side === 'buy' ? { asset1In: quote, asset0Out: token } : { asset0In: token, asset1Out: quote };
 
@@ -195,6 +192,21 @@ const reservesOf = (r: Pair01 | null | undefined, q1: boolean, p: PairInfo) => {
   const [t, q] = orient(r, q1);
   return { reserves: { asset0: decimalize(t, p.tokenDecimals), asset1: decimalize(q, p.quoteDecimals) } };
 };
+
+/**
+ * A trade's (token, quote) legs as GeckoTerminal states them: the input GROSS -- what the trader sent, every fee taken from
+ * it included -- and the output the CURVE's, before any fee taken from it (their Scenarios A and B). A `pool` row (EVM)
+ * adds the input fees to its input; a `trader` row (Solana) adds the output fees to its output. Fees unknown: as served.
+ */
+export function grossLegs(s: Pick<IxSwap, 'side' | 'tokenAmount' | 'quoteAmount' | 'fees01' | 'legs'>, q1: boolean): [bigint, bigint] {
+  const f = s.fees01;
+  if (f === null || f === undefined) return [s.tokenAmount, s.quoteAmount];
+  const [tin, qin] = orient([f.in0, f.in1], q1);
+  const [tout, qout] = orient([f.out0, f.out1], q1);
+  const legs = s.legs ?? 'pool';
+  if (s.side === 'buy') return legs === 'pool' ? [s.tokenAmount, s.quoteAmount + qin] : [s.tokenAmount + tout, s.quoteAmount];
+  return legs === 'pool' ? [s.tokenAmount + tin, s.quoteAmount] : [s.tokenAmount, s.quoteAmount + qout];
+}
 
 /** The fee metadata, asset0 the token and asset1 the quote, each leg only where non-zero; `{}` where nothing is stated. */
 function feeMetadata(f: Fees01 | null | undefined, q1: boolean, p: PairInfo): { metadata?: FeeMetadata } {
@@ -223,11 +235,13 @@ export function mapEvents(swaps: readonly IxSwap[], fills: readonly IxFill[], in
     if (!p || p.poolPairId === null) continue;
     if (s.pool !== undefined && key(s.pool) !== key(p.poolPairId)) { dropped++; continue; }
     const q1 = p.quoteIsCurrency1 ?? s.quoteIsCurrency1;
+    if (q1 === undefined) { dropped++; continue; }
     const price = priceFromSqrt(s.sqrtPriceX96, q1, p.tokenDecimals, p.quoteDecimals, s.sqrtBits ?? 96);
+    const [token, quote] = grossLegs(s, q1);
     const e: DexSwapEvent = {
       block: { blockNumber: s.blockNumber, blockTimestamp: s.timestamp }, eventType: 'swap',
       txnId: s.txHash, txnIndex: s.txIndex, eventIndex: s.logIndex, maker: s.trader ?? s.txFrom, pairId: p.poolPairId,
-      ...amounts(s.side, decimalize(s.tokenAmount, p.tokenDecimals), decimalize(s.quoteAmount, p.quoteDecimals)),
+      ...amounts(s.side, decimalize(token, p.tokenDecimals), decimalize(quote, p.quoteDecimals)),
       priceNative: price ?? '0',
       ...reservesOf(s.reserves01, q1, p),
       ...feeMetadata(s.fees01, q1, p),
@@ -240,12 +254,15 @@ export function mapEvents(swaps: readonly IxSwap[], fills: readonly IxFill[], in
     /* The fill's own price: quote over tokens, both decimalized — (q / 10^qd) / (t / 10^td). */
     const price = ratioString(f.quoteAmount * 10n ** BigInt(p.tokenDecimals), f.tokenAmount * 10n ** BigInt(p.quoteDecimals));
     const left = p.saleTokens - f.soldTotal;
-    /* the FLOOR Platform fee: on top of a buy (in), out of a sell-back's gross (out) — the quote leg. */
+    /* the FLOOR Platform fee: on top of a buy (in), out of a sell-back's gross (out) — the quote leg. A buy's input is GROSS,
+       the price plus the fee (what the buyer sent: GeckoTerminal's `assetIn` beside its `feesIn`); a sell-back's output is
+       the sale's payout before the fee, as the fill states it. */
     const fee = f.fee ?? 0n;
+    const quoteLeg = f.side === 'buy' ? f.quoteAmount + fee : f.quoteAmount;
     const e: DexSwapEvent = {
       block: { blockNumber: f.blockNumber, blockTimestamp: f.timestamp }, eventType: 'swap',
       txnId: f.txHash, txnIndex: f.txIndex, eventIndex: f.logIndex, maker: f.trader, pairId: p.saleId,
-      ...amounts(f.side, decimalize(f.tokenAmount, p.tokenDecimals), decimalize(f.quoteAmount, p.quoteDecimals)),
+      ...amounts(f.side, decimalize(f.tokenAmount, p.tokenDecimals), decimalize(quoteLeg, p.quoteDecimals)),
       priceNative: price ?? '0',
       ...(left >= 0n && f.raisedTotal >= 0n ? { reserves: { asset0: decimalize(left, p.tokenDecimals), asset1: decimalize(f.raisedTotal, p.quoteDecimals) } } : {}),
       ...(fee > 0n ? { metadata: f.side === 'buy' ? { fees1In: decimalize(fee, p.quoteDecimals) } : { fees1Out: decimalize(fee, p.quoteDecimals) } } : {}),
@@ -301,13 +318,12 @@ const BOOL_ = (v: unknown): boolean => {
 };
 
 /**
- * An EVM trade's fees, currency order: the hook's whole take (`hookFee`, its paired `HookFee` log — always the
- * QUOTE leg: a buy's off the quote IN, a sell's off the quote OUT). The pool's own LP fee is
- * 0 on a FLOOR pool (the hook's dynamic-fee override); a `Swap` that logs a non-zero `fee` (pips) states no exact LP amount,
- * so its fees are `null` (left out), never a guess.
+ * An EVM trade's fees, currency order: the hook's whole take (`hookFee`, its paired `HookFee` log — always the QUOTE leg: a
+ * buy's off the quote IN before the curve, a sell's off the quote OUT after it). The pool's LP fee is NOT here: the hook
+ * overrides every swap's LP fee to a flat 0.25% (2500 pips), charged INSIDE the curve and stated once, as the pool pair's
+ * `feeBps` (25); v4 logs no LP fee amount, so none is guessed.
  */
-export function evmFees(side: 'buy' | 'sell', quoteIsCurrency1: boolean, hookFee: bigint, lpFeePips: number): Fees01 | null {
-  if (lpFeePips !== 0) return null;
+export function evmFees(side: 'buy' | 'sell', quoteIsCurrency1: boolean, hookFee: bigint): Fees01 {
   const f: Fees01 = { in0: 0n, in1: 0n, out0: 0n, out1: 0n };
   const leg = side === 'buy' ? 'in' : 'out';
   f[`${leg}${quoteIsCurrency1 ? 1 : 0}` as keyof Fees01] = hookFee;
@@ -329,9 +345,10 @@ export function decodeEventsBody(body: unknown): { swaps: IxSwap[]; fills: IxFil
       quoteIsCurrency1: q1, sqrtPriceX96: sqrt,
       trader: r.trader === null ? null : HEX(r.trader, 20), txFrom: HEX(r.txFrom, 20),
       pool: HEX(r.poolId, 32),
-      /* the in-range VIRTUAL reserves off the log's own liquidity and price */
-      reserves01: virtualReserves(BIG(r.liquidity), sqrt, 96),
-      fees01: evmFees(side, q1, BIG(r.hookFee), INT(r.fee)),
+      /* the pool's reserves after the trade: every standing position, as the indexer serves them. */
+      reserves01: pair01(BIG_OR_NULL(r.reserve0), BIG_OR_NULL(r.reserve1)),
+      fees01: evmFees(side, q1, BIG(r.hookFee)),
+      legs: 'pool',
     };
   });
   const fills = b.fills.map((r: Record<string, unknown>): IxFill => ({
@@ -348,14 +365,12 @@ export function decodeEventsBody(body: unknown): { swaps: IxSwap[]; fills: IxFil
     if (kind !== 'add' && kind !== 'remove' && kind !== 'donate') throw new TypeError('liquidity kind');
     const a0 = BIG_OR_NULL(r.amount0);
     const a1 = BIG_OR_NULL(r.amount1);
-    const sqrt = BIG_OR_NULL(r.sqrtPriceX96);
-    const liq = BIG_OR_NULL(r.liquidity);
     return {
       blockNumber: INT(r.blockNumber), logIndex: INT(r.logIndex), txIndex: INT(r.txIndex), txHash: HEX(r.txHash, 32), timestamp: INT(r.timestamp),
       token: HEX(r.token, 20), pool: HEX(r.poolId, 32), kind: kind === 'remove' ? 'exit' : 'join',
       amount01: a0 === null || a1 === null ? null : [a0, a1],
       maker: BOOL_(r.isHook) ? HEX(r.sender, 20) : HEX(r.txFrom, 20),
-      reserves01: sqrt === null || liq === null ? null : virtualReserves(liq, sqrt, 96),
+      reserves01: pair01(BIG_OR_NULL(r.reserve0), BIG_OR_NULL(r.reserve1)),
       quoteIsCurrency1: BOOL_(r.quoteIsCurrency1),
     };
   });
@@ -387,14 +402,17 @@ const BOOL = (v: unknown): boolean => {
 const SPLIT = (v: unknown): bigint => {
   const o = v as Record<string, unknown> | null;
   if (o === null || typeof o !== 'object') throw new TypeError('fee split');
-  return BIG(o.skim) + BIG(o.creator) + BIG(o.holder) + BIG(o.platform) + BIG(o.team);
+  /* `platform` is the platform CUT, carved out of the gross `skim`: read, never added again. */
+  BIG(o.platform);
+  return BIG(o.skim) + BIG(o.creator) + BIG(o.holder) + BIG(o.team);
 };
 const U64_OR_NULL = (v: unknown): bigint | null => (v === null ? null : BIG(v));
 const pair01 = (a: bigint | null, b: bigint | null): Pair01 | null => (a === null || b === null ? null : [a, b]);
 
 /**
- * A Carpenter trade's fees, currency order, every part the `Swapped` event carries: the hook's five-part split per
- * currency (`feeSplit0` / `feeSplit1`: skim, creator, holder, platform, team), the Carpenter Platform fee
+ * A Carpenter trade's fees, currency order, every part the `Swapped` event carries: the hook's split per currency
+ * (`feeSplit0` / `feeSplit1`: skim GROSS, creator, holder, team; its `platform` slot is the cut INSIDE the skim and is not
+ * added again), the Carpenter Platform fee
  * (`protocolFeeTotal` in `protocolFeeCurrency`) and the LPs' fee (`lpFeeTotal`, in the INPUT currency). A fee in the trade's
  * input currency is `in`, in its output currency `out`. `null` where the split is not known (`feeSplitKnown` false): never a
  * partial figure.
@@ -434,11 +452,12 @@ export function decodeSolanaEventsBody(body: unknown): { swaps: IxSwap[]; fills:
       blockNumber: INT(r.slot), logIndex: INT(r.innerIxIndex), txIndex: INT(r.txIndex), txHash: SIG(r.signature), timestamp: INT(r.blockTime),
       token: B58(r.mint), side: BOOL(r.isBuy) ? 'buy' : 'sell',
       quoteAmount: BIG(r.quoteAmount), tokenAmount: BIG(r.tokenAmount),
-      quoteIsCurrency1: false, sqrtPriceX96: r.walkSqrtPriceX64 === null || r.walkSqrtPriceX64 === undefined ? BIG(r.postSqrtPriceX64) : BIG(r.walkSqrtPriceX64), sqrtBits: 64,
+      sqrtPriceX96: r.walkSqrtPriceX64 === null || r.walkSqrtPriceX64 === undefined ? BIG(r.postSqrtPriceX64) : BIG(r.walkSqrtPriceX64), sqrtBits: 64,
       trader, txFrom: trader,
       pool: B58(r.pool),
       reserves01: pair01(U64_OR_NULL(r.reserve0), U64_OR_NULL(r.reserve1)),
       fees01: solanaFees(r),
+      legs: 'trader',
     };
   });
   const fills = b.fills.map((r: Record<string, unknown>): IxFill => ({

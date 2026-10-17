@@ -80,8 +80,8 @@ export function decodePoolState(data: Hex): PoolStateTuple {
 }
 
 /** ONE `eth_call` of `poolState(id)`, decoded through `decodePoolState`. */
-export async function readPoolState(client: Pick<PublicClient, 'call'>, hook: Address, id: Hex): Promise<PoolStateTuple> {
-  const { data } = await client.call({ to: hook, data: poolStateCalldata(id) });
+export async function readPoolState(client: Pick<PublicClient, 'call'>, hook: Address, id: Hex, blockNumber?: bigint): Promise<PoolStateTuple> {
+  const { data } = await client.call({ to: hook, data: poolStateCalldata(id), ...(blockNumber !== undefined ? { blockNumber } : {}) });
   if (!data || data === '0x') throw new FloorEvmError('contract_mismatch', `poolState(${id}) at ${hook} returned no data`);
   return decodePoolState(data);
 }
@@ -105,9 +105,9 @@ export function poolRatesOf(st: PoolStateTuple): PoolRates {
   };
 }
 
-/** The pool's `Slot0` off the PoolManager (`extsload` of the pool's state slot). */
-export async function readSlot0(client: Pick<PublicClient, 'readContract'>, poolManager: Address, poolId: Hex): Promise<Slot0> {
-  const word = await client.readContract({ address: poolManager, abi: POOL_STATE_ABI, functionName: 'extsload', args: [poolStateSlot(poolId)] });
+/** The pool's `Slot0` off the PoolManager (`extsload` of the pool's state slot), at `blockNumber` when given. */
+export async function readSlot0(client: Pick<PublicClient, 'readContract'>, poolManager: Address, poolId: Hex, blockNumber?: bigint): Promise<Slot0> {
+  const word = await client.readContract({ address: poolManager, abi: POOL_STATE_ABI, functionName: 'extsload', args: [poolStateSlot(poolId)], ...(blockNumber !== undefined ? { blockNumber } : {}) });
   return decodeSlot0(word);
 }
 
@@ -225,9 +225,9 @@ export async function readLaunchFromEntry(client: PublicClient, d: Deployment, e
  * The pool's staircase cushion edge (`stairs()` through `hook.execute(poolId, …)`): what the gap buy skim reads.
  * `cushionLiq` 0 = no cushion standing.
  */
-export async function readCushion(client: Pick<PublicClient, 'call'>, hook: Address, poolId: Hex): Promise<CushionEdge> {
+export async function readCushion(client: Pick<PublicClient, 'call'>, hook: Address, poolId: Hex, blockNumber?: bigint): Promise<CushionEdge> {
   const inner = encodeFunctionData({ abi: POOL_ABI, functionName: 'stairs' });
-  const { data } = await client.call({ to: hook, data: encodeFunctionData({ abi: HOOK_ABI, functionName: 'execute', args: [poolId, inner] }) });
+  const { data } = await client.call({ to: hook, data: encodeFunctionData({ abi: HOOK_ABI, functionName: 'execute', args: [poolId, inner] }), ...(blockNumber !== undefined ? { blockNumber } : {}) });
   if (!data || data === '0x') throw new FloorEvmError('contract_mismatch', `stairs() of pool ${poolId} at ${hook} returned no data`);
   const bytes = decodeFunctionResult({ abi: HOOK_ABI, functionName: 'execute', data });
   const st = decodeFunctionResult({ abi: POOL_ABI, functionName: 'stairs', data: bytes });

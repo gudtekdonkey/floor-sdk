@@ -31,8 +31,10 @@ named here; the addresses are in its `deployments.ts`.
 **After graduation** (the PoolManager's `Swap(id, sender, amount0, amount1, sqrtPriceX96, liquidity, tick, fee)` where `id`
 is a FLOOR pool):
 
-- The quote leg is `amount1` when the quote is `currency1`, else `amount0`. Amounts are the swapper's deltas: a negative
-  quote leg means quote was paid in, a buy.
+- The quote leg is `amount1` when the quote is `currency1`, else `amount0`. Amounts are the CURVE's deltas, signed from
+  the swapper's side (a negative quote leg means quote was paid in, a buy), before the hook's take: on a buy the trader
+  sent `|quote leg| + HookFee`, on a sell the trader received `|quote leg| − HookFee`. The `fee` the log carries is the
+  pool's LP fee, 2500 pips (0.25%) on every FLOOR swap, set by the hook and charged inside the curve.
 - **A swap whose `sender` is the hook is not a trade.** The hook swaps in its own name when it re-places the bid during a
   sell and at a ratchet. Leave these out of volume and trade lists, and never let them move a candle's open.
 - The price is `sqrtPriceX96` in the pool's frame: quote per token is `2^192 / sqrtP^2` when the quote is `currency0`,

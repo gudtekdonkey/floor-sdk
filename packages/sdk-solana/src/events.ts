@@ -47,7 +47,14 @@ const SCHEMAS: Readonly<Record<ProgramKey, Readonly<Record<string, Schema>>>> = 
     CreatorFee: [['pool', 'pubkey'], ['isBuy', 'bool'], ['amount', 'u64']],
     PlatformCut: [['pool', 'pubkey'], ['amount', 'u64']],
     PolRaised: [['pool', 'pubkey'], ['fromEdge', 'i32'], ['toEdge', 'i32'], ['quoteMoved', 'u64'], ['tokensReadded', 'u64']],
-    BidReplaced: [['pool', 'pubkey'], ['tokensAbsorbed', 'u64'], ['ethBack', 'u64'], ['fromLower', 'i32'], ['toLower', 'i32']],
+    // ⛔ 2026-10-16 — THE RE-PLACE IS STATED: five fields APPENDED after `toLower` (never reordered): the in-swap close of
+    // the position `["position", pool, hook_authority, salt]` over `[fromLower, fromUpper]` by `liquidityRemoved`, and its
+    // re-open over `[toLower, toUpper]` by `liquidityAdded` (0 = no re-open). Every `floor_hook` before the upgrade emits the
+    // 5-field body, which `LEGACY_PREFIXES` decodes WITHOUT the five keys — `liquidityAdded === undefined` is "not stated".
+    BidReplaced: [
+      ['pool', 'pubkey'], ['tokensAbsorbed', 'u64'], ['ethBack', 'u64'], ['fromLower', 'i32'], ['toLower', 'i32'],
+      ['fromUpper', 'i32'], ['liquidityRemoved', 'u128'], ['toUpper', 'i32'], ['liquidityAdded', 'u128'], ['salt', 'u64'],
+    ],
     FloorUnbacked: [['pool', 'pubkey'], ['floorTick', 'i32'], ['vaultEth', 'u64'], ['minBid', 'u64']],
     Ratcheted: [['pool', 'pubkey'], ['floorTick', 'i32'], ['askTick', 'i32'], ['vaultEth', 'u64'], ['inventoryTokens', 'u64'], ['bounty', 'u64']],
     StairRentReimbursed: [['reserve', 'pubkey'], ['cranker', 'pubkey'], ['spent', 'u64'], ['lamports', 'u64']],
@@ -257,6 +264,8 @@ export const EVENT_SCHEMAS: Readonly<Record<ProgramKey, Readonly<Record<string, 
  */
 const LEGACY_PREFIXES: Readonly<Partial<Record<ProgramKey, Readonly<Record<string, readonly number[]>>>>> = {
   carpenter_amm: { Swapped: [21] },
+  // 2026-10-16: `BidReplaced` ended at `toLower` (5 fields, 56 B) until the stated re-place was appended (104 B).
+  floor_hook: { BidReplaced: [5] },
 };
 
 /** The legacy shapes `decodeEventPayload` accepts, derived from `LEGACY_PREFIXES` (read-only, for tests). */

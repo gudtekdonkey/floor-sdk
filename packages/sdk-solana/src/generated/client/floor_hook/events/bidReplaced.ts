@@ -6,24 +6,24 @@
  * @see https://github.com/codama-idl/codama
  */
 
-import { combineCodec, containsBytes, fixEncoderSize, getAddressDecoder, getAddressEncoder, getBytesEncoder, getConstantDecoder, getConstantEncoder, getHiddenPrefixDecoder, getHiddenPrefixEncoder, getI32Decoder, getI32Encoder, getStructDecoder, getStructEncoder, getU64Decoder, getU64Encoder, type Address, type FixedSizeCodec, type FixedSizeDecoder, type FixedSizeEncoder, type ReadonlyUint8Array } from '@solana/kit';
+import { combineCodec, containsBytes, fixEncoderSize, getAddressDecoder, getAddressEncoder, getBytesEncoder, getConstantDecoder, getConstantEncoder, getHiddenPrefixDecoder, getHiddenPrefixEncoder, getI32Decoder, getI32Encoder, getStructDecoder, getStructEncoder, getU128Decoder, getU128Encoder, getU64Decoder, getU64Encoder, type Address, type FixedSizeCodec, type FixedSizeDecoder, type FixedSizeEncoder, type ReadonlyUint8Array } from '@solana/kit';
 
 export const BID_REPLACED_EVENT_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array([100, 48, 132, 155, 12, 233, 226, 146]);
 
 export function getBidReplacedEventDiscriminatorBytes(): ReadonlyUint8Array { return fixEncoderSize(getBytesEncoder(), 8).encode(BID_REPLACED_EVENT_DISCRIMINATOR); }
 
-export type BidReplacedEvent = { pool: Address; tokensAbsorbed: bigint; ethBack: bigint; fromLower: number; toLower: number;  };
+export type BidReplacedEvent = { pool: Address; tokensAbsorbed: bigint; ethBack: bigint; fromLower: number; toLower: number; fromUpper: number; liquidityRemoved: bigint; toUpper: number; liquidityAdded: bigint; salt: bigint;  };
 
-export type BidReplacedEventArgs = { pool: Address; tokensAbsorbed: number | bigint; ethBack: number | bigint; fromLower: number; toLower: number;  };
+export type BidReplacedEventArgs = { pool: Address; tokensAbsorbed: number | bigint; ethBack: number | bigint; fromLower: number; toLower: number; fromUpper: number; liquidityRemoved: number | bigint; toUpper: number; liquidityAdded: number | bigint; salt: number | bigint;  };
 
 /** Gets the encoder for {@link BidReplacedEventArgs} event data. */
 export function getBidReplacedEventEncoder(): FixedSizeEncoder<BidReplacedEventArgs> {
-    return getHiddenPrefixEncoder(getStructEncoder([['pool', getAddressEncoder()], ['tokensAbsorbed', getU64Encoder()], ['ethBack', getU64Encoder()], ['fromLower', getI32Encoder()], ['toLower', getI32Encoder()]]), [getConstantEncoder(BID_REPLACED_EVENT_DISCRIMINATOR)]);
+    return getHiddenPrefixEncoder(getStructEncoder([['pool', getAddressEncoder()], ['tokensAbsorbed', getU64Encoder()], ['ethBack', getU64Encoder()], ['fromLower', getI32Encoder()], ['toLower', getI32Encoder()], ['fromUpper', getI32Encoder()], ['liquidityRemoved', getU128Encoder()], ['toUpper', getI32Encoder()], ['liquidityAdded', getU128Encoder()], ['salt', getU64Encoder()]]), [getConstantEncoder(BID_REPLACED_EVENT_DISCRIMINATOR)]);
 }
 
 /** Gets the decoder for {@link BidReplacedEvent} event data. */
 export function getBidReplacedEventDecoder(): FixedSizeDecoder<BidReplacedEvent> {
-    return getHiddenPrefixDecoder(getStructDecoder([['pool', getAddressDecoder()], ['tokensAbsorbed', getU64Decoder()], ['ethBack', getU64Decoder()], ['fromLower', getI32Decoder()], ['toLower', getI32Decoder()]]), [getConstantDecoder(BID_REPLACED_EVENT_DISCRIMINATOR)]);
+    return getHiddenPrefixDecoder(getStructDecoder([['pool', getAddressDecoder()], ['tokensAbsorbed', getU64Decoder()], ['ethBack', getU64Decoder()], ['fromLower', getI32Decoder()], ['toLower', getI32Decoder()], ['fromUpper', getI32Decoder()], ['liquidityRemoved', getU128Decoder()], ['toUpper', getI32Decoder()], ['liquidityAdded', getU128Decoder()], ['salt', getU64Decoder()]]), [getConstantDecoder(BID_REPLACED_EVENT_DISCRIMINATOR)]);
 }
 
 /** Gets the codec for {@link BidReplacedEvent} event data. */

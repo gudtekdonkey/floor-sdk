@@ -163,13 +163,23 @@ const fetch = async (options: FetchOptions) => {
       if (before) hookFee = BigInt(before.args.feeAmount0) + BigInt(before.args.feeAmount1);
     }
     addQuote(options.chain, dailyVolume, pool.quote, quoteLeg + hookFee, 'Pool swaps');
-    // The LP fee (Swap.fee pips) is charged on the input: the quote on a buy, exact; on a sell the token, stated here in
-    // the quote at the swap's own rate. Every position in a FLOOR pool is FLOOR's own (the protocol-owned liquidity, the
-    // bid, the cushion, the steps), so the LP fee goes into the pool's backing. FLOOR's 2.5% of it is the PlatformCut
-    // logged when it is swept in (booked below), so the backing's share here is the other 97.5%.
+    // The LP fee (Swap.fee pips) is charged in the swap's input currency and earned by the pool's positions, which are
+    // the hook's own (the protocol-owned liquidity, the bid, the cushion, the steps; see the methodology for a position
+    // added by anyone else).
     const fee = BigInt(s.args.fee);
-    const lp = quoteIn ? (quoteLeg * fee) / 1_000_000n : (quoteLeg * fee) / (1_000_000n - fee);
-    book(pool.quote, lp - (lp * PLATFORM_BPS) / 10_000n, 'LP fees: backing', 'holders');
+    if (quoteIn) {
+      // A buy pays it in the quote, exactly `quoteLeg * fee / 1e6`. The hook sweeps it into the pool's vault (the
+      // backing) through FLOOR's 2.5% cut; that cut is the PlatformCut logged at the sweep (booked below), so the
+      // backing's share here is the other 97.5%.
+      const lp = (quoteLeg * fee) / 1_000_000n;
+      book(pool.quote, lp - (lp * PLATFORM_BPS) / 10_000n, 'LP fees: backing', 'holders');
+    } else {
+      // A sell pays it in the launch token. Swept, those tokens join the pool vault's inventory at zero cost, out of the
+      // circulating supply; no quote enters the backing and no cut is taken. Stated in the quote at the swap's own rate
+      // (the curve's output per token after the fee), since the launch token has no price of its own here.
+      const lp = (quoteLeg * fee) / (1_000_000n - fee);
+      book(pool.quote, lp, 'LP fees: inventory', 'holders');
+    }
   }
 
   const total = new Map<string, bigint>();
@@ -241,9 +251,9 @@ const adapter: SimpleAdapter = {
   methodology: {
     Fees: "Every fee a FLOOR launch's traders pay: on the sale, the FLOOR Platform fee; on the pool, the hook's skim, creator fee (with its referral share), holder fee and FLOOR Platform fee, read from the hook's HookFee / Skimmed / CreatorFee / ReferralAccrued / HolderTax events, and the Uniswap v4 LP fee; and FLOOR's 2.5% cut of everything that enters a pool's backing (the raise at graduation, the staircase's sales, the swept LP fees), from PlatformCut.",
     UserFees: "The same as Fees: every fee is paid by the trader.",
-    Revenue: "The FLOOR Platform fee, FLOOR's cuts, the skim, the holder fee and the LP fee (every position in a FLOOR pool is FLOOR's own).",
-    ProtocolRevenue: "The FLOOR Platform fee, and FLOOR's 2.5% cut of everything that enters a pool's backing: the skim, the raise at graduation, the staircase's sales and the LP fee.",
-    HoldersRevenue: "The holder fee, and the rest of the skim and of the LP fee, which go into the pool's backing (the floor under every holder's tokens).",
+    Revenue: "The FLOOR Platform fee, FLOOR's cuts, the skim, the holder fee and the LP fee. The LP fee is counted as revenue because the hook owns the positions that earn it; the hook does not gate adding liquidity, so a position added by anyone else would earn its share of the LP fee, which this adapter cannot separate from the hook's (none is known).",
+    ProtocolRevenue: "The FLOOR Platform fee, and FLOOR's 2.5% cut of everything that enters a pool's backing: the skim, the raise at graduation, the staircase's sales and the LP fee paid in the quote.",
+    HoldersRevenue: "The holder fee; the rest of the skim and of the LP fee paid in the quote (buys), which go into the pool's backing; and the LP fee paid in the launch token (sells), which joins the pool vault's inventory at zero cost and leaves the circulating supply. That last part is not backing: it is stated in the quote at the swap's own rate.",
     SupplySideRevenue: "The creator fee and its referral share.",
     Volume: "Every trade on a FLOOR launch quoted in the chain's native asset or a quote asset FLOOR lists, in that asset: buys (with the FLOOR Platform fee) and sell-backs on each launch's sale, read from its Bought / TeamFeeCharged / SoldBack events and the deployer's TeamBought / TeamBuySoldBack, then every Uniswap v4 Swap on a graduated launch's pool: its quote side, plus on a buy the hook fee taken from the quote before the swap.",
   },
@@ -256,7 +266,8 @@ const adapter: SimpleAdapter = {
       'Referral fees': 'ReferralAccrued.amount, 10% of the gross creator fee.',
       'Holder fees': 'HolderTax.ethAmount.',
       'FLOOR\'s cut of the backing': 'Every other PlatformCut / PlatformCutDeferred: 2.5% of the raise at graduation, of the staircase\'s sales and of the swept LP fees as they enter the backing.',
-      'LP fees: backing': 'Swap.fee pips of the input (on a sell, stated in the quote at the swap\'s rate), less FLOOR\'s 2.5%: the LP fee of FLOOR\'s own positions, which goes into the pool\'s backing.',
+      'LP fees: backing': 'On a buy, Swap.fee pips of the quote paid into the curve, less FLOOR\'s 2.5%: the LP fee of the hook\'s positions, paid in the quote, which the hook sweeps into the pool\'s backing.',
+      'LP fees: inventory': 'On a sell, Swap.fee pips of the launch token paid in, stated in the quote at the swap\'s rate (the quote side times fee / (1e6 - fee)): the LP fee of the hook\'s positions, paid in the token, which joins the pool vault\'s inventory at zero cost. It is not backing and pays no cut.',
     },
     Volume: {
       'Sale buys': 'Bought.ethSpent plus the FLOOR Platform fee TeamFeeCharged reports for the buy, and the team buy\'s TeamBought.cost + fee.',

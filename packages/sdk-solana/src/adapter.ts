@@ -462,8 +462,10 @@ function ctxTokenProgram(): Address {
 
 /**
  * A graduated pool's quote as the shared `Quote`. On a buy every fee is in the quote asset. On a sell the LP fee is
- * charged on the INPUT (the token), so it is converted to quote at the walk's average price — `feesExact` is then false;
- * every other part is already in the quote asset.
+ * charged on the INPUT (the token), so it is converted to quote at the walk's average price — the walk's GROSS quote output
+ * (`amountOut` plus the hook's take, `QuoteFees::hook_total`, plus the Carpenter Platform fee taken off the output) over the
+ * tokens the curve consumed (`amountIn − lp`) — and `feesExact` is then false; every other part is already in the quote
+ * asset. `floorSkim` is the gross skim; the platform cut inside it (`platformCut`) is not listed again.
  */
 export function swapToQuote(ref: LaunchRef, side: Side, q: SwapQuote): Quote {
   const f = q.fees;
@@ -473,7 +475,9 @@ export function swapToQuote(ref: LaunchRef, side: Side, q: SwapQuote): Quote {
   let lp = f.lp;
   let exact = true;
   if (side === 'sell' && f.lp > 0n) {
-    lp = q.amountIn > 0n ? (f.lp * q.amountOut) / q.amountIn : 0n;
+    const gross = q.amountOut + f.skim + f.creator + f.holder + f.team + f.protocol;
+    const consumed = q.amountIn - f.lp;
+    lp = consumed > 0n ? (f.lp * gross) / consumed : 0n;
     exact = false;
   }
   return {

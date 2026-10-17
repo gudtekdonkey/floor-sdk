@@ -6917,6 +6917,26 @@
           {
             "name": "to_lower",
             "type": "i32"
+          },
+          {
+            "name": "from_upper",
+            "type": "i32"
+          },
+          {
+            "name": "liquidity_removed",
+            "type": "u128"
+          },
+          {
+            "name": "to_upper",
+            "type": "i32"
+          },
+          {
+            "name": "liquidity_added",
+            "type": "u128"
+          },
+          {
+            "name": "salt",
+            "type": "u64"
           }
         ]
       }

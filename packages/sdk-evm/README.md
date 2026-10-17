@@ -140,8 +140,13 @@ createEvmAdapter({ chains: [31337], rpcUrls: { 31337: 'http://127.0.0.1:8545' },
 
 - A bonding buy and a sell-back carry **no on-chain minimum** (the sale takes none). `buildTrade` refuses a trade whose
   quote, read just before, is under `minAmountOut`; a buy racing another buy can still fill at a later tranche's price.
-- A pool quote's `amountOut` is the V4Quoter's simulation; its fee parts are computed from the pool's own rates at the
-  pre-trade tick (`feesExact: false`). A sell's skim is charged at the post-swap tick, so its skim part is a minimum.
+- A pool quote's `amountOut` is the V4Quoter's simulation, read at one block. Its fee parts come from the SDK's own walk of
+  the pool at the same block (`simulateSwapLive`, which reads only the tick-bitmap words the walk crosses), so the hook's
+  four parts are what `_takeFees` charges: a buy's at the pre-swap tick, a sell's at the post-swap tick. A buy whose walk
+  gives the quoter's amount is `feesExact: true`. A sell's LP fee is charged in the token and stated in quote at the walk's
+  average price, so a sell is `feesExact: false` while its other four parts are exact. Where the walk cannot run (no
+  StateView in the row) or disagrees with the quoter, the parts come from the rates at the pre-swap tick (`feesExact: false`;
+  a sell's skim then is a minimum). `swapFeeParts(simulateSwap(...))` gives the same five parts off a snapshot.
 - PoolSwapTest (a testnet harness with no minimum received) is refused as a trade route.
 - Contract versions differ, and a quote models the version its deployment row names (`Deployment.rules`, read with
   `rulesOf`; a row that names none gets `CURRENT_RULES`):

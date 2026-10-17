@@ -44,7 +44,7 @@ One launch per EVM chain sits at the same addresses on every chain (the factory 
 | Robinhood Chain | `0x71f15ee29a424f95004d55ba6dbe2f8261172488abc7fbbaf40a02b308021d35` | `0x8224eb28c47c3be44867637765408b8f3e5f6684288d3bf19bd947a2cd2e89f7` |
 | Arc | `0xcd99ca591c7c5ede9f6504f6e656ea89cee5952217e36734fc29182fd05aa29b` | `0x7e15385a8bbdf91ee3e008f8d6ae1a21a2f1b289c30dca3a2b3080e809ab1c5f` |
 
-Solana: the `floor_launch` registry lists two launches. The graduated one is launch
+Solana: the `floor_launch` registry lists two launches, both graduated. The one used as the example here is launch
 `BQ8BKPW2RNmTjwnpL6zFKVDNygPZzMS54U9YEhrSQwWN`, mint `8SpNeQW8Eszw91J5cPMbrmDbPUnsywRVXQmwBSoasB1D`, quoted in wSOL,
 trading on the Carpenter pool `FzNAs2cCbeKVhD4ckoSbFhgeFL8Jo3hoRQ35QoxqVcRA` (quote vault
 `7yHRxN53NafFezUdinvRiARrn1349kiBqpwzdVjuMh7v`). `$FLOOR`, the platform's own token, is the Solana mint
@@ -142,7 +142,20 @@ GeckoTerminal's Integration API Standard (DEX Screener reads the same shape), se
 - `https://floor.supply/api/dex/{chain}/pair?id={poolId | token | sale}` — the pool (or the sale while it sells)
 - `https://floor.supply/api/dex/{chain}/events?fromBlock=&toBlock=` — every swap, join and exit, with fees in `metadata`
 
-Example: https://floor.supply/api/dex/base/pair?id=0x5259c52ce22be9d859d73e8b29bed5d316053fe4b9afab637d986812041d89ff
+How the figures are stated:
+
+- **Reserves** after each event are the pool's whole liquidity: EVM, every standing position's principal at the price
+  after the event, in range or not (the floor's bid band below the price, the staircase above it, the POL and the
+  cushion); Solana, the pool's two vaults. LP fees not yet collected are not in them.
+- **Amounts** follow the standard's two scenarios: a swap's input is what the trader sent, every fee taken from it
+  included, and its output is the curve's, before any fee taken from it.
+- **Fees**: an EVM pool's LP fee is a flat 0.25% (`feeBps` 25 on the pool pair), charged inside the curve; the hook's take
+  (skim, creator fee, holder fee, FLOOR Platform fee) rides each swap's `metadata`, `fees1In` on a buy and `fees1Out` on a
+  sell. A Solana swap's `metadata` carries every part exactly: the hook's take, the Carpenter Platform fee and the LP fee
+  (in the input currency). A sale fill's FLOOR Platform fee is on top of a buy's price and out of a sell-back's payout.
+
+Examples: https://floor.supply/api/dex/base/pair?id=0x5259c52ce22be9d859d73e8b29bed5d316053fe4b9afab637d986812041d89ff and
+https://floor.supply/api/dex/sol/pair?id=FzNAs2cCbeKVhD4ckoSbFhgeFL8Jo3hoRQ35QoxqVcRA
 
 The same pair model and event mapping, as code: `@floorlaunchpad/sdk`'s `dex` namespace.
 
