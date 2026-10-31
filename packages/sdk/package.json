@@ -1,0 +1,439 @@
+{
+  "name": "@floor/sdk",
+  "version": "0.3.0",
+  "description": "The FLOOR Program in TypeScript: the math, the quoter, decoders, PDAs and instruction builders for Solana and EVM",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22.18"
+  },
+  "files": [
+    "dist",
+    "src/**/*.ts",
+    "docs",
+    "CHANGELOG.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./math": {
+      "types": "./src/math/index.ts",
+      "import": "./dist/math/index.js",
+      "default": "./dist/math/index.js"
+    },
+    "./math/genesis": {
+      "types": "./src/math/genesis.ts",
+      "import": "./dist/math/genesis.js",
+      "default": "./dist/math/genesis.js"
+    },
+    "./codec": {
+      "types": "./src/codec.ts",
+      "import": "./dist/codec.js",
+      "default": "./dist/codec.js"
+    },
+    "./quote": {
+      "types": "./src/quote.ts",
+      "import": "./dist/quote.js",
+      "default": "./dist/quote.js"
+    },
+    "./solana/instruction": {
+      "types": "./src/solana/instruction.ts",
+      "import": "./dist/solana/instruction.js",
+      "default": "./dist/solana/instruction.js"
+    },
+    "./solana/pda": {
+      "types": "./src/solana/pda.ts",
+      "import": "./dist/solana/pda.js",
+      "default": "./dist/solana/pda.js"
+    },
+    "./solana/tx": {
+      "types": "./src/solana/tx.ts",
+      "import": "./dist/solana/tx.js",
+      "default": "./dist/solana/tx.js"
+    },
+    "./solana/alt": {
+      "types": "./src/solana/alt.ts",
+      "import": "./dist/solana/alt.js",
+      "default": "./dist/solana/alt.js"
+    },
+    "./handle": {
+      "types": "./src/handle.ts",
+      "import": "./dist/handle.js",
+      "default": "./dist/handle.js"
+    },
+    "./burn": {
+      "types": "./src/burn.ts",
+      "import": "./dist/burn.js",
+      "default": "./dist/burn.js"
+    },
+    "./evm/keccak": {
+      "types": "./src/evm/keccak.ts",
+      "import": "./dist/evm/keccak.js",
+      "default": "./dist/evm/keccak.js"
+    },
+    "./evm/abi": {
+      "types": "./src/evm/abi.ts",
+      "import": "./dist/evm/abi.js",
+      "default": "./dist/evm/abi.js"
+    },
+    "./evm/items": {
+      "types": "./src/evm/items.ts",
+      "import": "./dist/evm/items.js",
+      "default": "./dist/evm/items.js"
+    },
+    "./evm/zap": {
+      "types": "./src/evm/zap.ts",
+      "import": "./dist/evm/zap.js",
+      "default": "./dist/evm/zap.js"
+    },
+    "./evm/router": {
+      "types": "./src/evm/router.ts",
+      "import": "./dist/evm/router.js",
+      "default": "./dist/evm/router.js"
+    },
+    "./evm/chains": {
+      "types": "./src/evm/chains.ts",
+      "import": "./dist/evm/chains.js",
+      "default": "./dist/evm/chains.js"
+    },
+    "./evm/multicall": {
+      "types": "./src/evm/multicall.ts",
+      "import": "./dist/evm/multicall.js",
+      "default": "./dist/evm/multicall.js"
+    },
+    "./evm/floor/abi.gen": {
+      "types": "./src/evm/floor/abi.gen.ts",
+      "import": "./dist/evm/floor/abi.gen.js",
+      "default": "./dist/evm/floor/abi.gen.js"
+    },
+    "./evm/floor/iface": {
+      "types": "./src/evm/floor/iface.ts",
+      "import": "./dist/evm/floor/iface.js",
+      "default": "./dist/evm/floor/iface.js"
+    },
+    "./evm/floor/calls": {
+      "types": "./src/evm/floor/calls.ts",
+      "import": "./dist/evm/floor/calls.js",
+      "default": "./dist/evm/floor/calls.js"
+    },
+    "./evm/floor/events": {
+      "types": "./src/evm/floor/events.ts",
+      "import": "./dist/evm/floor/events.js",
+      "default": "./dist/evm/floor/events.js"
+    },
+    "./route": {
+      "types": "./src/route.ts",
+      "import": "./dist/route.js",
+      "default": "./dist/route.js"
+    },
+    "./solana/floor/program": {
+      "types": "./src/solana/floor/program.ts",
+      "import": "./dist/solana/floor/program.js",
+      "default": "./dist/solana/floor/program.js"
+    },
+    "./solana/floor/accounts": {
+      "types": "./src/solana/floor/accounts.ts",
+      "import": "./dist/solana/floor/accounts.js",
+      "default": "./dist/solana/floor/accounts.js"
+    },
+    "./solana/floor/instructions": {
+      "types": "./src/solana/floor/instructions.ts",
+      "import": "./dist/solana/floor/instructions.js",
+      "default": "./dist/solana/floor/instructions.js"
+    },
+    "./solana/floor/create": {
+      "types": "./src/solana/floor/create.ts",
+      "import": "./dist/solana/floor/create.js",
+      "default": "./dist/solana/floor/create.js"
+    },
+    "./solana/floor/events": {
+      "types": "./src/solana/floor/events.ts",
+      "import": "./dist/solana/floor/events.js",
+      "default": "./dist/solana/floor/events.js"
+    },
+    "./solana/floor/registry": {
+      "types": "./src/solana/floor/registry.ts",
+      "import": "./dist/solana/floor/registry.js",
+      "default": "./dist/solana/floor/registry.js"
+    },
+    "./solana/floor/metadata": {
+      "types": "./src/solana/floor/metadata.ts",
+      "import": "./dist/solana/floor/metadata.js",
+      "default": "./dist/solana/floor/metadata.js"
+    },
+    "./solana/floor/genesis": {
+      "types": "./src/solana/floor/genesis.ts",
+      "import": "./dist/solana/floor/genesis.js",
+      "default": "./dist/solana/floor/genesis.js"
+    },
+    "./solana/floor/mint": {
+      "types": "./src/solana/floor/mint.ts",
+      "import": "./dist/solana/floor/mint.js",
+      "default": "./dist/solana/floor/mint.js"
+    },
+    "./indexer/read": {
+      "types": "./src/indexer/read.ts",
+      "import": "./dist/indexer/read.js",
+      "default": "./dist/indexer/read.js"
+    },
+    "./indexer/stream": {
+      "types": "./src/indexer/stream.ts",
+      "import": "./dist/indexer/stream.js",
+      "default": "./dist/indexer/stream.js"
+    },
+    "./evm/balances": {
+      "types": "./src/evm/balances.ts",
+      "import": "./dist/evm/balances.js",
+      "default": "./dist/evm/balances.js"
+    },
+    "./v2/circulating": {
+      "types": "./src/v2/circulating.ts",
+      "import": "./dist/v2/circulating.js",
+      "default": "./dist/v2/circulating.js"
+    },
+    "./v2/dead": {
+      "types": "./src/v2/dead.ts",
+      "import": "./dist/v2/dead.js",
+      "default": "./dist/v2/dead.js"
+    },
+    "./v2/layouts": {
+      "types": "./src/v2/layouts.ts",
+      "import": "./dist/v2/layouts.js",
+      "default": "./dist/v2/layouts.js"
+    },
+    "./v2/solana": {
+      "types": "./src/v2/solana.ts",
+      "import": "./dist/v2/solana.js",
+      "default": "./dist/v2/solana.js"
+    },
+    "./v2/solanaSettle": {
+      "types": "./src/v2/solanaSettle.ts",
+      "import": "./dist/v2/solanaSettle.js",
+      "default": "./dist/v2/solanaSettle.js"
+    },
+    "./v2/burnPreview": {
+      "types": "./src/v2/burnPreview.ts",
+      "import": "./dist/v2/burnPreview.js",
+      "default": "./dist/v2/burnPreview.js"
+    },
+    "./v2/evmReads": {
+      "types": "./src/v2/evmReads.ts",
+      "import": "./dist/v2/evmReads.js",
+      "default": "./dist/v2/evmReads.js"
+    },
+    "./v2/presetRowEvm": {
+      "types": "./src/v2/presetRowEvm.ts",
+      "import": "./dist/v2/presetRowEvm.js",
+      "default": "./dist/v2/presetRowEvm.js"
+    },
+    "./v2/claimAllEvm": {
+      "types": "./src/v2/claimAllEvm.ts",
+      "import": "./dist/v2/claimAllEvm.js",
+      "default": "./dist/v2/claimAllEvm.js"
+    },
+    "./v2/quoteMint": {
+      "types": "./src/v2/quoteMint.ts",
+      "import": "./dist/v2/quoteMint.js",
+      "default": "./dist/v2/quoteMint.js"
+    },
+    "./v2/genesis": {
+      "types": "./src/v2/genesis.ts",
+      "import": "./dist/v2/genesis.js",
+      "default": "./dist/v2/genesis.js"
+    },
+    "./v2/events": {
+      "types": "./src/v2/events.ts",
+      "import": "./dist/v2/events.js",
+      "default": "./dist/v2/events.js"
+    },
+    "./v2/evm": {
+      "types": "./src/v2/evm.ts",
+      "import": "./dist/v2/evm.js",
+      "default": "./dist/v2/evm.js"
+    },
+    "./v2/types": {
+      "types": "./src/v2/types.ts",
+      "import": "./dist/v2/types.js",
+      "default": "./dist/v2/types.js"
+    },
+    "./math/v2/wide": {
+      "types": "./src/math/v2/wide.ts",
+      "import": "./dist/math/v2/wide.js",
+      "default": "./dist/math/v2/wide.js"
+    },
+    "./math/v2/sqrt": {
+      "types": "./src/math/v2/sqrt.ts",
+      "import": "./dist/math/v2/sqrt.js",
+      "default": "./dist/math/v2/sqrt.js"
+    },
+    "./math/v2/fees": {
+      "types": "./src/math/v2/fees.ts",
+      "import": "./dist/math/v2/fees.js",
+      "default": "./dist/math/v2/fees.js"
+    },
+    "./math/v2/book": {
+      "types": "./src/math/v2/book.ts",
+      "import": "./dist/math/v2/book.js",
+      "default": "./dist/math/v2/book.js"
+    },
+    "./math/v2/trade": {
+      "types": "./src/math/v2/trade.ts",
+      "import": "./dist/math/v2/trade.js",
+      "default": "./dist/math/v2/trade.js"
+    },
+    "./math/v2/supply": {
+      "types": "./src/math/v2/supply.ts",
+      "import": "./dist/math/v2/supply.js",
+      "default": "./dist/math/v2/supply.js"
+    },
+    "./math/v2/error": {
+      "types": "./src/math/v2/error.ts",
+      "import": "./dist/math/v2/error.js",
+      "default": "./dist/math/v2/error.js"
+    },
+    "./math/v2/holders": {
+      "types": "./src/math/v2/holders.ts",
+      "import": "./dist/math/v2/holders.js",
+      "default": "./dist/math/v2/holders.js"
+    },
+    "./math/v2/milestones": {
+      "types": "./src/math/v2/milestones.ts",
+      "import": "./dist/math/v2/milestones.js",
+      "default": "./dist/math/v2/milestones.js"
+    },
+    "./math/v2/rows": {
+      "types": "./src/math/v2/rows.ts",
+      "import": "./dist/math/v2/rows.js",
+      "default": "./dist/math/v2/rows.js"
+    },
+    "./math/v2/circulating": {
+      "types": "./src/math/v2/circulating.ts",
+      "import": "./dist/math/v2/circulating.js",
+      "default": "./dist/math/v2/circulating.js"
+    },
+    "./math/v2/ask": {
+      "types": "./src/math/v2/ask.ts",
+      "import": "./dist/math/v2/ask.js",
+      "default": "./dist/math/v2/ask.js"
+    },
+    "./math/v2/feasibility": {
+      "types": "./src/math/v2/feasibility.ts",
+      "import": "./dist/math/v2/feasibility.js",
+      "default": "./dist/math/v2/feasibility.js"
+    },
+    "./v2/devbuy": {
+      "types": "./src/v2/devbuy.ts",
+      "import": "./dist/v2/devbuy.js",
+      "default": "./dist/v2/devbuy.js"
+    },
+    "./v2/route": {
+      "types": "./src/v2/route.ts",
+      "import": "./dist/v2/route.js",
+      "default": "./dist/v2/route.js"
+    },
+    "./math/v2/split": {
+      "types": "./src/math/v2/split.ts",
+      "import": "./dist/math/v2/split.js",
+      "default": "./dist/math/v2/split.js"
+    },
+    "./math/v2/relay": {
+      "types": "./src/math/v2/relay.ts",
+      "import": "./dist/math/v2/relay.js",
+      "default": "./dist/math/v2/relay.js"
+    },
+    "./math/v2/create": {
+      "types": "./src/math/v2/create.ts",
+      "import": "./dist/math/v2/create.js",
+      "default": "./dist/math/v2/create.js"
+    },
+    "./math/v2/display": {
+      "types": "./src/math/v2/display.ts",
+      "import": "./dist/math/v2/display.js",
+      "default": "./dist/math/v2/display.js"
+    },
+    "./v2/market-evm": {
+      "types": "./src/v2/market-evm.ts",
+      "import": "./dist/v2/market-evm.js",
+      "default": "./dist/v2/market-evm.js"
+    },
+    "./math/v2/team": {
+      "types": "./src/math/v2/team.ts",
+      "import": "./dist/math/v2/team.js",
+      "default": "./dist/math/v2/team.js"
+    },
+    "./math/v2/receipt": {
+      "types": "./src/math/v2/receipt.ts",
+      "import": "./dist/math/v2/receipt.js",
+      "default": "./dist/math/v2/receipt.js"
+    },
+    "./v2/claims": {
+      "types": "./src/v2/claims.ts",
+      "import": "./dist/v2/claims.js",
+      "default": "./dist/v2/claims.js"
+    },
+    "./v2/claims-evm": {
+      "types": "./src/v2/claims-evm.ts",
+      "import": "./dist/v2/claims-evm.js",
+      "default": "./dist/v2/claims-evm.js"
+    },
+    "./v2/route-alt": {
+      "types": "./src/v2/route-alt.ts",
+      "import": "./dist/v2/route-alt.js",
+      "default": "./dist/v2/route-alt.js"
+    },
+    "./v2/tx": {
+      "types": "./src/v2/tx/index.ts",
+      "import": "./dist/v2/tx/index.js",
+      "default": "./dist/v2/tx/index.js"
+    },
+    "./events": {
+      "types": "./src/events/index.ts",
+      "import": "./dist/events/index.js",
+      "default": "./dist/events/index.js"
+    },
+    "./abi": {
+      "types": "./src/abi/index.ts",
+      "import": "./dist/abi/index.js",
+      "default": "./dist/abi/index.js"
+    },
+    "./v2/press": {
+      "types": "./src/v2/press.ts",
+      "import": "./dist/v2/press.js",
+      "default": "./dist/v2/press.js"
+    },
+    "./v2/receipt-tx": {
+      "types": "./src/v2/receipt-tx.ts",
+      "import": "./dist/v2/receipt-tx.js",
+      "default": "./dist/v2/receipt-tx.js"
+    },
+    "./config": {
+      "types": "./src/config/index.ts",
+      "import": "./dist/config/index.js",
+      "default": "./dist/config/index.js"
+    },
+    "./fixtures": {
+      "types": "./src/fixtures.ts",
+      "import": "./dist/fixtures.js",
+      "default": "./dist/fixtures.js"
+    },
+    "./client": {
+      "types": "./src/client/index.ts",
+      "import": "./dist/client/index.js",
+      "default": "./dist/client/index.js"
+    },
+    "./errors": {
+      "types": "./src/errors.ts",
+      "import": "./dist/errors.js",
+      "default": "./dist/errors.js"
+    },
+    "./generated": {
+      "types": "./src/generated/index.ts",
+      "import": "./dist/generated/index.js",
+      "default": "./dist/generated/index.js"
+    }
+  }
+}

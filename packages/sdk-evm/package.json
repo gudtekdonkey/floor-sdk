@@ -1,0 +1,25 @@
+{
+  "name": "@floor/sdk-evm",
+  "version": "0.3.0",
+  "description": "The FLOOR Program on EVM chains: ABIs, call builders, event decoders, chain config and reads, over @floor/sdk",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22.18"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ],
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    }
+  },
+  "dependencies": {
+    "@floor/sdk": "0.3.0"
+  }
+}
