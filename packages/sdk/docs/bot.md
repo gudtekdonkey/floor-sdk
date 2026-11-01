@@ -7,7 +7,7 @@ You want to watch launches and trades, keep your own copy of the data, or react 
 Pass a `get`: a function from a path to `{ status, body }`. It can be `fetch`, a proxy, or a cache.
 
 ```ts
-import { readLaunches, readLaunch, readTrades, type Get } from "@floor/sdk/indexer/read";
+import { readLaunches, readLaunch, readTrades, type Get } from "@floorlaunchpad/sdk/indexer/read";
 
 const get: Get = async (path) => {
   const r = await fetch(`${INDEXER}${path}`);
@@ -23,7 +23,7 @@ Pages carry a `next` cursor; pass it as `before` for the next page, and stop whe
 ## Follow the live stream
 
 ```ts
-import { parseStreamFrames, streamPath } from "@floor/sdk/indexer/stream";
+import { parseStreamFrames, streamPath } from "@floorlaunchpad/sdk/indexer/stream";
 
 let rest = "";
 // feed each text chunk from your server-sent-events connection to path streamPath()
@@ -35,7 +35,7 @@ rest = left;
 
 ## Decode chain data yourself
 
-For raw logs and accounts, skip the indexer: `decodeLogV2` (EVM logs) and `decodeEventData` (Solana events) decode events; `@floor/sdk/v2/layouts` decodes Solana accounts. Every decoder is exact and throws on a length mismatch.
+For raw logs and accounts, skip the indexer: `decodeLogV2` (EVM logs) and `decodeEventData` (Solana events) decode events; `@floorlaunchpad/sdk/v2/layouts` decodes Solana accounts. Every decoder is exact and throws on a length mismatch.
 
 ## Trade
 

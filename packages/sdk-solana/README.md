@@ -1,18 +1,18 @@
-# @floor/sdk-solana
+# @floorlaunchpad/sdk-solana
 
-The FLOOR Program on Solana: PDAs, account and event decoders, instruction and transaction builders, over @floor/sdk.
+The FLOOR Program on Solana: PDAs, account and event decoders, instruction and transaction builders, over @floorlaunchpad/sdk.
 
 ```sh
-npm install @floor/sdk-solana
+npm install @floorlaunchpad/sdk-solana
 ```
 
 ```ts
-import { solanaInstruction, math } from "@floor/sdk-solana";
+import { solanaInstruction, math } from "@floorlaunchpad/sdk-solana";
 ```
 
-The root entry re-exports, from `@floor/sdk` at the same version, the namespaces for Solana and the ones both chains
+The root entry re-exports, from `@floorlaunchpad/sdk` at the same version, the namespaces for Solana and the ones both chains
 share. Nothing runs at import, so a bundler keeps only what a file reads. Every other module, and every subpath import,
-is in `@floor/sdk`; its README has the guides.
+is in `@floorlaunchpad/sdk`; its README has the guides.
 
 Solana namespaces: `solanaInstruction`, `solanaPda`, `solanaTx`, `solanaAlt`, `solanaFloorProgram`, `solanaFloorAccounts`, `solanaFloorInstructions`, `solanaFloorCreate`, `solanaFloorEvents`, `solanaFloorRegistry`, `solanaFloorMetadata`, `solanaFloorGenesis`, `solanaFloorMint`, `v2Layouts`, `v2Solana`, `v2SolanaSettle`, `v2BurnPreview`, `v2QuoteMint`, `v2Genesis`, `v2Events`, `v2Devbuy`, `v2Claims`, `v2RouteAlt`.
 

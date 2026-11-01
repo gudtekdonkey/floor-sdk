@@ -322,9 +322,9 @@ export type ServedKeys<N extends RouteName> = RouteBody<N> extends readonly unkn
 
 export const OPEN_ROUTES = {
 
-  genesisSeries: { pattern: "/floor-amm/genesis/series", served: false, open: "owner (A2): kept or dropped with the site's row" },
+  genesisSeries: { pattern: "/floor-amm/genesis/series", served: false, open: "undecided: kept or dropped with the site's row" },
 
-  points: { pattern: null, served: false, open: "owner (A2): a points route, or the trades drain as now" },
+  points: { pattern: null, served: false, open: "undecided: a points route, or the trades drain as now" },
 } as const;
 
 export function routeLimit(name: RouteName): { readonly default: number; readonly max: number } | null {

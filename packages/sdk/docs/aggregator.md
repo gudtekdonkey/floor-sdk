@@ -7,7 +7,7 @@ A launch trades against the program from its first block. There is no separate p
 ## 1. Find a path
 
 ```ts
-import { findRouteV2 } from "@floor/sdk/v2/route";
+import { findRouteV2 } from "@floorlaunchpad/sdk/v2/route";
 
 const path = findRouteV2(pools, fromCoin, toCoin);
 ```
@@ -17,7 +17,7 @@ const path = findRouteV2(pools, fromCoin, toCoin);
 ## 2. Quote it
 
 ```ts
-import { quoteRouteV2 } from "@floor/sdk/v2/route";
+import { quoteRouteV2 } from "@floorlaunchpad/sdk/v2/route";
 
 const q = quoteRouteV2({
   path,
@@ -28,14 +28,14 @@ const q = quoteRouteV2({
 // q.amountOut, and q.hops[i].minOut for each hop
 ```
 
-The hop quoter is yours: it runs the program's math on a copy of the launch state and returns what one hop pays. `slippageBps` is 0 to 10,000 (100 % is allowed; every minimum is still at least 1). A path that trades the same launch token twice, or has no hop on a FLOOR launch, is refused with a `RangeError`. `findRouteV2` throws a `NoRouteError` (exported from `@floor/sdk/route`) when there is no path. When the path includes an outside leg, use `quoteRouteEdgeV2` and pass an `edge` function that prices it.
+The hop quoter is yours: it runs the program's math on a copy of the launch state and returns what one hop pays. `slippageBps` is 0 to 10,000 (100 % is allowed; every minimum is still at least 1). A path that trades the same launch token twice, or has no hop on a FLOOR launch, is refused with a `RangeError`. `findRouteV2` throws a `NoRouteError` (exported from `@floorlaunchpad/sdk/route`) when there is no path. When the path includes an outside leg, use `quoteRouteEdgeV2` and pass an `edge` function that prices it.
 
 ## 3. Build the transaction
 
 Solana returns instructions. You give the trader, the quote, and the trader's balance of every coin on the path before the trade. Use `0n` for a coin the trader holds none of. A missing entry throws, so a route never spends a balance you did not mean to:
 
 ```ts
-import { routeInstructionsV2, routeTransactionsV2 } from "@floor/sdk/v2/route";
+import { routeInstructionsV2, routeTransactionsV2 } from "@floorlaunchpad/sdk/v2/route";
 
 const ixs = routeInstructionsV2({ trader, quote: q, balances });
 // or, split across transactions when one will not fit:
@@ -45,7 +45,7 @@ const txs = routeTransactionsV2({ trader, quote: q, balances, lookupTables });
 EVM returns calldata. `evmRouteCallV2` builds one call to the router; `evmHopCallsV2` builds one call per hop for a caller that sends them in turn:
 
 ```ts
-import { evmRouteCallV2 } from "@floor/sdk/v2/route";
+import { evmRouteCallV2 } from "@floorlaunchpad/sdk/v2/route";
 
 const call = evmRouteCallV2(q, { router, to: recipient, deadline });
 // { to, data, ... }: send it from the trader's wallet

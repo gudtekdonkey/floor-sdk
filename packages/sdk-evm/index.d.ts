@@ -37,4 +37,4 @@ export {
   v2Types,
   v2Circulating,
   v2Dead,
-} from "@floor/sdk";
+} from "@floorlaunchpad/sdk";

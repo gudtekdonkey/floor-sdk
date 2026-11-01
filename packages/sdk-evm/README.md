@@ -1,18 +1,18 @@
-# @floor/sdk-evm
+# @floorlaunchpad/sdk-evm
 
-The FLOOR Program on EVM chains: ABIs, call builders, event decoders, chain config and reads, over @floor/sdk.
+The FLOOR Program on EVM chains: ABIs, call builders, event decoders, chain config and reads, over @floorlaunchpad/sdk.
 
 ```sh
-npm install @floor/sdk-evm
+npm install @floorlaunchpad/sdk-evm
 ```
 
 ```ts
-import { evmKeccak, math } from "@floor/sdk-evm";
+import { evmKeccak, math } from "@floorlaunchpad/sdk-evm";
 ```
 
-The root entry re-exports, from `@floor/sdk` at the same version, the namespaces for EVM chains and the ones both chains
+The root entry re-exports, from `@floorlaunchpad/sdk` at the same version, the namespaces for EVM chains and the ones both chains
 share. Nothing runs at import, so a bundler keeps only what a file reads. Every other module, and every subpath import,
-is in `@floor/sdk`; its README has the guides.
+is in `@floorlaunchpad/sdk`; its README has the guides.
 
 EVM chains namespaces: `evmKeccak`, `evmAbi`, `evmItems`, `evmZap`, `evmRouter`, `evmChains`, `evmMulticall`, `evmFloorAbiGen`, `evmFloorIface`, `evmFloorCalls`, `evmFloorEvents`, `evmBalances`, `v2Evm`, `v2EvmReads`, `v2PresetRowEvm`, `v2ClaimAllEvm`, `v2MarketEvm`, `v2ClaimsEvm`.
 

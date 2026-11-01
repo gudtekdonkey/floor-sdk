@@ -5,16 +5,16 @@ You want a page that lists launches, quotes a trade and builds the transaction f
 ## Import from the root
 
 ```ts
-import { v2Route, indexerRead, mathV2Display } from "@floor/sdk";
+import { v2Route, indexerRead, mathV2Display } from "@floorlaunchpad/sdk";
 ```
 
-The root entry exposes each module as a namespace, and a bundler keeps only the ones you use. If you want the smallest possible import, name the module: `@floor/sdk/indexer/read`.
+The root entry exposes each module as a namespace, and a bundler keeps only the ones you use. If you want the smallest possible import, name the module: `@floorlaunchpad/sdk/indexer/read`.
 
 ## Show data
 
 Read from your indexer with an injected `get` (see [bot guide](bot.md)). Launch reads come back with `bigint` amounts; format them at the edge of the page, not before.
 
-`@floor/sdk/math/v2/display` and the other `math/v2` modules hold the figures the page shows. They use the same integer math as the program, so the number on the page is the number the program pays.
+`@floorlaunchpad/sdk/math/v2/display` and the other `math/v2` modules hold the figures the page shows. They use the same integer math as the program, so the number on the page is the number the program pays.
 
 ## Quote and build
 

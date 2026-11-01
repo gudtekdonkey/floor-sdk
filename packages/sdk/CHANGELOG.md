@@ -1,11 +1,11 @@
 # Changelog
 
-All notable changes to `@floor/sdk`. The version follows semver; while the major number is 0, a minor bump may rename or remove an export and a patch bump never does.
+All notable changes to `@floorlaunchpad/sdk`. The version follows semver; while the major number is 0, a minor bump may rename or remove an export and a patch bump never does.
 
 ## 0.3.0
 
-The first public build, in three packages under the Apache License 2.0. `@floor/sdk` is the whole SDK.
-`@floor/sdk-evm` and `@floor/sdk-solana` are chain-scoped entries over it. Each re-exports, from `@floor/sdk` at the
+The first public build, in three packages under the Apache License 2.0. `@floorlaunchpad/sdk` is the whole SDK.
+`@floorlaunchpad/sdk-evm` and `@floorlaunchpad/sdk-solana` are chain-scoped entries over it. Each re-exports, from `@floorlaunchpad/sdk` at the
 same version, the namespaces for its chain and the shared ones.
 
 Removed (0.x minor):
@@ -53,7 +53,7 @@ Added:
 - Subpath exports `./v2/burnPreview`, `./v2/evmReads`, `./v2/presetRowEvm` and `./v2/claimAllEvm`, each also a root
   namespace (`v2BurnPreview`, `v2EvmReads`, `v2PresetRowEvm`, `v2ClaimAllEvm`). Their names stay exported flat from the root too.
 
-- A root entry. `import { v2Route, indexerRead } from "@floor/sdk"` reaches every subpath module as a namespace named after its path. Importing it runs no code.
+- A root entry. `import { v2Route, indexerRead } from "@floorlaunchpad/sdk"` reaches every subpath module as a namespace named after its path. Importing it runs no code.
 - Guides for four readers in `docs/`: aggregator, wallet, bot and frontend.
 - This changelog and the version plan below.
 - New subpath exports, each also a root namespace: `./client` (`createFloorClient`), `./errors` (`FloorError`,

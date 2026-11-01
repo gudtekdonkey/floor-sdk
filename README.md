@@ -6,9 +6,9 @@ its first block.
 
 | Package | Directory | What it holds |
 |---|---|---|
-| `@floor/sdk` | [`packages/sdk`](packages/sdk) | Everything: the math (bit for bit with the program), quotes, routes, decoders and builders for both chain families |
-| `@floor/sdk-evm` | [`packages/sdk-evm`](packages/sdk-evm) | The EVM part: ABIs, call builders, event decoders, chain config and reads |
-| `@floor/sdk-solana` | [`packages/sdk-solana`](packages/sdk-solana) | The Solana part: PDAs, account and event decoders, instruction and transaction builders |
+| `@floorlaunchpad/sdk` | [`packages/sdk`](packages/sdk) | Everything: the math (bit for bit with the program), quotes, routes, decoders and builders for both chain families |
+| `@floorlaunchpad/sdk-evm` | [`packages/sdk-evm`](packages/sdk-evm) | The EVM part: ABIs, call builders, event decoders, chain config and reads |
+| `@floorlaunchpad/sdk-solana` | [`packages/sdk-solana`](packages/sdk-solana) | The Solana part: PDAs, account and event decoders, instruction and transaction builders |
 
 Version 0.3.0. No dependencies, and no connection is opened: you pass in your own RPC, indexer and send functions.
 Node 22.18 or newer.

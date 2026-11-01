@@ -11,6 +11,7 @@ import { PACKET_DATA_SIZE, closeAccountInstruction, compileV0Message, createAsso
 import { FLOOR_AMM_PROGRAM_ID, launchPda, quoteVault, tokenVault, traderRefEscrow, traderRefPda } from "../solana/floor/program.js";
 import { approveCall, buyCall, sellCall } from "../evm/floor/calls.js";
 
+import { EVM_TOKEN_SCALE } from "./market-evm.js";
 import { checkFloorHops, evmRouteCall } from "../evm/router.js";
 
 import { edgeLegInstructions } from "../route/edge.js";
@@ -377,6 +378,8 @@ export function evmHopCallsV2(q              , p                                
       if (p.approve !== false && coinKey(pool.quote) !== EVM_NATIVE) calls.push(approveCall(pool.quote, p.floorAmm, spend));
       calls.push(buyCall({ floorAmm: p.floorAmm, quote: pool.quote, launchId: pool.launchId, amountIn: spend, minTokensOut: hq.minOut, to: p.to, deadline: p.deadline }));
     } else {
+
+      if (spend < EVM_TOKEN_SCALE) throw new RangeError(`SellBelowTokenScale: the sell of ${pool.symbol} would spend ${spend}, under one token (${EVM_TOKEN_SCALE}): the min-out of the hop before is too low for a direct call; lower the slippage or use the router`);
       if (p.approve !== false) calls.push(approveCall(pool.token, p.floorAmm, spend));
       calls.push(sellCall({ floorAmm: p.floorAmm, launchId: pool.launchId, tokensIn: spend, minQuoteOut: hq.minOut, to: p.to, deadline: p.deadline }));
     }

@@ -1,5 +1,5 @@
 {
-  "name": "@floor/sdk",
+  "name": "@floorlaunchpad/sdk",
   "version": "0.3.0",
   "description": "The FLOOR Program in TypeScript: the math, the quoter, decoders, PDAs and instruction builders for Solana and EVM",
   "license": "Apache-2.0",
