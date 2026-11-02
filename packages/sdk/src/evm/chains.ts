@@ -130,9 +130,9 @@ export const FLOOR_SALTS = {
   routerDeployer: salt("floor-router.v2.router-deployer"),
 } as const;
 
-/** The FloorAmm proxy: one CREATE2 address on every v2 EVM chain. Read back on chain on Ethereum (2026-11-02, from
- * block 26327910) and Base (2026-11-02, from block 53421827), code hash 0x46a010df…b9b4; the other chains get the same address
- * at their deploy. */
+/** The FloorAmm proxy: one CREATE2 address on every v2 EVM chain. Read back on chain on 2026-11-02 on Ethereum (from
+ * block 26327910), Base (53421827), BNB Chain (131270813), Arbitrum (520655168), Arc (29205598) and Robinhood Chain (104455459),
+ * code hash 0x46a010df…b9b4; HyperEVM gets the same address at its deploy. */
 export const FLOOR_AMM_ADDRESS: string | null = "0xF10000bd05c2C01793C6d55F027346469683d225";
 
 const cat = (...h: string[]): string => "0x" + h.map((x) => bytesToHex(hexToBytes(x)).slice(2)).join("");

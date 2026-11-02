@@ -5,8 +5,9 @@ All notable changes to `@floorlaunchpad/sdk`. The version follows semver; while 
 ## 0.3.1
 
 - `FLOOR_AMM_ADDRESS` (`evm/chains.ts`) is `0xF10000bd05c2C01793C6d55F027346469683d225`, the FloorAmm proxy (one CREATE2 address on every v2 EVM
-  chain), no longer `null`. Read back on chain on Ethereum on 2026-11-02 (from block 26327910) and on Base on 2026-11-02 (from
-  block 53421827); BNB Chain, Arbitrum, Arc and Robinhood get the same address when they are deployed. `@floorlaunchpad/sdk-evm` and `@floorlaunchpad/sdk-solana` follow at 0.3.1.
+  chain), no longer `null`. Read back on chain on 2026-11-02 on Ethereum (from block 26327910), Base (from
+  block 53421827), BNB Chain (131270813), Arbitrum (520655168), Arc (29205598) and Robinhood Chain (104455459); HyperEVM gets the
+  same address when it is deployed. `@floorlaunchpad/sdk-evm` and `@floorlaunchpad/sdk-solana` follow at 0.3.1.
 
 ## 0.3.0
 
