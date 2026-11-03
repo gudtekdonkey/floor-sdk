@@ -9,6 +9,7 @@ its first block.
 | `@floorlaunchpad/sdk` | [`packages/sdk`](packages/sdk) | Everything: the math (bit for bit with the program), quotes, routes, decoders and builders for both chain families |
 | `@floorlaunchpad/sdk-evm` | [`packages/sdk-evm`](packages/sdk-evm) | The EVM part: ABIs, call builders, event decoders, chain config and reads |
 | `@floorlaunchpad/sdk-solana` | [`packages/sdk-solana`](packages/sdk-solana) | The Solana part: PDAs, account and event decoders, instruction and transaction builders |
+| Integration adapters | [`adapters`](adapters) | Partner integrations: the Jupiter and Titan crates (Solana), the EVM references (1inch, LI.FI, Squid), and the KyberSwap and Velora patches; see [adapters/README.md](adapters/README.md) |
 
 Version 0.3.1. No dependencies, and no connection is opened: you pass in your own RPC, indexer and send functions.
 Node 22.18 or newer.

@@ -1,0 +1,24 @@
+
+[package]
+name = "floor-amm-jupiter"
+version = "0.1.0"
+edition = "2021"
+description = "The FLOOR Program (floor_amm) as a jupiter-amm-interface Amm: quotes are floor-math's reference trade"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+doctest = false
+
+[dependencies]
+jupiter-amm-interface = { git = "https://github.com/jup-ag/jupiter-amm-interface", rev = "95bd18485e580625a39eb92a0c0ad2061579daad" }
+floor-math = { path = "../floor-math" }
+floor-amm-solana = { path = "../solana-core" }
+solana-pubkey = { version = "=4.2.0", features = ["curve25519"] }
+solana-instruction = "=3.4.0"
+solana-account = "=4.3.1"
+rust_decimal = "=1.40.0"
+
+[dev-dependencies]
+serde_json = "=1.0.149"
+solana-sha256-hasher = { version = "=3.1.0", features = ["sha2"] }

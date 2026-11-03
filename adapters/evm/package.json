@@ -1,0 +1,14 @@
+{
+  "name": "@floorlaunchpad/evm-adapter-reference",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "FloorAmm for EVM aggregators that integrate by hand: the protocol module (discovery, state, logs, math, calldata), the 1inch, LI.FI and Squid reference shapes and the token list. vendor/sdk holds the @floorlaunchpad/sdk source files it uses; no dependencies",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "test": "node --test 'test/*.test.ts'"
+  },
+  "license": "Apache-2.0"
+}
