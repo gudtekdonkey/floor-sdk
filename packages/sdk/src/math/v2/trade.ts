@@ -40,7 +40,7 @@ function commit(dst: Book, src: Book): void {
 
 type Side = { row: SplitRow; sup: Supply } | null;
 
-function buyOn(book: Book, side: Side, gross: bigint, minTokens: bigint, walkSteps: number): BookBuy {
+function buyOn(book: Book, side: Side, gross: bigint, minTokens: bigint, walkSteps: number, keep = true): BookBuy {
   const ppm = feesNow(book);
   const budget = netFromGross(gross, ppm);
   if (budget === 0n) fail("NothingToDo");
@@ -82,11 +82,11 @@ function buyOn(book: Book, side: Side, gross: bigint, minTokens: bigint, walkSte
     steps: walked.steps, budgetHit: walked.budgetHit, graduatedNow: walked.graduatedNow, sqrtBefore: book.sqrtP, sqrtAfter: w.sqrtP,
     split: sp, relay: rl,
   };
-  commit(book, w);
+  if (keep) commit(book, w);
   return r;
 }
 
-function sellOn(book: Book, side: Side, tokens: bigint, minOut: bigint): BookSell {
+function sellOn(book: Book, side: Side, tokens: bigint, minOut: bigint, keep = true): BookSell {
   if (tokens === 0n) fail("NothingToDo");
   const ppm = feesNow(book);
   const w = cloneBook(book);
@@ -105,7 +105,7 @@ function sellOn(book: Book, side: Side, tokens: bigint, minOut: bigint): BookSel
     tokensIn: tokens, unfilled: tokens - walked.tokens, gross: walked.money, fees, out, steps: walked.steps, sqrtBefore: book.sqrtP, sqrtAfter: w.sqrtP,
     fromF: walked.fromF, fromK: walked.fromK, fromC: walked.fromC, relay: rl,
   };
-  commit(book, w);
+  if (keep) commit(book, w);
   return r;
 }
 
@@ -118,8 +118,8 @@ export function sell(book: Book, row: SplitRow, sup: Supply, tokens: bigint, min
 }
 
 export const quoteBuy = (book: Book, row: SplitRow, sup: Supply, gross: bigint, walkSteps: number = MAX_WALK_STEPS): BookBuy =>
-  buy(cloneBook(book), row, sup, gross, 0n, { walkSteps });
-export const quoteSell = (book: Book, row: SplitRow, sup: Supply, tokens: bigint): BookSell => sell(cloneBook(book), row, sup, tokens, 0n);
+  buyOn(book, { row, sup }, gross, 0n, walkSteps, false);
+export const quoteSell = (book: Book, row: SplitRow, sup: Supply, tokens: bigint): BookSell => sellOn(book, { row, sup }, tokens, 0n, false);
 
 export function buyMinTokens(b: Book, row: SplitRow, sup: Supply, gross: bigint, slippageBps: number, walkSteps: number = MAX_WALK_STEPS): bigint {
   const less = buyLessIn(gross, slippageBps);
@@ -141,5 +141,5 @@ export function bookSell(book: Book, tokens: bigint, minOut: bigint): BookSell {
   return sellOn(book, null, tokens, minOut);
 }
 
-export const quoteBookBuy = (book: Book, gross: bigint, walkSteps: number = MAX_WALK_STEPS): BookBuy => bookBuy(cloneBook(book), gross, 0n, walkSteps);
-export const quoteBookSell = (book: Book, tokens: bigint): BookSell => bookSell(cloneBook(book), tokens, 0n);
+export const quoteBookBuy = (book: Book, gross: bigint, walkSteps: number = MAX_WALK_STEPS): BookBuy => buyOn(book, null, gross, 0n, walkSteps, false);
+export const quoteBookSell = (book: Book, tokens: bigint): BookSell => sellOn(book, null, tokens, 0n, false);

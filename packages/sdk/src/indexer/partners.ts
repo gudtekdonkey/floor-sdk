@@ -21,6 +21,9 @@ export const DEX_ASSET = object({
 });
 export type DexAsset = Infer<typeof DEX_ASSET>;
 
+export const TOKEN_HOLDERS = object({ total: int, holders: array(object({ address: str, balance: big })) });
+export type TokenHolders = Infer<typeof TOKEN_HOLDERS>;
+
 export const DEX_SUMMARY = object({
   pair: str,
   base: str,
@@ -69,6 +72,9 @@ export const CG_TICKERS = array(object({
   low: nullable(decimal),
   liquidity_in_usd: nullable(decimal),
   liquidity_in_quote: big,
+
+  depthUp2: nullable(decimal),
+  depthDown2: nullable(decimal),
 }));
 export type CgTickers = Infer<typeof CG_TICKERS>;
 

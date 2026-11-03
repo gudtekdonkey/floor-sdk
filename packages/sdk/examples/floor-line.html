@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FLOOR line example</title>
+<style>
+  :root { --bg:#000000; --panel:#101113; --text:#F4F5F7; --muted:#9AA3B2; --price:#8EA0BC; --floor:#FF6A1A; --grid:#23262B; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui, sans-serif; }
+  main { max-width:1100px; margin:0 auto; padding:24px 16px 48px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  p.run { margin:0 0 16px; color:var(--muted); }
+  .grid { display:grid; grid-template-columns:minmax(0,3fr) minmax(0,2fr); gap:16px; }
+  @media (max-width:800px) { .grid { grid-template-columns:minmax(0,1fr); } }
+  .panel { background:var(--panel); border-radius:8px; padding:16px; min-width:0; }
+  .legend { display:flex; gap:16px; margin-bottom:8px; flex-wrap:wrap; }
+  .legend span::before { content:""; display:inline-block; width:18px; height:3px; margin-right:6px; vertical-align:middle; background:currentColor; }
+  .legend .p { color:var(--price); } .legend .f { color:var(--floor); }
+  svg { width:100%; height:auto; display:block; }
+  pre { margin:0; overflow:auto; font:13px/1.5 ui-monospace, Menlo, monospace; white-space:pre; }
+  h2 { font-size:15px; margin:0 0 8px; }
+  .read { margin-top:8px; color:var(--muted); min-height:1.5em; }
+  .read b { color:var(--text); font-weight:600; }
+  input[type=range] { width:100%; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Drawing the floor line</h1>
+  <p class="run" id="run"></p>
+  <div class="grid">
+    <div class="panel">
+      <div class="legend"><span class="p">Price</span><span class="f">FLOOR</span></div>
+      <svg id="chart" viewBox="0 0 640 360" role="img" aria-label="Price and floor line over the run"></svg>
+      <input id="at" type="range" min="0" value="0" aria-label="Move through the run">
+      <div class="read" id="read"></div>
+    </div>
+    <div class="panel">
+      <h2>The code that draws it</h2>
+<pre>// one fetch gives price and floor together
+const s = await (await fetch(
+  `${API}/v2/dex/summary?id=${pair}`)).json();
+const price = Number(s.priceNative);
+const floor = Number(s.floorPriceNative);
+
+// hide the floor until the launch has one,
+// and when every token has been burned
+const hasFloor = floor &gt; 0 &amp;&amp;
+  Number(s.circulatingSupply) &gt; 0;
+
+priceLine.push({ time, value: price });
+if (hasFloor) {
+  floorLine.push({ time, value: floor });
+}
+// draw floorLine under priceLine:
+// colour #FF6A1A, label "FLOOR"</pre>
+    </div>
+  </div>
+</main>
+<script>
+const DATA = /*DATA*/{"run":"A simulated launch with a USDC quote at $1: 64 buys, then 6 small sells","quoteDecimals":6,"series":[{"i":0,"price":0.01,"floor":null,"graduated":false,"side":"open"},{"i":1,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":2,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":3,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":4,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":5,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":6,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":7,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":8,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":9,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":10,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":11,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":12,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":13,"price":0.01022274,"floor":0.01,"graduated":true,"side":"buy"},{"i":14,"price":0.01045981,"floor":0.01,"graduated":true,"side":"buy"},{"i":15,"price":0.01069961,"floor":0.01,"graduated":true,"side":"buy"},{"i":16,"price":0.01092692,"floor":0.01,"graduated":true,"side":"buy"},{"i":17,"price":0.01110845,"floor":0.01,"graduated":true,"side":"buy"},{"i":18,"price":0.0112915,"floor":0.01,"graduated":true,"side":"buy"},{"i":19,"price":0.01147605,"floor":0.01,"graduated":true,"side":"buy"},{"i":20,"price":0.0116621,"floor":0.01,"graduated":true,"side":"buy"},{"i":21,"price":0.01184832,"floor":0.01,"graduated":true,"side":"buy"},{"i":22,"price":0.0119884,"floor":0.01,"graduated":true,"side":"buy"},{"i":23,"price":0.01212932,"floor":0.01,"graduated":true,"side":"buy"},{"i":24,"price":0.01227106,"floor":0.01,"graduated":true,"side":"buy"},{"i":25,"price":0.01284634,"floor":0.01,"graduated":true,"side":"buy"},{"i":26,"price":0.01329322,"floor":0.01,"graduated":true,"side":"buy"},{"i":27,"price":0.01373598,"floor":0.01030198,"graduated":true,"side":"buy"},{"i":28,"price":0.01414542,"floor":0.01060907,"graduated":true,"side":"buy"},{"i":29,"price":0.01448348,"floor":0.01086261,"graduated":true,"side":"buy"},{"i":30,"price":0.01482555,"floor":0.01111917,"graduated":true,"side":"buy"},{"i":31,"price":0.01517165,"floor":0.01137874,"graduated":true,"side":"buy"},{"i":32,"price":0.01545607,"floor":0.01159206,"graduated":true,"side":"buy"},{"i":33,"price":0.0157178,"floor":0.01178835,"graduated":true,"side":"buy"},{"i":34,"price":0.01598174,"floor":0.01198631,"graduated":true,"side":"buy"},{"i":35,"price":0.01624789,"floor":0.01218592,"graduated":true,"side":"buy"},{"i":36,"price":0.01651626,"floor":0.0123872,"graduated":true,"side":"buy"},{"i":37,"price":0.01674282,"floor":0.01255712,"graduated":true,"side":"buy"},{"i":38,"price":0.01694468,"floor":0.01270851,"graduated":true,"side":"buy"},{"i":39,"price":0.01714776,"floor":0.01286082,"graduated":true,"side":"buy"},{"i":40,"price":0.01735205,"floor":0.01301404,"graduated":true,"side":"buy"},{"i":41,"price":0.01755756,"floor":0.01316817,"graduated":true,"side":"buy"},{"i":42,"price":0.01776429,"floor":0.01332322,"graduated":true,"side":"buy"},{"i":43,"price":0.01797224,"floor":0.01347918,"graduated":true,"side":"buy"},{"i":44,"price":0.01815632,"floor":0.01361724,"graduated":true,"side":"buy"},{"i":45,"price":0.01831214,"floor":0.01373411,"graduated":true,"side":"buy"},{"i":46,"price":0.01846863,"floor":0.01385147,"graduated":true,"side":"buy"},{"i":47,"price":0.0186258,"floor":0.01396935,"graduated":true,"side":"buy"},{"i":48,"price":0.01878363,"floor":0.01408772,"graduated":true,"side":"buy"},{"i":49,"price":0.01926116,"floor":0.01444587,"graduated":true,"side":"buy"},{"i":50,"price":0.01972843,"floor":0.01479632,"graduated":true,"side":"buy"},{"i":51,"price":0.02009085,"floor":0.01506814,"graduated":true,"side":"buy"},{"i":52,"price":0.0204566,"floor":0.01534245,"graduated":true,"side":"buy"},{"i":53,"price":0.02082566,"floor":0.01561925,"graduated":true,"side":"buy"},{"i":54,"price":0.02119805,"floor":0.01589854,"graduated":true,"side":"buy"},{"i":55,"price":0.02153399,"floor":0.01615049,"graduated":true,"side":"buy"},{"i":56,"price":0.02181455,"floor":0.01636091,"graduated":true,"side":"buy"},{"i":57,"price":0.02209694,"floor":0.0165727,"graduated":true,"side":"buy"},{"i":58,"price":0.02238115,"floor":0.01678586,"graduated":true,"side":"buy"},{"i":59,"price":0.0226672,"floor":0.0170004,"graduated":true,"side":"buy"},{"i":60,"price":0.02295507,"floor":0.0172163,"graduated":true,"side":"buy"},{"i":61,"price":0.02324477,"floor":0.01743358,"graduated":true,"side":"buy"},{"i":62,"price":0.02347823,"floor":0.01760867,"graduated":true,"side":"buy"},{"i":63,"price":0.02369538,"floor":0.01777153,"graduated":true,"side":"buy"},{"i":64,"price":0.02391353,"floor":0.01793515,"graduated":true,"side":"buy"},{"i":65,"price":0.02389484,"floor":0.01793515,"graduated":true,"side":"sell"},{"i":66,"price":0.02387622,"floor":0.01793515,"graduated":true,"side":"sell"},{"i":67,"price":0.02385767,"floor":0.01793515,"graduated":true,"side":"sell"},{"i":68,"price":0.02383919,"floor":0.01793515,"graduated":true,"side":"sell"},{"i":69,"price":0.02382078,"floor":0.01793515,"graduated":true,"side":"sell"},{"i":70,"price":0.02380243,"floor":0.01793515,"graduated":true,"side":"sell"}]}/*END*/;
+const W = 640, H = 360, L = 52, R = 12, T = 12, B = 28;
+const pts = DATA.series;
+const max = Math.max(...pts.map((p) => p.price)) * 1.05;
+const min = Math.min(...pts.map((p) => p.floor ?? p.price)) * 0.95;
+const x = (i) => L + (i / (pts.length - 1)) * (W - L - R);
+const y = (v) => T + (1 - (v - min) / (max - min)) * (H - T - B);
+const NS = "http://www.w3.org/2000/svg";
+const svg = document.getElementById("chart");
+const el = (tag, attrs, text) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text) e.textContent = text; svg.appendChild(e); return e; };
+document.getElementById("run").textContent = DATA.run + ". The numbers come from the SDK's own math, not from a live pool.";
+
+for (let k = 0; k <= 4; k++) {
+  const v = min + ((max - min) * k) / 4;
+  el("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: "#23262B" });
+  el("text", { x: L - 6, y: y(v) + 4, "text-anchor": "end", fill: "#9AA3B2", "font-size": 11 }, v.toFixed(4));
+}
+el("text", { x: L, y: H - 6, fill: "#9AA3B2", "font-size": 11 }, "trades, in order");
+// the price line, then the floor line under it (a step line: it holds between trades)
+const priceD = pts.map((p, i) => `${i ? "L" : "M"}${x(i)},${y(p.price)}`).join("");
+let floorD = "", pen = false, prev = null;
+pts.forEach((p, i) => {
+  if (p.floor === null) { pen = false; return; }
+  floorD += pen ? `L${x(i)},${y(prev)}L${x(i)},${y(p.floor)}` : `M${x(i)},${y(p.floor)}`;
+  pen = true; prev = p.floor;
+});
+el("path", { d: priceD, fill: "none", stroke: "#8EA0BC", "stroke-width": 2 });
+el("path", { d: floorD, fill: "none", stroke: "#FF6A1A", "stroke-width": 2 });
+const last = pts[pts.length - 1];
+el("text", { x: W - R - 4, y: y(last.floor) + 16, "text-anchor": "end", fill: "#FF6A1A", "font-size": 12 }, "FLOOR");
+const mark = el("line", { y1: T, y2: H - B, stroke: "#F4F5F7", "stroke-opacity": 0.4 });
+
+const at = document.getElementById("at"), read = document.getElementById("read");
+at.max = pts.length - 1; at.value = pts.length - 1;
+function show() {
+  const p = pts[+at.value];
+  mark.setAttribute("x1", x(+at.value)); mark.setAttribute("x2", x(+at.value));
+  read.innerHTML = `Trade ${p.i} (${p.side}): price <b>${p.price}</b>, ` + (p.floor === null ? "no floor yet (the launch has not graduated)" : `floor <b>${p.floor}</b>, ${(100 * p.floor / p.price).toFixed(1)}% of the price`) + ", in USDC per token.";
+}
+at.addEventListener("input", show); show();
+</script>
+</body>
+</html>

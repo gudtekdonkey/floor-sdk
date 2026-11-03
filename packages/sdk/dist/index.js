@@ -7,6 +7,8 @@ export * from "./v2/presetRowEvm.js";
 
 export * from "./v2/claimAllEvm.js";
 
+export * from "./v2/router.js";
+
 export * as math from "./math/index.js";
 export * as mathGenesis from "./math/genesis.js";
 export * as codec from "./codec.js";

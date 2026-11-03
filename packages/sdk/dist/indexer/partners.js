@@ -20,6 +20,8 @@ export const DEX_ASSET = object({
   }),
 });
 
+export const TOKEN_HOLDERS = object({ total: int, holders: array(object({ address: str, balance: big })) });
+
 export const DEX_SUMMARY = object({
   pair: str,
   base: str,
@@ -65,6 +67,9 @@ export const CG_TICKERS = array(object({
   low: nullable(decimal),
   liquidity_in_usd: nullable(decimal),
   liquidity_in_quote: big,
+
+  depthUp2: nullable(decimal),
+  depthDown2: nullable(decimal),
 }));
 
 export const CG_TRADE = object({ trade_id: int, price: decimal, base_volume: decimal, target_volume: decimal, trade_timestamp: int, type: oneOf("buy", "sell") });

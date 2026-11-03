@@ -50,6 +50,7 @@ export const routePath                                                    = {
   roles: (a) => indexerPath.roles(a.wallet),
   traderBoard: (a) => indexerPath.traderBoard(a ?? {}),
   launcherBoard: (a) => indexerPath.launcherBoard(a ?? {}),
+  tokenHolders: (a) => `/floor-amm/holders/${encodeURIComponent(need(a.token, "token"))}${query({ limit: a.limit, offset: a.offset })}`,
   dexAsset: (a) => `/v2/dex/asset${query({ id: need(a.id, "id") })}`,
   dexSummary: (a) => `/v2/dex/summary${query({ id: need(a.id, "id") })}`,
   dexPair: (a) => `/v2/dex/pair${query({ id: need(a.id, "id") })}`,

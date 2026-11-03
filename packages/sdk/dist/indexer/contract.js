@@ -71,7 +71,7 @@ const LAUNCH_ERR = [...GATED, "unknown_launch"]         ;
 const WALLET_ERR = [...GATED, "bad_query"]         ;
 
 function site   (s                            )                   {
-  const params = [...s.pattern.matchAll(/<(launch|wallet)>/g)].map((m) => m[1]             );
+  const params = [...s.pattern.matchAll(/<(launch|wallet|token)>/g)].map((m) => m[1]             );
   const { v2, ...rest } = s;
   const aliases = s.aliases ?? (v2 ? [s.pattern.replace(/^\/floor-amm\//, "/floor-amm/v2/")] : []);
   return { mount: "chain", query: {}, page: NONE, errors: GATED, gated: true, units: "site", audience: "site", ...rest, params, aliases };
@@ -210,6 +210,15 @@ export const INDEXER_CONTRACT = {
   traderBoard: site({ pattern: "/floor-amm/leaderboards/traders", v2: true, query: { window: WINDOW, limit: LIMIT(100, 500) }, page: limit(100, 500), errors: [...GATED, "bad_query"], body: B.TRADER_BOARD }),
   launcherBoard: site({ pattern: "/floor-amm/leaderboards/launchers", v2: true, query: { limit: LIMIT(100, 500) }, page: limit(100, 500), errors: [...GATED, "bad_query"], body: B.LAUNCHER_BOARD }),
 
+  tokenHolders: partner({
+    pattern: "/floor-amm/holders/<token>",
+    aliases: ["/holders/<token>"],
+    params: ["token"],
+    query: { limit: LIMIT(100, 500), offset: { kind: "int", doc: "rows skipped", min: 0, default: 0 } },
+    page: { kind: "offset", limit: { default: 100, max: 500 }, total: "total" },
+    errors: [...GATED, "bad_query", "not_found"],
+    body: P.TOKEN_HOLDERS,
+  }),
   dexAsset: partner({ pattern: "/v2/dex/asset", aliases: ["/asset"], query: { id: { kind: "string", doc: "a launch's token, or a quote", required: true } }, errors: [...GATED, "bad_query", "not_found", "not_indexed"], body: P.DEX_ASSET }),
   dexSummary: partner({ pattern: "/v2/dex/summary", aliases: ["/summary"], query: { id: { kind: "string", doc: "the pair id", required: true } }, errors: [...GATED, "bad_query", "not_found"], body: P.DEX_SUMMARY }),
   dexPair: partner({ pattern: "/v2/dex/pair", aliases: ["/pair"], query: { id: { kind: "string", doc: "the pair id", required: true } }, errors: [...GATED, "unknown_launch"], body: P.DEX_PAIR }),
@@ -248,7 +257,7 @@ export function matchRoute(path        )                                        
     const c                = INDEXER_CONTRACT[name];
     for (const pat of [c.pattern, ...c.aliases]) {
       const keys              = [];
-      const re = new RegExp(`^${pat.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/<(launch|wallet)>/g, (_, k           ) => (keys.push(k), "([^/]+)"))}$`);
+      const re = new RegExp(`^${pat.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/<(launch|wallet|token)>/g, (_, k           ) => (keys.push(k), "([^/]+)"))}$`);
       const m = re.exec(p);
       if (m === null) continue;
       const params                                     = {};

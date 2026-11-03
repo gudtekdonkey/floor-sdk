@@ -7,6 +7,8 @@ export * from "./v2/presetRowEvm.ts";
 
 export * from "./v2/claimAllEvm.ts";
 
+export * from "./v2/router.ts";
+
 export * as math from "./math/index.ts";
 export * as mathGenesis from "./math/genesis.ts";
 export * as codec from "./codec.ts";

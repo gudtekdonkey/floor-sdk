@@ -107,7 +107,11 @@ export const FLOOR_SALTS = {
   routerDeployer: salt("floor-router.v2.router-deployer"),
 }         ;
 
-export const FLOOR_AMM_ADDRESS                = null;
+export const FLOOR_AMM_ADDRESS                = "0xF10000bd05c2C01793C6d55F027346469683d225";
+
+export const FLOOR_AMM_FROM_BLOCK                                            = {
+  ethereum: 26327910, base: 53421827, bsc: 131270813, arbitrum: 520655168, arc: 29205598, robinhood: 104455459, hyperevm: null,
+};
 
 const cat = (...h          )         => "0x" + h.map((x) => bytesToHex(hexToBytes(x)).slice(2)).join("");
 const at = (s        , init        )         => create2Address({ deployer: CREATE2_FACTORY, salt: s, initCode: init });

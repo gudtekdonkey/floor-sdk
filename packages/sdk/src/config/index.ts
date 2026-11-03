@@ -30,6 +30,8 @@ export interface ExplorerRow {
   address?: string;
   tx?: string;
   soak: { url: string; query?: string };
+
+  alt?: { name: string; url: string }[];
 }
 
 export interface ChainRow {

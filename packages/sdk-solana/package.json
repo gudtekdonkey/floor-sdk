@@ -1,6 +1,6 @@
 {
   "name": "@floorlaunchpad/sdk-solana",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "The FLOOR Program on Solana: PDAs, account and event decoders, instruction and transaction builders, over @floorlaunchpad/sdk",
   "license": "Apache-2.0",
   "type": "module",
@@ -20,6 +20,6 @@
     }
   },
   "dependencies": {
-    "@floorlaunchpad/sdk": "0.3.0"
+    "@floorlaunchpad/sdk": "0.3.1"
   }
 }

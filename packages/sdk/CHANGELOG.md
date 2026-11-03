@@ -2,6 +2,36 @@
 
 All notable changes to `@floorlaunchpad/sdk`. The version follows semver; while the major number is 0, a minor bump may rename or remove an export and a patch bump never does.
 
+## 0.3.1
+
+Added:
+
+- Solana genesis: `startGenesisPublicInstruction`, `setGenesisEndInstruction`, `GENESIS_NO_END`.
+- Events: `GenesisPublicStarted` and `GenesisEndSet` on Solana (`SolGenesisPublicStartedFields`, `SolGenesisEndSetFields`);
+  `SolanaEvent`, `SolanaEventMap` and `FloorEvent` gain them. A `switch` over `name` that checks it is exhaustive needs the
+  two new cases.
+
+- Config: `ExplorerRow.alt` (optional): a chain's other explorers (Blockscout). Arc and Robinhood Chain now link to Etherscan
+  (`arc.etherscan.io`, `robin.etherscan.io`), with Blockscout in `alt`; HyperEVM's test network links to Hyperliquid's
+  testnet explorer. The old Arc, Robinhood Chain and HyperEVM test links did not load.
+
+- Router helpers on the root entry: `isDustRefund`, `carriesNoRefund`, `gasFor`, `GAS_FLAT`, `GAS_PER_STEP`, `GAS_FLAT_STEPS`, `GAS_MAX`.
+- Indexer decoder: `CG_TICKERS` rows carry `depthUp2` and `depthDown2` (nullable decimals; the indexer serves them always).
+- Indexer: the route `GET /floor-amm/holders/<token>` (`INDEXER_CONTRACT.tokenHolders`, reader `tokenHolders`): a token's
+  holders, balance descending, `limit` 1..500 (default 100) and `offset`; balances in the SDK's 6-decimal token units on
+  both chains.
+- Config: `FLOOR_AMM_FROM_BLOCK` (`evm/chains.ts`): the block each EVM chain's FloorAmm was deployed at, `null` where it is
+  not deployed yet.
+- Docs: `docs/floor-line.md`, a request to integrators to draw the floor line, and `examples/floor-line.html`, a page that draws it from a run of the SDK's math (`examples/gen-floor-line.mjs` makes its data). The npm package ships the page, not the script.
+
+Changed:
+
+- `FLOOR_AMM_ADDRESS` (`evm/chains.ts`) is `0xF10000bd05c2C01793C6d55F027346469683d225`, the FloorAmm proxy on every v2 EVM chain
+  (one CREATE2 address), no longer `null`. Deployed on Ethereum, Base, BNB Chain, Arbitrum, Arc and Robinhood Chain;
+  HyperEVM gets the same address at its deploy.
+
+No export removed or renamed, no signature changed.
+
 ## 0.3.0
 
 The first public build, in three packages under the Apache License 2.0. `@floorlaunchpad/sdk` is the whole SDK.

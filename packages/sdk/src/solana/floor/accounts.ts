@@ -125,7 +125,9 @@ export const GENESIS_RAISE: Layout = [
 
   ["preset_id", "u8"],
   ["opened", "u8"],
-  ["pad1", "bytes:6"],
+
+  ["public_open", "u8"],
+  ["pad1", "bytes:5"],
   ["cap", "u64"],
   ["ends_at", "i64"],
   ["migrated_refunded", "u64"],
