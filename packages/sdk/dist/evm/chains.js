@@ -110,7 +110,7 @@ export const FLOOR_SALTS = {
 export const FLOOR_AMM_ADDRESS                = "0xF10000bd05c2C01793C6d55F027346469683d225";
 
 export const FLOOR_AMM_FROM_BLOCK                                            = {
-  ethereum: 26327910, base: 53421827, bsc: 131270813, arbitrum: 520655168, arc: 29205598, robinhood: 104455459, hyperevm: null,
+  ethereum: 26327910, base: 53421827, bsc: 131270813, arbitrum: 520655168, arc: 29205598, robinhood: 104455459, hyperevm: 50398055,
 };
 
 const cat = (...h          )         => "0x" + h.map((x) => bytesToHex(hexToBytes(x)).slice(2)).join("");
