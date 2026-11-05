@@ -2,6 +2,16 @@
 
 All notable changes to `@floorlaunchpad/sdk`. The version follows semver; while the major number is 0, a minor bump may rename or remove an export and a patch bump never does.
 
+## 0.3.2
+
+Changed:
+
+- `FLOOR_AMM_FROM_BLOCK.hyperevm` (`evm/chains.ts`) is `50398055`, the block FloorAmm was deployed at on HyperEVM (chain 999),
+  no longer `null`. FloorAmm is now deployed on all seven EVM chains at `FLOOR_AMM_ADDRESS`
+  (`0xF10000bd05c2C01793C6d55F027346469683d225`).
+
+No export removed or renamed, no signature changed.
+
 ## 0.3.1
 
 Added:
