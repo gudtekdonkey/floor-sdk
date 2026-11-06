@@ -2,9 +2,10 @@
 
 The FLOOR Program in TypeScript. It holds the program's math (bit for bit with the Rust crate), quoting, account and event decoders, and transaction builders for Solana and for EVM chains. It has no dependencies and opens no connection: you pass in your own RPC, indexer `get` and send functions.
 
-> **A request: show the floor.** If you route or list FLOOR pools, please show the FLOOR line on the token's price chart and
-> the floor price somewhere on the token's page. That is the bare minimum we ask for; anything more is a bonus. It is
-> not a requirement, and it is highly appreciated. The field is `floorPriceNative`; the full guide is [docs/floor-line.md](docs/floor-line.md).
+> **One ask: show the FLOOR.** If you chart, list, route or hold FLOOR tokens, please show the FLOOR line on the token's
+> price chart and the FLOOR price on the token's page. That is the minimum we ask for; anything more is a bonus. It is not
+> a requirement, and it is highly appreciated. The field is `floorPriceQuote` in the Partner API (or `sqrtF` on every
+> trade event); the guide, with drop-in chart code, is [docs/floor-line.md](docs/floor-line.md).
 
 `npm install @floorlaunchpad/sdk`. Chain-scoped entries over it: `@floorlaunchpad/sdk-evm` and `@floorlaunchpad/sdk-solana`. Apache-2.0.
 
@@ -27,11 +28,11 @@ Node 22.18 or newer. The package ships compiled JavaScript in `dist/` with the t
 | A wallet | [docs/wallet.md](docs/wallet.md): decode what a transaction does, read errors, build a claim |
 | A bot or indexer | [docs/bot.md](docs/bot.md): read launches, follow the stream, decode logs |
 | A frontend | [docs/frontend.md](docs/frontend.md): the root entry, the indexer readers, the math for display |
-| An aggregator or chart that lists FLOOR pools | [docs/floor-line.md](docs/floor-line.md): draw the floor line (a request, not a requirement) |
+| Anyone who shows a FLOOR token: chart, screener, terminal, wallet | [docs/floor-line.md](docs/floor-line.md): show the FLOOR line and the FLOOR price (the one ask) |
 
 ## Show the floor on your chart
 
-A launch's floor is the price the program's own money stands behind. Drawing it under the price line shows holders what backs them. [docs/floor-line.md](docs/floor-line.md) says which field to read, how to draw the line and what to watch for (units, burns, the gap between floor and price, graduation). [examples/floor-line.html](examples/floor-line.html) is a working page.
+A launch's floor is the price the program's own money stands behind. Drawing it under the price line shows holders what backs them. [docs/floor-line.md](docs/floor-line.md) says what we ask, which field to read (the Partner API, a trade event or the SDK), how to draw the line in Lightweight Charts, TradingView or plain SVG, and what to watch for (units, burns, the gap between floor and price, graduation). [examples/floor-line.html](examples/floor-line.html) is a working token page with the line, the FLOOR price and every snippet.
 
 ## Versions
 

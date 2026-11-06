@@ -76,6 +76,17 @@ export const readTrades = (get: Get, id: LaunchId, q: TradesQuery = {}): Promise
 export const readLaunchClaims = (get: Get, id: LaunchId, q: { claimer?: string } = {}): Promise<At & { claims: B.LaunchClaim[] }> => readRoute(get, indexerPath.launchClaims(id, q), B.LAUNCH_CLAIMS);
 export const readDevBuys = (get: Get, id: LaunchId): Promise<B.DevBuys> => readRoute(get, indexerPath.devBuys(id), B.DEV_BUYS);
 
+export const readMemberSold = (get: Get, id: LaunchId): Promise<B.MemberSoldBody> => readRoute(get, indexerPath.memberSold(id), B.MEMBER_SOLD);
+
+export const readLaunchAccount = (get: Get, id: LaunchId): Promise<B.LaunchAccountBody> => readRoute(get, indexerPath.launchAccount(id), B.LAUNCH_ACCOUNT);
+
+export function launchAccountBytes(body: { data: string }): Uint8Array {
+  const bin = atob(body.data);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
 export const readTraders = (get: Get, id: LaunchId, q: { window?: B.TraderWindow; limit?: number } = {}): Promise<B.LaunchTraders> => readRoute(get, indexerPath.traders(id, q), B.LAUNCH_TRADERS);
 export const readQuoteChain = (get: Get, id: LaunchId): Promise<B.QuoteChain> => readRoute(get, indexerPath.quoteChain(id), B.QUOTE_CHAIN);
 
@@ -103,6 +114,8 @@ export const readFirsts = (get: Get, wallet: string): Promise<At & { wallet: str
 export const readFirstsMany = (get: Get, wallets: readonly string[]): Promise<At & { wallets: Record<string, B.Firsts> }> => readRoute(get, indexerPath.firstsMany(wallets), B.FIRSTS_MANY);
 export const readPeople = (get: Get, wallet: string): Promise<B.People> => readRoute(get, indexerPath.people(wallet), B.PEOPLE);
 export const readRoles = (get: Get, wallet: string): Promise<B.Roles> => readRoute(get, indexerPath.roles(wallet), B.ROLES);
+
+export const readHandlePlaces = (get: Get, handle: string): Promise<B.HandlePlaces> => readRoute(get, indexerPath.handlePlaces(handle), B.HANDLE_PLACES);
 
 export const readTraderBoard = (get: Get, q: { window?: B.TraderWindow; limit?: number } = {}): Promise<B.TraderBoard> => readRoute(get, indexerPath.traderBoard(q), B.TRADER_BOARD);
 export const readLauncherBoard = (get: Get, q: { limit?: number } = {}): Promise<B.LauncherBoard> => readRoute(get, indexerPath.launcherBoard(q), B.LAUNCHER_BOARD);

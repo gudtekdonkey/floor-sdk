@@ -4,6 +4,24 @@ All notable changes to `@floorlaunchpad/sdk`. The version follows semver; while 
 
 ## 0.3.2
 
+Added:
+
+- Indexer: the route `GET /floor-amm/launches/<launch>/member-sold` (also under `/floor-amm/v2/`; `INDEXER_CONTRACT.memberSold`,
+  `indexerPath.memberSold`, reader `memberSold`, `readMemberSold`, decoder `MEMBER_SOLD` / `MEMBER_SOLD_ROW`, types
+  `MemberSoldBody` / `MemberSoldRow`): every sell by a wallet that held a Team Slot place at that moment, oldest first, as
+  `{ indexed, memberSold: [{ launch, member, place, amount, quoteOut, block, timestamp, tx, id }] }`; `place` the lowest place
+  the member held, `amount` the tokens sold in the SDK's 6-decimal token units, `quoteOut` the quote paid out in base units,
+  `id` `<block>:<txnIndex>:<eventIndex>`. Derived from the trades and the Team Slot; a member who moves the tokens to another
+  wallet before selling is not seen.
+- Indexer: the route `GET /floor-amm/launches/<launch>/account` (also under `/floor-amm/v2/`; `INDEXER_CONTRACT.launchAccount`,
+  `indexerPath.launchAccount`, reader `launchAccount`, `readLaunchAccount`, decoder `LAUNCH_ACCOUNT`, type `LaunchAccountBody`,
+  helper `launchAccountBytes`): a launch's whole `LaunchV2` account read live from the node at the ask (Solana only; EVM answers
+  `unknown route`), as `{ indexed, launch, mint, slot, data }` with `slot` the RPC context slot and `data` the account bytes in
+  base64. `launchAccountBytes(body)` returns them as a `Uint8Array` (browser and Node) for `decodeLaunchV2`. An account that is
+  absent, not owned by the program or not a `LaunchV2` answers `unknown launch`; a failed node read is a 502.
+- `v2Devbuy.memberSoldFromTrade` (with `MemberSold`, `TeamSeat`): the member sale of one v2 `Trade` against a launch's
+  Team Slot places, or null. The indexer serves the route above from it.
+
 Changed:
 
 - `FLOOR_AMM_FROM_BLOCK.hyperevm` (`evm/chains.ts`) is `50398055`, the block FloorAmm was deployed at on HyperEVM (chain 999),
@@ -30,6 +48,9 @@ Added:
 - Indexer: the route `GET /floor-amm/holders/<token>` (`INDEXER_CONTRACT.tokenHolders`, reader `tokenHolders`): a token's
   holders, balance descending, `limit` 1..500 (default 100) and `offset`; balances in the SDK's 6-decimal token units on
   both chains.
+- Indexer: the route `GET /floor-amm/handles/<handleId>/places` (`INDEXER_CONTRACT.handlePlaces`, reader `handlePlaces`,
+  `readHandlePlaces`, decoder `HANDLE_PLACES`): the Team Slot places a social handle holds now, bound to a wallet or not, as
+  `{ indexed, handle, places: [{ launch, place }] }`; `handleId` is 0x + 64 hex. `PathParam` gains `"handle"`.
 - Config: `FLOOR_AMM_FROM_BLOCK` (`evm/chains.ts`): the block each EVM chain's FloorAmm was deployed at, `null` where it is
   not deployed yet.
 - Docs: `docs/floor-line.md`, a request to integrators to draw the floor line, and `examples/floor-line.html`, a page that draws it from a run of the SDK's math (`examples/gen-floor-line.mjs` makes its data). The npm package ships the page, not the script.

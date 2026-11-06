@@ -130,6 +130,8 @@ export const LISTED_LAUNCH = object({
   backedPpm: nullable(int),
   volume24hUsd: nullable(decimal),
   marketCapUsd: nullable(decimal),
+
+  trendingScore: nullable(big),
 });
 export type ListedLaunch = Infer<typeof LISTED_LAUNCH>;
 
@@ -272,6 +274,14 @@ export const LAUNCH_CLAIMS = object({ indexed, claims: array(LAUNCH_CLAIM) });
 
 export const DEV_BUYS = object({ indexed, teamBuyUnlocked: bool, teamBuyUnlockedTs: nullable(int), devBuys: array(DEV_BUY) });
 export type DevBuys = Infer<typeof DEV_BUYS>;
+
+export const MEMBER_SOLD_ROW = object({ launch: str, member: str, place: int, amount: big, quoteOut: big, block: int, timestamp: int, tx: str, id: str });
+export type MemberSoldRow = Infer<typeof MEMBER_SOLD_ROW>;
+export const MEMBER_SOLD = object({ indexed, memberSold: array(MEMBER_SOLD_ROW) });
+export type MemberSoldBody = Infer<typeof MEMBER_SOLD>;
+
+export const LAUNCH_ACCOUNT = object({ indexed, launch: str, mint: str, slot: int, data: str });
+export type LaunchAccountBody = Infer<typeof LAUNCH_ACCOUNT>;
 
 export const CANDLE_INTERVALS = ["1s", "5s", "1m", "5m", "15m", "1h", "4h", "1d"] as const;
 export type CandleInterval = (typeof CANDLE_INTERVALS)[number];
@@ -508,11 +518,20 @@ export const ROLES = object({
     creatorOf: array(str),
     creatorRefOf: array(object({ launch: str, tier: int })),
     teamSlotOf: array(object({ launch: str, place: int })),
+
+    handleSlotOf: array(object({ launch: str, place: int, handle: str })),
     holdings: array(object({ launch: str, token: str, amount: big })),
   }),
   claimed: record(big),
 });
 export type Roles = Infer<typeof ROLES>;
+
+export const HANDLE_PLACES = object({
+  indexed,
+  handle: str,
+  places: array(object({ launch: str, place: int })),
+});
+export type HandlePlaces = Infer<typeof HANDLE_PLACES>;
 
 export const TRADER_BOARD = object({
   indexed,

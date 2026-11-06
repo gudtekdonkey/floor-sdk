@@ -83,7 +83,7 @@ export type Pagination =
 
   | { readonly kind: "range"; readonly from: string; readonly to: string; readonly span?: { readonly interval: string; readonly max: number } };
 
-export type PathParam = "launch" | "wallet" | "token";
+export type PathParam = "launch" | "wallet" | "token" | "handle";
 
 export interface RouteContract<T = unknown> {
   readonly pattern: string;
@@ -116,7 +116,7 @@ const WALLET_ERR = [...GATED, "bad_query"] as const;
 type Spec<T> = Omit<RouteContract<T>, "aliases" | "mount" | "params" | "query" | "page" | "errors" | "gated" | "units" | "audience"> & Partial<RouteContract<T>>;
 
 function site<T>(s: Spec<T> & { v2?: boolean }): RouteContract<T> {
-  const params = [...s.pattern.matchAll(/<(launch|wallet|token)>/g)].map((m) => m[1] as PathParam);
+  const params = [...s.pattern.matchAll(/<(launch|wallet|token|handle)>/g)].map((m) => m[1] as PathParam);
   const { v2, ...rest } = s;
   const aliases = s.aliases ?? (v2 ? [s.pattern.replace(/^\/floor-amm\//, "/floor-amm/v2/")] : []);
   return { mount: "chain", query: {}, page: NONE, errors: GATED, gated: true, units: "site", audience: "site", ...rest, params, aliases };
@@ -185,6 +185,10 @@ export const INDEXER_CONTRACT = {
   }),
   launchClaims: site({ pattern: "/floor-amm/launches/<launch>/claims", v2: true, query: { claimer: { kind: "string", doc: "only this claimer's rows" } }, errors: LAUNCH_ERR, body: B.LAUNCH_CLAIMS }),
   devBuys: site({ pattern: "/floor-amm/launches/<launch>/dev-buys", v2: true, errors: LAUNCH_ERR, body: B.DEV_BUYS }),
+
+  memberSold: site({ pattern: "/floor-amm/launches/<launch>/member-sold", v2: true, errors: LAUNCH_ERR, body: B.MEMBER_SOLD }),
+
+  launchAccount: site({ pattern: "/floor-amm/launches/<launch>/account", v2: true, errors: LAUNCH_ERR, body: B.LAUNCH_ACCOUNT }),
   traders: site({ pattern: "/floor-amm/launches/<launch>/traders", v2: true, query: { window: WINDOW, limit: LIMIT(100, 500) }, page: limit(100, 500), errors: [...LAUNCH_ERR, "bad_query"], body: B.LAUNCH_TRADERS }),
   quoteChain: site({ pattern: "/floor-amm/launches/<launch>/chain", v2: true, errors: LAUNCH_ERR, body: B.QUOTE_CHAIN }),
   devTrades: site({ pattern: "/floor-amm/launches/<launch>/dev", v2: true, query: { limit: LIMIT(100, 500) }, page: limit(100, 500), errors: [...LAUNCH_ERR, "bad_query"], body: B.DEV_TRADES }),
@@ -252,6 +256,8 @@ export const INDEXER_CONTRACT = {
   people: site({ pattern: "/floor-amm/referrals/<wallet>/people", errors: WALLET_ERR, body: B.PEOPLE }),
   roles: site({ pattern: "/floor-amm/roles/<wallet>", errors: WALLET_ERR, body: B.ROLES }),
 
+  handlePlaces: site({ pattern: "/floor-amm/handles/<handle>/places", errors: WALLET_ERR, body: B.HANDLE_PLACES }),
+
   traderBoard: site({ pattern: "/floor-amm/leaderboards/traders", v2: true, query: { window: WINDOW, limit: LIMIT(100, 500) }, page: limit(100, 500), errors: [...GATED, "bad_query"], body: B.TRADER_BOARD }),
   launcherBoard: site({ pattern: "/floor-amm/leaderboards/launchers", v2: true, query: { limit: LIMIT(100, 500) }, page: limit(100, 500), errors: [...GATED, "bad_query"], body: B.LAUNCHER_BOARD }),
 
@@ -306,7 +312,7 @@ export function matchRoute(path: string): { name: RouteName; params: Partial<Rec
     const c: RouteContract = INDEXER_CONTRACT[name];
     for (const pat of [c.pattern, ...c.aliases]) {
       const keys: PathParam[] = [];
-      const re = new RegExp(`^${pat.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/<(launch|wallet|token)>/g, (_, k: PathParam) => (keys.push(k), "([^/]+)"))}$`);
+      const re = new RegExp(`^${pat.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/<(launch|wallet|token|handle)>/g, (_, k: PathParam) => (keys.push(k), "([^/]+)"))}$`);
       const m = re.exec(p);
       if (m === null) continue;
       const params: Partial<Record<PathParam, string>> = {};

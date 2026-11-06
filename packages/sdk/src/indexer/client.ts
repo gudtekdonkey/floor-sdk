@@ -28,6 +28,8 @@ export interface RouteArgs {
   trades: L & TradesQuery;
   launchClaims: L & { claimer?: string };
   devBuys: L;
+  memberSold: L;
+  launchAccount: L;
   traders: L & { window?: TraderWindow; limit?: number };
   quoteChain: L;
   devTrades: L & { limit?: number };
@@ -48,6 +50,7 @@ export interface RouteArgs {
   claimView: W;
   people: W;
   roles: W;
+  handlePlaces: { handle: string };
   traderBoard: { window?: TraderWindow; limit?: number } | void;
   launcherBoard: { limit?: number } | void;
   tokenHolders: { token: string; limit?: number; offset?: number };
@@ -83,6 +86,8 @@ export const routePath: { [N in RouteName]: (a: RouteArgs[N]) => string } = {
   trades: ({ launch, ...q }) => indexerPath.trades(launch, q),
   launchClaims: ({ launch, ...q }) => indexerPath.launchClaims(launch, q),
   devBuys: (a) => indexerPath.devBuys(a.launch),
+  memberSold: (a) => indexerPath.memberSold(a.launch),
+  launchAccount: (a) => indexerPath.launchAccount(a.launch),
   traders: ({ launch, ...q }) => indexerPath.traders(launch, q),
   quoteChain: (a) => indexerPath.quoteChain(a.launch),
   devTrades: ({ launch, ...q }) => indexerPath.devTrades(launch, q),
@@ -103,6 +108,7 @@ export const routePath: { [N in RouteName]: (a: RouteArgs[N]) => string } = {
   claimView: (a) => indexerPath.claimView(a.wallet),
   people: (a) => indexerPath.people(a.wallet),
   roles: (a) => indexerPath.roles(a.wallet),
+  handlePlaces: (a) => indexerPath.handlePlaces(a.handle),
   traderBoard: (a) => indexerPath.traderBoard(a ?? {}),
   launcherBoard: (a) => indexerPath.launcherBoard(a ?? {}),
   tokenHolders: (a) => `/floor-amm/holders/${encodeURIComponent(need(a.token, "token"))}${query({ limit: a.limit, offset: a.offset })}`,

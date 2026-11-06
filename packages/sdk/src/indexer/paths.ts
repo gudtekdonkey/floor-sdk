@@ -21,6 +21,8 @@ export const INDEXER_ROUTES = {
   trades: { pattern: "/floor-amm/launches/<launch>/trades", keys: ["limit", "before", "traders"] },
   launchClaims: { pattern: "/floor-amm/launches/<launch>/claims", keys: ["claimer"] },
   devBuys: { pattern: "/floor-amm/launches/<launch>/dev-buys", keys: [] },
+  memberSold: { pattern: "/floor-amm/launches/<launch>/member-sold", keys: [] },
+  launchAccount: { pattern: "/floor-amm/launches/<launch>/account", keys: [] },
   traders: { pattern: "/floor-amm/launches/<launch>/traders", keys: ["window", "limit"] },
   quoteChain: { pattern: "/floor-amm/launches/<launch>/chain", keys: [] },
   devTrades: { pattern: "/floor-amm/launches/<launch>/dev", keys: ["limit"] },
@@ -41,6 +43,7 @@ export const INDEXER_ROUTES = {
   claimView: { pattern: "/floor-amm/claims/<wallet>", keys: [] },
   people: { pattern: "/floor-amm/referrals/<wallet>/people", keys: [] },
   roles: { pattern: "/floor-amm/roles/<wallet>", keys: [] },
+  handlePlaces: { pattern: "/floor-amm/handles/<handle>/places", keys: [] },
   traderBoard: { pattern: "/floor-amm/leaderboards/traders", keys: ["window", "limit"] },
   launcherBoard: { pattern: "/floor-amm/leaderboards/launchers", keys: ["limit"] },
 } as const satisfies Record<string, IndexerRoute>;
@@ -156,6 +159,8 @@ export const indexerPath = {
   trades: (id: string, q: TradesQuery = {}): string => launchPath(id, `/trades${query({ limit: q.limit, before: q.before, traders: q.traders?.length ? q.traders : undefined })}`),
   launchClaims: (id: string, q: { claimer?: string } = {}): string => launchPath(id, `/claims${query({ claimer: q.claimer })}`),
   devBuys: (id: string): string => launchPath(id, "/dev-buys"),
+  memberSold: (id: string): string => launchPath(id, "/member-sold"),
+  launchAccount: (id: string): string => launchPath(id, "/account"),
   traders: (id: string, q: { window?: "1h" | "24h" | "7d" | "all"; limit?: number } = {}): string => launchPath(id, `/traders${query({ window: q.window, limit: q.limit })}`),
   quoteChain: (id: string): string => launchPath(id, "/chain"),
   devTrades: (id: string, q: { limit?: number } = {}): string => launchPath(id, `/dev${query({ limit: q.limit })}`),
@@ -185,6 +190,7 @@ export const indexerPath = {
   claimView: (w: string): string => `/floor-amm/claims/${seg(w)}`,
   people: (w: string): string => `/floor-amm/referrals/${seg(w)}/people`,
   roles: (w: string): string => `/floor-amm/roles/${seg(w)}`,
+  handlePlaces: (handle: string): string => `/floor-amm/handles/${seg(handle)}/places`,
   traderBoard: (q: { window?: "1h" | "24h" | "7d" | "all"; limit?: number } = {}): string => `/floor-amm/leaderboards/traders${query({ window: q.window, limit: q.limit })}`,
   launcherBoard: (q: { limit?: number } = {}): string => `/floor-amm/leaderboards/launchers${query({ limit: q.limit })}`,
 } as const satisfies Record<IndexerRouteName, (...a: never[]) => string>;

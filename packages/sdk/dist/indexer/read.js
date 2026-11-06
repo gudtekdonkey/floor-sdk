@@ -66,6 +66,17 @@ export const readTrades = (get     , id          , q              = {})         
 export const readLaunchClaims = (get     , id          , q                       = {})                                            => readRoute(get, indexerPath.launchClaims(id, q), B.LAUNCH_CLAIMS);
 export const readDevBuys = (get     , id          )                     => readRoute(get, indexerPath.devBuys(id), B.DEV_BUYS);
 
+export const readMemberSold = (get     , id          )                            => readRoute(get, indexerPath.memberSold(id), B.MEMBER_SOLD);
+
+export const readLaunchAccount = (get     , id          )                               => readRoute(get, indexerPath.launchAccount(id), B.LAUNCH_ACCOUNT);
+
+export function launchAccountBytes(body                  )             {
+  const bin = atob(body.data);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
 export const readTraders = (get     , id          , q                                              = {})                           => readRoute(get, indexerPath.traders(id, q), B.LAUNCH_TRADERS);
 export const readQuoteChain = (get     , id          )                        => readRoute(get, indexerPath.quoteChain(id), B.QUOTE_CHAIN);
 
@@ -93,6 +104,8 @@ export const readFirsts = (get     , wallet        )                            
 export const readFirstsMany = (get     , wallets                   )                                                      => readRoute(get, indexerPath.firstsMany(wallets), B.FIRSTS_MANY);
 export const readPeople = (get     , wallet        )                    => readRoute(get, indexerPath.people(wallet), B.PEOPLE);
 export const readRoles = (get     , wallet        )                   => readRoute(get, indexerPath.roles(wallet), B.ROLES);
+
+export const readHandlePlaces = (get     , handle        )                          => readRoute(get, indexerPath.handlePlaces(handle), B.HANDLE_PLACES);
 
 export const readTraderBoard = (get     , q                                              = {})                         => readRoute(get, indexerPath.traderBoard(q), B.TRADER_BOARD);
 export const readLauncherBoard = (get     , q                     = {})                           => readRoute(get, indexerPath.launcherBoard(q), B.LAUNCHER_BOARD);

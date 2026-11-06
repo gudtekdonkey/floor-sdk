@@ -3,102 +3,399 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FLOOR line example</title>
+<title>Show the FLOOR</title>
 <style>
-  :root { --bg:#000000; --panel:#101113; --text:#F4F5F7; --muted:#9AA3B2; --price:#8EA0BC; --floor:#FF6A1A; --grid:#23262B; }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui, sans-serif; }
-  main { max-width:1100px; margin:0 auto; padding:24px 16px 48px; }
-  h1 { font-size:20px; margin:0 0 4px; }
-  p.run { margin:0 0 16px; color:var(--muted); }
-  .grid { display:grid; grid-template-columns:minmax(0,3fr) minmax(0,2fr); gap:16px; }
-  @media (max-width:800px) { .grid { grid-template-columns:minmax(0,1fr); } }
-  .panel { background:var(--panel); border-radius:8px; padding:16px; min-width:0; }
-  .legend { display:flex; gap:16px; margin-bottom:8px; flex-wrap:wrap; }
-  .legend span::before { content:""; display:inline-block; width:18px; height:3px; margin-right:6px; vertical-align:middle; background:currentColor; }
+  :root { --bg:#000000; --panel:#101113; --panel2:#16181B; --line:#23262B; --text:#F4F5F7; --muted:#8A94A3; --price:#8EA0BC; --floor:#FF6A1A; --up:#2EBD85; --down:#F6465D; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width:1180px; margin:0 auto; padding:28px 16px 64px; }
+  a { color:var(--floor); }
+  h1 { font-size:28px; line-height:1.2; margin:0 0 8px; letter-spacing:-0.01em; }
+  h1 em { font-style:normal; color:var(--floor); }
+  h2 { font-size:17px; margin:0 0 12px; }
+  .lede { color:var(--muted); max-width:760px; margin:0 0 24px; }
+  .lede b { color:var(--text); font-weight:600; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; min-width:0; }
+  .layout { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:16px; }
+  @media (max-width:900px) { .layout { grid-template-columns:minmax(0,1fr); } }
+
+  /* the mock token page */
+  .tok { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+  .ava { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,#2a2d33,#4a505a); display:grid; place-items:center; font-weight:700; }
+  .name { font-weight:700; font-size:18px; }
+  .name small { color:var(--muted); font-weight:500; font-size:14px; }
+  .pill { font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); }
+  .pill.grad { color:var(--floor); border-color:rgba(255,106,26,.45); }
+  .stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-bottom:14px; }
+  @media (max-width:560px) { .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  .stat { background:var(--panel2); border-radius:8px; padding:8px 10px; min-width:0; position:relative; }
+  .stat .k { font-size:12px; color:var(--muted); }
+  .stat .v { font-size:18px; font-weight:650; font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .stat.ask { outline:1px dashed rgba(255,106,26,.6); outline-offset:2px; }
+  .stat.ask .v { color:var(--floor); }
+  .tag { position:absolute; top:-9px; right:8px; font-size:10px; letter-spacing:.06em; text-transform:uppercase; background:var(--floor); color:#000; padding:0 6px; border-radius:4px; font-weight:700; }
+  .tag.bonus { background:var(--panel); color:var(--muted); border:1px solid var(--line); }
+
+  .bar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+  .seg { display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .seg button { background:transparent; color:var(--muted); border:0; padding:5px 10px; font:inherit; font-size:13px; cursor:pointer; transition:color .15s, background .15s; }
+  .seg button[aria-pressed=true] { background:var(--panel2); color:var(--text); }
+  .legend { display:flex; gap:14px; font-size:13px; color:var(--muted); margin-left:auto; }
+  .legend span::before { content:""; display:inline-block; width:16px; height:2px; margin-right:6px; vertical-align:middle; background:currentColor; }
   .legend .p { color:var(--price); } .legend .f { color:var(--floor); }
+  .chartwrap { position:relative; }
   svg { width:100%; height:auto; display:block; }
-  pre { margin:0; overflow:auto; font:13px/1.5 ui-monospace, Menlo, monospace; white-space:pre; }
-  h2 { font-size:15px; margin:0 0 8px; }
-  .read { margin-top:8px; color:var(--muted); min-height:1.5em; }
+  .ask-chart { position:absolute; top:6px; left:8px; }
+  .replay { display:flex; gap:10px; align-items:center; margin-top:8px; }
+  .replay button { background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:5px 12px; font:inherit; font-size:13px; cursor:pointer; }
+  input[type=range] { flex:1; accent-color:var(--floor); }
+  .read { margin-top:6px; color:var(--muted); font-size:13px; min-height:1.5em; }
   .read b { color:var(--text); font-weight:600; }
-  input[type=range] { width:100%; }
+
+  /* the ask */
+  .ask ol, .ask ul { margin:0 0 12px; padding-left:20px; }
+  .ask li { margin:4px 0; }
+  .ask .min li::marker { color:var(--floor); font-weight:700; }
+  .ask h3 { font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:14px 0 6px; }
+  .ask h3:first-of-type { margin-top:0; }
+  .swatch { display:inline-block; width:10px; height:10px; border-radius:2px; background:var(--floor); vertical-align:middle; margin-right:4px; }
+  .ask p { color:var(--muted); font-size:13px; margin:8px 0 0; }
+
+  /* code */
+  .code { margin-top:16px; }
+  .tabs { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:10px; }
+  .tabs button { background:transparent; border:1px solid var(--line); color:var(--muted); border-radius:8px; padding:5px 10px; font:inherit; font-size:13px; cursor:pointer; transition:color .15s, border-color .15s; }
+  .tabs button[aria-selected=true] { color:var(--text); border-color:var(--floor); }
+  .codebox { position:relative; background:#0A0B0C; border:1px solid var(--line); border-radius:8px; }
+  pre { margin:0; padding:14px; overflow:auto; font:13px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; white-space:pre; max-height:460px; }
+  .copy { position:absolute; top:8px; right:8px; background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:3px 9px; font:inherit; font-size:12px; cursor:pointer; }
+  .note { color:var(--muted); font-size:13px; margin:8px 0 0; }
+  footer { color:var(--muted); font-size:13px; margin-top:24px; }
 </style>
 </head>
 <body>
 <main>
-  <h1>Drawing the floor line</h1>
-  <p class="run" id="run"></p>
-  <div class="grid">
-    <div class="panel">
-      <div class="legend"><span class="p">Price</span><span class="f">FLOOR</span></div>
-      <svg id="chart" viewBox="0 0 640 360" role="img" aria-label="Price and floor line over the run"></svg>
-      <input id="at" type="range" min="0" value="0" aria-label="Move through the run">
+  <h1>Show the <em>FLOOR</em> on your UI</h1>
+  <p class="lede">Every FLOOR launch has a floor: a price in its quote token that the program's own money stands behind, and that never falls. <b>We ask for two things: the FLOOR line on the chart and the FLOOR price on the token page.</b> Anything more is a bonus. It is a request, not a requirement, and it is highly appreciated. Below is what it looks like, then the code.</p>
+
+  <div class="layout">
+    <section class="panel" aria-label="Example token page">
+      <div class="tok">
+        <div class="ava" aria-hidden="true">D</div>
+        <div class="name">DEMO <small>/ USDC</small></div>
+        <span class="pill" id="phase">Bonding</span>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="k">Price</div><div class="v" id="sPrice">–</div></div>
+        <div class="stat ask"><span class="tag">asked</span><div class="k">FLOOR</div><div class="v" id="sFloor">–</div></div>
+        <div class="stat"><span class="tag bonus">bonus</span><div class="k">Backed</div><div class="v" id="sBacked">–</div></div>
+        <div class="stat"><div class="k">Market cap</div><div class="v" id="sMcap">–</div></div>
+      </div>
+      <div class="bar">
+        <div class="seg" role="group" aria-label="Chart units">
+          <button type="button" data-mode="price" aria-pressed="true">Price</button>
+          <button type="button" data-mode="mcap" aria-pressed="false">Market cap</button>
+        </div>
+        <div class="legend"><span class="p">Price</span><span class="f">FLOOR</span></div>
+      </div>
+      <div class="chartwrap">
+        <svg id="chart" viewBox="0 0 760 380" role="img" aria-label="Candles with the FLOOR line under them"></svg>
+      </div>
+      <div class="replay">
+        <button type="button" id="play">Replay</button>
+        <input id="at" type="range" min="0" value="0" aria-label="Move through the launch">
+      </div>
       <div class="read" id="read"></div>
-    </div>
-    <div class="panel">
-      <h2>The code that draws it</h2>
-<pre>// one fetch gives price and floor together
-const s = await (await fetch(
-  `${API}/v2/dex/summary?id=${pair}`)).json();
-const price = Number(s.priceNative);
-const floor = Number(s.floorPriceNative);
+    </section>
 
-// hide the floor until the launch has one,
-// and when every token has been burned
-const hasFloor = floor &gt; 0 &amp;&amp;
-  Number(s.circulatingSupply) &gt; 0;
-
-priceLine.push({ time, value: price });
-if (hasFloor) {
-  floorLine.push({ time, value: floor });
-}
-// draw floorLine under priceLine:
-// colour #FF6A1A, label "FLOOR"</pre>
-    </div>
+    <aside class="panel ask" aria-label="What we ask">
+      <h3>The minimum</h3>
+      <ol class="min">
+        <li><b>The FLOOR line on the price chart.</b> <span class="swatch"></span><code>#FF6A1A</code>, 2 px, a step line, labelled <code>FLOOR</code>, under the price.</li>
+        <li><b>The FLOOR price on the token page,</b> next to the price.</li>
+      </ol>
+      <h3>Bonus</h3>
+      <ul>
+        <li><code>% backed</code> (floor ÷ price)</li>
+        <li>A FLOOR column in lists and screeners</li>
+        <li>The FLOOR price in a wallet's holding row</li>
+        <li>An alert near the floor</li>
+      </ul>
+      <h3>Rules of thumb</h3>
+      <ul>
+        <li>No line before graduation. Never draw a missing floor as 0.</li>
+        <li>It only steps up, in the quote token.</li>
+        <li>Keep it after graduation: same program, same pair.</li>
+        <li>In market-cap mode, scale it by the same supply as the price.</li>
+      </ul>
+      <p>The full guide is <code>docs/floor-line.md</code>. Shipped it, or stuck? contact@floor.supply</p>
+    </aside>
   </div>
+
+  <section class="panel code" aria-label="The code">
+    <h2>The code</h2>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <div class="codebox"><button type="button" class="copy" id="copy">Copy</button><pre id="code"></pre></div>
+    <p class="note" id="codenote"></p>
+  </section>
+
+  <footer id="run"></footer>
 </main>
+
+<script type="text/plain" id="c-api" data-label="Partner API" data-note="Server to server; ask for a key at contact@floor.supply. floorPriceQuote is null before graduation.">// 1. the FLOOR price for the token page
+const H = { headers: { Authorization: `Bearer ${process.env.FLOOR_API_KEY}` } };
+const API = "https://floor.supply/api/v1";
+
+const { data: launch } = await (await fetch(`${API}/launches/${chain}/${token}`, H)).json();
+const price = launch.market.priceQuote;
+const floor = launch.market.floorPriceQuote;   // null: no floor yet
+const backed = launch.market.backedPct;        // bonus: floor / price, in %
+
+// 2. the history of the line: the floor after every trade
+const { data: trades, meta } = await (await fetch(`${API}/launches/${chain}/${token}/trades?limit=100`, H)).json();
+const floorPoints = trades
+  .filter((t) => t.floorPriceQuote !== null)
+  .map((t) => ({ time: t.time, value: t.floorPriceQuote }))
+  .reverse();                                  // oldest first
+// older pages: ?before=${meta.nextBefore}</script>
+
+<script type="text/plain" id="c-lwc" data-label="Lightweight Charts" data-note="lightweight-charts v5. LineType.WithSteps holds the floor between trades and steps it up at the trade that lifts it.">import { createChart, CandlestickSeries, LineSeries, LineType } from "lightweight-charts";
+
+const chart = createChart(el, { autoSize: true });
+const candles = chart.addSeries(CandlestickSeries);
+const floorLine = chart.addSeries(LineSeries, {
+  color: "#FF6A1A",
+  lineWidth: 2,
+  lineType: LineType.WithSteps,
+  title: "FLOOR",
+  priceLineVisible: false,
+  lastValueVisible: true,
+  crosshairMarkerVisible: false,
+  autoscaleInfoProvider: () => null,   // the floor never stretches the price scale
+});
+
+candles.setData(ohlc);                 // your candles
+floorLine.setData(floorPoints);        // [{ time, value }], none before graduation
+
+// live, on each trade
+if (trade.floorPriceQuote !== null) {
+  floorLine.update({ time: trade.time, value: trade.floorPriceQuote });
+}</script>
+
+<script type="text/plain" id="c-tv" data-label="TradingView" data-note="The Charting Library (Advanced Charts): a locked horizontal line at the current floor. For the full step history, plot the floor series as a custom indicator in the same style.">const chart = widget.activeChart();
+
+const id = await chart.createShape(
+  { price: floor },
+  {
+    shape: "horizontal_line",
+    lock: true,
+    disableSelection: true,
+    disableSave: true,
+    text: "FLOOR",
+    overrides: {
+      linecolor: "#FF6A1A",
+      linewidth: 2,
+      showLabel: true,
+      textcolor: "#FF6A1A",
+      showPrice: true,
+    },
+  },
+);
+
+// when a trade lifts the floor
+chart.getShapeById(id).setPoints([{ price: newFloor }]);</script>
+
+<script type="text/plain" id="c-chain" data-label="From the chain" data-note="For indexers that read events themselves. sqrtF has 72 fraction bits; it is 0 before graduation. Keep the math in bigint: sqrtF squared does not fit in 128 bits.">// EVM:    FloorAmm `Trade` event, field `sqrtF` (uint128)
+// Solana: floor_amm `TradeV2` event (Anchor CPI event), field `sqrt_f` (u128)
+//
+// floor (whole quote per whole token) = sqrtF^2 * 10^6 / (2^144 * 10^quoteDecimals)
+
+function floorOf(sqrtF, quoteDecimals) {
+  if (sqrtF === 0n) return null;      // no floor yet
+  return Number((sqrtF * sqrtF * 10n ** 6n * 10n ** 12n) >> 144n) / 10 ** (quoteDecimals + 12);
+}
+
+// quoteDecimals: 6 for USDC, 9 for SOL, 18 for ETH
+const floor = floorOf(BigInt(event.sqrtF), quoteDecimals);</script>
+
+<script type="text/plain" id="c-svg" data-label="Plain SVG" data-note="What this page runs: walk the trades oldest first; hold the floor flat, then step up.">function floorPath(points, x, y) {
+  // points: [{ i, floor }] oldest first; floor null before graduation
+  let d = "", prev = null;
+  points.forEach((p, k) => {
+    if (p.floor === null) { prev = null; return; }
+    d += prev === null
+      ? `M${x(k)},${y(p.floor)}`
+      : `L${x(k)},${y(prev)}L${x(k)},${y(p.floor)}`;
+    prev = p.floor;
+  });
+  return d;   // <path d=... stroke="#FF6A1A" stroke-width="2" fill="none">
+}</script>
+
+<script type="text/plain" id="c-stat" data-label="Token page" data-note="The FLOOR price next to the price. Before graduation: FLOOR with a dash, or leave it out.">&lt;div class="stat"&gt;
+  &lt;span class="label"&gt;FLOOR&lt;/span&gt;
+  &lt;span class="value" style="color:#FF6A1A"&gt;${fmt(floor)}&lt;/span&gt;
+  &lt;span class="note"&gt;${backed.toFixed(0)}% backed&lt;/span&gt;  &lt;!-- bonus --&gt;
+&lt;/div&gt;</script>
+
 <script>
-const DATA = /*DATA*/{"run":"A simulated launch with a USDC quote at $1: 64 buys, then 6 small sells","quoteDecimals":6,"series":[{"i":0,"price":0.01,"floor":null,"graduated":false,"side":"open"},{"i":1,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":2,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":3,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":4,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":5,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":6,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":7,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":8,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":9,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":10,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":11,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":12,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":13,"price":0.01022274,"floor":0.01,"graduated":true,"side":"buy"},{"i":14,"price":0.01045981,"floor":0.01,"graduated":true,"side":"buy"},{"i":15,"price":0.01069961,"floor":0.01,"graduated":true,"side":"buy"},{"i":16,"price":0.01092692,"floor":0.01,"graduated":true,"side":"buy"},{"i":17,"price":0.01110845,"floor":0.01,"graduated":true,"side":"buy"},{"i":18,"price":0.0112915,"floor":0.01,"graduated":true,"side":"buy"},{"i":19,"price":0.01147605,"floor":0.01,"graduated":true,"side":"buy"},{"i":20,"price":0.0116621,"floor":0.01,"graduated":true,"side":"buy"},{"i":21,"price":0.01184832,"floor":0.01,"graduated":true,"side":"buy"},{"i":22,"price":0.0119884,"floor":0.01,"graduated":true,"side":"buy"},{"i":23,"price":0.01212932,"floor":0.01,"graduated":true,"side":"buy"},{"i":24,"price":0.01227106,"floor":0.01,"graduated":true,"side":"buy"},{"i":25,"price":0.01284634,"floor":0.01,"graduated":true,"side":"buy"},{"i":26,"price":0.01329322,"floor":0.01,"graduated":true,"side":"buy"},{"i":27,"price":0.01373598,"floor":0.01030198,"graduated":true,"side":"buy"},{"i":28,"price":0.01414542,"floor":0.01060907,"graduated":true,"side":"buy"},{"i":29,"price":0.01448348,"floor":0.01086261,"graduated":true,"side":"buy"},{"i":30,"price":0.01482555,"floor":0.01111917,"graduated":true,"side":"buy"},{"i":31,"price":0.01517165,"floor":0.01137874,"graduated":true,"side":"buy"},{"i":32,"price":0.01545607,"floor":0.01159206,"graduated":true,"side":"buy"},{"i":33,"price":0.0157178,"floor":0.01178835,"graduated":true,"side":"buy"},{"i":34,"price":0.01598174,"floor":0.01198631,"graduated":true,"side":"buy"},{"i":35,"price":0.01624789,"floor":0.01218592,"graduated":true,"side":"buy"},{"i":36,"price":0.01651626,"floor":0.0123872,"graduated":true,"side":"buy"},{"i":37,"price":0.01674282,"floor":0.01255712,"graduated":true,"side":"buy"},{"i":38,"price":0.01694468,"floor":0.01270851,"graduated":true,"side":"buy"},{"i":39,"price":0.01714776,"floor":0.01286082,"graduated":true,"side":"buy"},{"i":40,"price":0.01735205,"floor":0.01301404,"graduated":true,"side":"buy"},{"i":41,"price":0.01755756,"floor":0.01316817,"graduated":true,"side":"buy"},{"i":42,"price":0.01776429,"floor":0.01332322,"graduated":true,"side":"buy"},{"i":43,"price":0.01797224,"floor":0.01347918,"graduated":true,"side":"buy"},{"i":44,"price":0.01815632,"floor":0.01361724,"graduated":true,"side":"buy"},{"i":45,"price":0.01831214,"floor":0.01373411,"graduated":true,"side":"buy"},{"i":46,"price":0.01846863,"floor":0.01385147,"graduated":true,"side":"buy"},{"i":47,"price":0.0186258,"floor":0.01396935,"graduated":true,"side":"buy"},{"i":48,"price":0.01878363,"floor":0.01408772,"graduated":true,"side":"buy"},{"i":49,"price":0.01926116,"floor":0.01444587,"graduated":true,"side":"buy"},{"i":50,"price":0.01972843,"floor":0.01479632,"graduated":true,"side":"buy"},{"i":51,"price":0.02009085,"floor":0.01506814,"graduated":true,"side":"buy"},{"i":52,"price":0.0204566,"floor":0.01534245,"graduated":true,"side":"buy"},{"i":53,"price":0.02082566,"floor":0.01561925,"graduated":true,"side":"buy"},{"i":54,"price":0.02119805,"floor":0.01589854,"graduated":true,"side":"buy"},{"i":55,"price":0.02153399,"floor":0.01615049,"graduated":true,"side":"buy"},{"i":56,"price":0.02181455,"floor":0.01636091,"graduated":true,"side":"buy"},{"i":57,"price":0.02209694,"floor":0.0165727,"graduated":true,"side":"buy"},{"i":58,"price":0.02238115,"floor":0.01678586,"graduated":true,"side":"buy"},{"i":59,"price":0.0226672,"floor":0.0170004,"graduated":true,"side":"buy"},{"i":60,"price":0.02295507,"floor":0.0172163,"graduated":true,"side":"buy"},{"i":61,"price":0.02324477,"floor":0.01743358,"graduated":true,"side":"buy"},{"i":62,"price":0.02347823,"floor":0.01760867,"graduated":true,"side":"buy"},{"i":63,"price":0.02369538,"floor":0.01777153,"graduated":true,"side":"buy"},{"i":64,"price":0.02391353,"floor":0.01793515,"graduated":true,"side":"buy"},{"i":65,"price":0.02389484,"floor":0.01793515,"graduated":true,"side":"sell"},{"i":66,"price":0.02387622,"floor":0.01793515,"graduated":true,"side":"sell"},{"i":67,"price":0.02385767,"floor":0.01793515,"graduated":true,"side":"sell"},{"i":68,"price":0.02383919,"floor":0.01793515,"graduated":true,"side":"sell"},{"i":69,"price":0.02382078,"floor":0.01793515,"graduated":true,"side":"sell"},{"i":70,"price":0.02380243,"floor":0.01793515,"graduated":true,"side":"sell"}]}/*END*/;
-const W = 640, H = 360, L = 52, R = 12, T = 12, B = 28;
+const DATA = /*DATA*/{"run":"A simulated launch with a USDC quote at $1: 74 buys and 8 sells","quoteDecimals":6,"series":[{"i":0,"price":0.01,"floor":null,"graduated":false,"side":"open"},{"i":1,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":2,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":3,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":4,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":5,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":6,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":7,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":8,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":9,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":10,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":11,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":12,"price":0.01,"floor":null,"graduated":false,"side":"buy"},{"i":13,"price":0.01022274,"floor":0.01,"graduated":true,"side":"buy"},{"i":14,"price":0.01045981,"floor":0.01,"graduated":true,"side":"buy"},{"i":15,"price":0.01069961,"floor":0.01,"graduated":true,"side":"buy"},{"i":16,"price":0.01092692,"floor":0.01,"graduated":true,"side":"buy"},{"i":17,"price":0.01110845,"floor":0.01,"graduated":true,"side":"buy"},{"i":18,"price":0.0112915,"floor":0.01,"graduated":true,"side":"buy"},{"i":19,"price":0.01147605,"floor":0.01,"graduated":true,"side":"buy"},{"i":20,"price":0.0116621,"floor":0.01,"graduated":true,"side":"buy"},{"i":21,"price":0.01184832,"floor":0.01,"graduated":true,"side":"buy"},{"i":22,"price":0.0119884,"floor":0.01,"graduated":true,"side":"buy"},{"i":23,"price":0.01212932,"floor":0.01,"graduated":true,"side":"buy"},{"i":24,"price":0.01227106,"floor":0.01,"graduated":true,"side":"buy"},{"i":25,"price":0.01284634,"floor":0.01,"graduated":true,"side":"buy"},{"i":26,"price":0.01329322,"floor":0.01,"graduated":true,"side":"buy"},{"i":27,"price":0.01373598,"floor":0.01030198,"graduated":true,"side":"buy"},{"i":28,"price":0.01414542,"floor":0.01060907,"graduated":true,"side":"buy"},{"i":29,"price":0.01448348,"floor":0.01086261,"graduated":true,"side":"buy"},{"i":30,"price":0.01482555,"floor":0.01111917,"graduated":true,"side":"buy"},{"i":31,"price":0.01517165,"floor":0.01137874,"graduated":true,"side":"buy"},{"i":32,"price":0.01545607,"floor":0.01159206,"graduated":true,"side":"buy"},{"i":33,"price":0.0157178,"floor":0.01178835,"graduated":true,"side":"buy"},{"i":34,"price":0.01598174,"floor":0.01198631,"graduated":true,"side":"buy"},{"i":35,"price":0.01624789,"floor":0.01218592,"graduated":true,"side":"buy"},{"i":36,"price":0.01651626,"floor":0.0123872,"graduated":true,"side":"buy"},{"i":37,"price":0.01674282,"floor":0.01255712,"graduated":true,"side":"buy"},{"i":38,"price":0.01694468,"floor":0.01270851,"graduated":true,"side":"buy"},{"i":39,"price":0.01714776,"floor":0.01286082,"graduated":true,"side":"buy"},{"i":40,"price":0.01735205,"floor":0.01301404,"graduated":true,"side":"buy"},{"i":41,"price":0.01755756,"floor":0.01316817,"graduated":true,"side":"buy"},{"i":42,"price":0.01776429,"floor":0.01332322,"graduated":true,"side":"buy"},{"i":43,"price":0.01797224,"floor":0.01347918,"graduated":true,"side":"buy"},{"i":44,"price":0.01815632,"floor":0.01361724,"graduated":true,"side":"buy"},{"i":45,"price":0.01831214,"floor":0.01373411,"graduated":true,"side":"buy"},{"i":46,"price":0.01846863,"floor":0.01385147,"graduated":true,"side":"buy"},{"i":47,"price":0.0186258,"floor":0.01396935,"graduated":true,"side":"buy"},{"i":48,"price":0.01878363,"floor":0.01408772,"graduated":true,"side":"buy"},{"i":49,"price":0.01859303,"floor":0.01408772,"graduated":true,"side":"sell"},{"i":50,"price":0.01841113,"floor":0.01408772,"graduated":true,"side":"sell"},{"i":51,"price":0.01823746,"floor":0.01408772,"graduated":true,"side":"sell"},{"i":52,"price":0.01806707,"floor":0.01408772,"graduated":true,"side":"sell"},{"i":53,"price":0.01853992,"floor":0.01408772,"graduated":true,"side":"buy"},{"i":54,"price":0.01901433,"floor":0.01426075,"graduated":true,"side":"buy"},{"i":55,"price":0.01949479,"floor":0.0146211,"graduated":true,"side":"buy"},{"i":56,"price":0.01990367,"floor":0.01492776,"graduated":true,"side":"buy"},{"i":57,"price":0.02026771,"floor":0.01520078,"graduated":true,"side":"buy"},{"i":58,"price":0.02063506,"floor":0.0154763,"graduated":true,"side":"buy"},{"i":59,"price":0.02100574,"floor":0.0157543,"graduated":true,"side":"buy"},{"i":60,"price":0.02137974,"floor":0.0160348,"graduated":true,"side":"buy"},{"i":61,"price":0.02166974,"floor":0.01625231,"graduated":true,"side":"buy"},{"i":62,"price":0.02195119,"floor":0.01646339,"graduated":true,"side":"buy"},{"i":63,"price":0.02223446,"floor":0.01667585,"graduated":true,"side":"buy"},{"i":64,"price":0.02251957,"floor":0.01688968,"graduated":true,"side":"buy"},{"i":65,"price":0.0228065,"floor":0.01710487,"graduated":true,"side":"buy"},{"i":66,"price":0.02309526,"floor":0.01732144,"graduated":true,"side":"buy"},{"i":67,"price":0.02336672,"floor":0.01752504,"graduated":true,"side":"buy"},{"i":68,"price":0.02358335,"floor":0.01768751,"graduated":true,"side":"buy"},{"i":69,"price":0.02346715,"floor":0.01768751,"graduated":true,"side":"sell"},{"i":70,"price":0.02335372,"floor":0.01768751,"graduated":true,"side":"sell"},{"i":71,"price":0.02321907,"floor":0.01768751,"graduated":true,"side":"sell"},{"i":72,"price":0.02307369,"floor":0.01768751,"graduated":true,"side":"sell"},{"i":73,"price":0.02335063,"floor":0.01768751,"graduated":true,"side":"buy"},{"i":74,"price":0.02356718,"floor":0.01768751,"graduated":true,"side":"buy"},{"i":75,"price":0.02378474,"floor":0.01783855,"graduated":true,"side":"buy"},{"i":76,"price":0.02400331,"floor":0.01800248,"graduated":true,"side":"buy"},{"i":77,"price":0.02422288,"floor":0.01816716,"graduated":true,"side":"buy"},{"i":78,"price":0.02444346,"floor":0.0183326,"graduated":true,"side":"buy"},{"i":79,"price":0.02466505,"floor":0.01849879,"graduated":true,"side":"buy"},{"i":80,"price":0.02488764,"floor":0.01866573,"graduated":true,"side":"buy"},{"i":81,"price":0.02511124,"floor":0.01883343,"graduated":true,"side":"buy"},{"i":82,"price":0.02533585,"floor":0.01900189,"graduated":true,"side":"buy"}]}/*END*/;
+const SUPPLY = 1e9; // a FLOOR launch mints 1B tokens; market cap = price x total supply
 const pts = DATA.series;
-const max = Math.max(...pts.map((p) => p.price)) * 1.05;
-const min = Math.min(...pts.map((p) => p.floor ?? p.price)) * 0.95;
-const x = (i) => L + (i / (pts.length - 1)) * (W - L - R);
-const y = (v) => T + (1 - (v - min) / (max - min)) * (H - T - B);
+
+/* ---------- the candles: three trades to a candle ---------- */
+const PER = 3;
+function candlesUpTo(n) {
+  const out = [];
+  for (let s = 1; s <= n; s += PER) {
+    const e = Math.min(s + PER - 1, n);
+    const seg = pts.slice(s, e + 1);
+    const open = pts[s - 1].price, close = seg[seg.length - 1].price;
+    const hi = Math.max(open, ...seg.map((p) => p.price)), lo = Math.min(open, ...seg.map((p) => p.price));
+    const fl = seg[seg.length - 1].floor;
+    out.push({ s, e, open, close, hi, lo, floor: fl });
+  }
+  return out;
+}
+
+/* ---------- drawing ---------- */
+const W = 760, H = 380, L = 8, R = 78, T = 34, B = 26;
 const NS = "http://www.w3.org/2000/svg";
 const svg = document.getElementById("chart");
-const el = (tag, attrs, text) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text) e.textContent = text; svg.appendChild(e); return e; };
-document.getElementById("run").textContent = DATA.run + ". The numbers come from the SDK's own math, not from a live pool.";
+const el = (tag, attrs, text, parent = svg) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; parent.appendChild(e); return e; };
+let mode = "price";
+const unit = (v) => (mode === "mcap" ? v * SUPPLY : v);
+const fmtP = (v) => (v >= 1000 ? "$" + (v >= 1e6 ? (v / 1e6).toFixed(2) + "M" : (v / 1e3).toFixed(1) + "K") : "$" + v.toPrecision(4));
 
-for (let k = 0; k <= 4; k++) {
-  const v = min + ((max - min) * k) / 4;
-  el("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: "#23262B" });
-  el("text", { x: L - 6, y: y(v) + 4, "text-anchor": "end", fill: "#9AA3B2", "font-size": 11 }, v.toFixed(4));
+function floorPath(points, x, y) {
+  let d = "", prev = null;
+  points.forEach((p, k) => {
+    if (p.floor === null) { prev = null; return; }
+    d += prev === null ? `M${x(k)},${y(p.floor)}` : `L${x(k)},${y(prev)}L${x(k)},${y(p.floor)}`;
+    prev = p.floor;
+  });
+  return d;
 }
-el("text", { x: L, y: H - 6, fill: "#9AA3B2", "font-size": 11 }, "trades, in order");
-// the price line, then the floor line under it (a step line: it holds between trades)
-const priceD = pts.map((p, i) => `${i ? "L" : "M"}${x(i)},${y(p.price)}`).join("");
-let floorD = "", pen = false, prev = null;
-pts.forEach((p, i) => {
-  if (p.floor === null) { pen = false; return; }
-  floorD += pen ? `L${x(i)},${y(prev)}L${x(i)},${y(p.floor)}` : `M${x(i)},${y(p.floor)}`;
-  pen = true; prev = p.floor;
-});
-el("path", { d: priceD, fill: "none", stroke: "#8EA0BC", "stroke-width": 2 });
-el("path", { d: floorD, fill: "none", stroke: "#FF6A1A", "stroke-width": 2 });
-const last = pts[pts.length - 1];
-el("text", { x: W - R - 4, y: y(last.floor) + 16, "text-anchor": "end", fill: "#FF6A1A", "font-size": 12 }, "FLOOR");
-const mark = el("line", { y1: T, y2: H - B, stroke: "#F4F5F7", "stroke-opacity": 0.4 });
 
-const at = document.getElementById("at"), read = document.getElementById("read");
-at.max = pts.length - 1; at.value = pts.length - 1;
+function draw(n) {
+  svg.textContent = "";
+  const cs = candlesUpTo(Math.max(n, 1));
+  const all = candlesUpTo(pts.length - 1);
+  const slots = all.length;
+  const cw = (W - L - R) / slots;
+  const xs = (k) => L + cw * (k + 0.5);
+  // the scale follows the candles only; the floor never stretches it
+  const lo = Math.min(...all.map((c) => c.lo)), hi = Math.max(...all.map((c) => c.hi));
+  const pad = (hi - lo) * 0.12;
+  const min = unit(lo - pad * 3), max = unit(hi + pad);
+  const y = (v) => T + (1 - (unit(v) - min) / (max - min)) * (H - T - B);
+
+  // grid and axis
+  for (let k = 0; k <= 4; k++) {
+    const v = min + ((max - min) * k) / 4;
+    const yy = T + (1 - k / 4) * (H - T - B);
+    el("line", { x1: L, x2: W - R, y1: yy, y2: yy, stroke: "#1B1E22" });
+    el("text", { x: W - R + 8, y: yy + 4, fill: "#8A94A3", "font-size": 11 }, fmtP(v));
+  }
+
+  // Bonding: the flat opening window, no floor yet
+  const gradK = all.findIndex((c) => c.floor !== null);
+  if (gradK > 0) {
+    el("rect", { x: L, y: T, width: cw * gradK, height: H - T - B, fill: "#16181B" });
+    el("text", { x: L + 8, y: H - B - 8, fill: "#8A94A3", "font-size": 11 }, "Bonding: no floor yet");
+    el("line", { x1: L + cw * gradK, x2: L + cw * gradK, y1: T, y2: H - B, stroke: "#FF6A1A", "stroke-opacity": 0.35, "stroke-dasharray": "3 4" });
+    el("text", { x: L + cw * gradK + 6, y: T + 12, fill: "#FF6A1A", "font-size": 11, "fill-opacity": 0.8 }, "Graduated: the floor starts");
+  }
+
+  // candles
+  cs.forEach((c, k) => {
+    const up = c.close >= c.open, col = up ? "#2EBD85" : "#F6465D";
+    el("line", { x1: xs(k), x2: xs(k), y1: y(c.hi), y2: y(c.lo), stroke: col });
+    const top = y(Math.max(c.open, c.close)), bot = y(Math.min(c.open, c.close));
+    el("rect", { x: xs(k) - cw * 0.32, width: cw * 0.64, y: top, height: Math.max(1, bot - top), fill: col });
+  });
+
+  // the FLOOR line: a step line under the price
+  const fp = cs.map((c) => ({ floor: c.floor }));
+  const d = floorPath(fp, (k) => L + cw * k, y);
+  const lastC = cs[cs.length - 1];
+  if (d) {
+    const path = el("path", { d: d + (lastC.floor !== null ? `L${L + cw * cs.length},${y(lastC.floor)}` : ""), fill: "none", stroke: "#FF6A1A", "stroke-width": 2 });
+    // the inline tag and the axis value
+    const fy = y(lastC.floor);
+    const ex = L + cw * cs.length;
+    el("rect", { x: ex - 52, y: fy - 9, width: 46, height: 16, fill: "#000" });
+    el("text", { x: ex - 29, y: fy + 4, fill: "#FF6A1A", "font-size": 11, "font-weight": 700, "text-anchor": "middle" }, "FLOOR");
+    el("rect", { x: W - R + 2, y: fy - 9, width: R - 4, height: 18, rx: 3, fill: "#FF6A1A" });
+    el("text", { x: W - R + 8, y: fy + 4, fill: "#000", "font-size": 11, "font-weight": 700 }, fmtP(unit(lastC.floor)));
+  }
+  // the last price on the axis
+  const py = y(lastC.close);
+  el("rect", { x: W - R + 2, y: py - 9, width: R - 4, height: 18, rx: 3, fill: "#8EA0BC" });
+  el("text", { x: W - R + 8, y: py + 4, fill: "#000", "font-size": 11, "font-weight": 700 }, fmtP(unit(lastC.close)));
+  // the ask marker
+  el("text", { x: L + 8, y: 18, fill: "#FF6A1A", "font-size": 11, "font-weight": 700 }, "ASKED: the FLOOR line");
+}
+
+/* ---------- the stats and the readout ---------- */
+const $ = (id) => document.getElementById(id);
 function show() {
-  const p = pts[+at.value];
-  mark.setAttribute("x1", x(+at.value)); mark.setAttribute("x2", x(+at.value));
-  read.innerHTML = `Trade ${p.i} (${p.side}): price <b>${p.price}</b>, ` + (p.floor === null ? "no floor yet (the launch has not graduated)" : `floor <b>${p.floor}</b>, ${(100 * p.floor / p.price).toFixed(1)}% of the price`) + ", in USDC per token.";
+  const n = +at.value, p = pts[n];
+  draw(n);
+  $("sPrice").textContent = fmtP(p.price);
+  $("sFloor").textContent = p.floor === null ? "—" : fmtP(p.floor);
+  $("sBacked").textContent = p.floor === null ? "—" : Math.round((100 * p.floor) / p.price) + "%";
+  $("sMcap").textContent = fmtP(p.price * SUPPLY);
+  const ph = $("phase");
+  ph.textContent = p.graduated ? "Graduated" : "Bonding";
+  ph.className = "pill" + (p.graduated ? " grad" : "");
+  let why = "";
+  if (p.floor === null) why = "Bonding sells at one flat price, so there is no floor and no line yet.";
+  else if (p.side === "sell") why = "A sell: the price comes down, the floor holds.";
+  else if (n > 0 && pts[n - 1].floor !== null && p.floor > pts[n - 1].floor) why = "A buy: part of its money joins the floor, which steps up.";
+  else why = "A buy: the floor holds until enough money has joined it to step up.";
+  $("read").innerHTML = `Trade ${n} of ${pts.length - 1} (${p.side}): price <b>${p.price}</b>` + (p.floor === null ? "" : `, FLOOR <b>${p.floor}</b>`) + ` USDC. ${why}`;
 }
-at.addEventListener("input", show); show();
+const at = $("at");
+at.max = pts.length - 1; at.value = pts.length - 1;
+at.addEventListener("input", show);
+document.querySelectorAll(".seg button").forEach((b) => b.addEventListener("click", () => {
+  mode = b.dataset.mode;
+  document.querySelectorAll(".seg button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  show();
+}));
+let timer = null;
+$("play").addEventListener("click", () => {
+  if (timer) { clearInterval(timer); timer = null; $("play").textContent = "Replay"; return; }
+  at.value = 0; $("play").textContent = "Stop";
+  timer = setInterval(() => {
+    if (+at.value >= pts.length - 1) { clearInterval(timer); timer = null; $("play").textContent = "Replay"; return; }
+    at.value = +at.value + 1; show();
+  }, 90);
+});
+show();
+
+/* ---------- the code tabs ---------- */
+const blocks = [...document.querySelectorAll('script[type="text/plain"]')];
+const tabs = $("tabs");
+function pick(b) {
+  [...tabs.children].forEach((t) => t.setAttribute("aria-selected", String(t.dataset.id === b.id)));
+  const tmp = document.createElement("textarea"); tmp.innerHTML = b.textContent; // decode the HTML tab's entities
+  $("code").textContent = tmp.value.trim();
+  $("codenote").textContent = b.dataset.note;
+}
+blocks.forEach((b, i) => {
+  const t = document.createElement("button");
+  t.type = "button"; t.role = "tab"; t.dataset.id = b.id; t.textContent = b.dataset.label;
+  t.addEventListener("click", () => pick(b));
+  tabs.appendChild(t);
+  if (i === 0) pick(b);
+});
+$("copy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("code").textContent); $("copy").textContent = "Copied"; } catch { $("copy").textContent = "Select and copy"; }
+  setTimeout(() => ($("copy").textContent = "Copy"), 1500);
+});
+
+$("run").textContent = DATA.run + ". The numbers come from the SDK's own math on a simulated launch, not from a live token.";
 </script>
 </body>
 </html>

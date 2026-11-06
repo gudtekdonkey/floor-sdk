@@ -35,3 +35,18 @@ export function devBuyFromTrade(t              , team         , ctx             
 }
 
 export const devBuyChangeSinceBps = (d        , sqrtNow        )         => impactBps(d.priceAfterX64, priceX64(sqrtNow));
+
+export function memberSoldFromTrade(
+  t                                                                                                                   ,
+  seats                     ,
+  same                                    = (a, b) => a === b,
+)                    {
+  if (t.isBuy) return null;
+  for (const who of t.recipient === undefined ? [t.trader] : [t.trader, t.recipient]) {
+    const held = seats.filter((s) => same(s.wallet, who));
+    if (held.length === 0) continue;
+    const seat = held.reduce((lo, s) => (s.place < lo.place ? s : lo));
+    return { launch: t.launch, member: seat.wallet, place: seat.place, amount: t.tokens, quoteOut: t.quoteNet, ...(t.slot === undefined ? {} : { slot: t.slot }) };
+  }
+  return null;
+}
