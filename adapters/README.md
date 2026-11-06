@@ -15,6 +15,6 @@ Integration code for routers and aggregators that quote and route FLOOR Program 
 | Squid | [`evm/`](evm) | The same module, with the Squid hook shape |
 
 The math in every folder is the FLOOR Program's reference math and is tested against the same golden cases.
-The EVM module vendors the source files of `@floorlaunchpad/sdk` 0.3.1 it uses under `evm/vendor/sdk`.
+The EVM module vendors the source files of `@floorlaunchpad/sdk` 0.3.2 it uses under `evm/vendor/sdk`.
 
 Licence: Apache License 2.0 (each folder's `LICENSE`).
