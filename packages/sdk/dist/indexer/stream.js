@@ -1,11 +1,11 @@
 
 
-import { decode, int, nullable, object, str, unknown } from "./decode.js";
+import { decode, int, nullable, object, optional, str, unknown } from "./decode.js";
 import { HEAD, LIVE_LAUNCH, TRADE } from "./bodies.js";
 
 import { indexerPath } from "./paths.js";
 
-const HELLO = object({ head: HEAD, window: int, oldest: nullable(str) });
+const HELLO = object({ head: HEAD, window: int, oldest: nullable(str), epoch: optional(str) });
 const HEAD_SEEN = object({ block: int, age: int });
 const LAUNCH_FRAME = object({ launch: LIVE_LAUNCH });
 const STATE = object({ launch: str, mint: str, block: int, ts: nullable(int), seq: int, prev: unknown, state: LIVE_LAUNCH });
@@ -45,27 +45,74 @@ export function decodeStreamFrame(event        , data         , id         )    
 
 export function parseStreamFrames(text        )                                          {
   const frames                = [];
-  let rest = text.replace(/\r\n/g, "\n");
+
+  const t = text.indexOf("\r") < 0 ? text : text.replace(/\r\n/g, "\n");
+  let at = 0;
   let cut        ;
-  while ((cut = rest.indexOf("\n\n")) >= 0) {
-    const block = rest.slice(0, cut);
-    rest = rest.slice(cut + 2);
-    let event = "message";
-    let id                    ;
-    const data           = [];
-    let comment                = null;
-    for (const line of block.split("\n")) {
-      if (line.startsWith(":")) comment = line.slice(1).trim();
-      else if (line.startsWith("event:")) event = line.slice(6).trim();
-      else if (line.startsWith("id:")) id = line.slice(3).trim();
-      else if (line.startsWith("data:")) data.push(line.slice(5).replace(/^ /, ""));
-    }
-    if (data.length === 0) {
-      if (comment !== null) frames.push({ event: "comment", text: comment });
-      continue;
-    }
-    const f = decodeStreamFrame(event, JSON.parse(data.join("\n")), id);
-    if (f !== null) frames.push(f);
+  while ((cut = t.indexOf("\n\n", at)) >= 0) {
+    frameOf(t.slice(at, cut), frames);
+    at = cut + 2;
   }
-  return { frames, rest };
+  return { frames, rest: at === 0 ? t : t.slice(at) };
+}
+
+export function createStreamParser()               {
+  let pieces           = [];
+  let cr = false;
+  let endsNl = false;
+  const parser               = {
+    push(chunk        )                {
+      const frames                = [];
+      let c = cr ? `\r${chunk}` : chunk;
+      cr = c.endsWith("\r");
+      if (cr) c = c.slice(0, -1);
+      if (c.indexOf("\r") >= 0) c = c.replace(/\r\n/g, "\n");
+      if (c.length === 0) return frames;
+      let at = 0;
+
+      if (endsNl && pieces.length > 0 && c.charCodeAt(0) === 10) {
+        const block = pieces.join("");
+        pieces = [];
+        frameOf(block.slice(0, -1), frames);
+        at = 1;
+      }
+      let cut        ;
+      while ((cut = c.indexOf("\n\n", at)) >= 0) {
+        const head = c.slice(at, cut);
+        frameOf(pieces.length > 0 ? pieces.join("") + head : head, frames);
+        pieces = [];
+        at = cut + 2;
+      }
+      if (at < c.length) {
+        pieces.push(at === 0 ? c : c.slice(at));
+        endsNl = c.charCodeAt(c.length - 1) === 10;
+      } else endsNl = false;
+      return frames;
+    },
+    rest()         {
+      const r = pieces.join("");
+      pieces = r.length > 0 ? [r] : [];
+      return cr ? `${r}\r` : r;
+    },
+  };
+  return parser;
+}
+
+function frameOf(block        , frames               )       {
+  let event = "message";
+  let id                    ;
+  const data           = [];
+  let comment                = null;
+  for (const line of block.split("\n")) {
+    if (line.startsWith(":")) comment = line.slice(1).trim();
+    else if (line.startsWith("event:")) event = line.slice(6).trim();
+    else if (line.startsWith("id:")) id = line.slice(3).trim();
+    else if (line.startsWith("data:")) data.push(line.slice(5).replace(/^ /, ""));
+  }
+  if (data.length === 0) {
+    if (comment !== null) frames.push({ event: "comment", text: comment });
+    return;
+  }
+  const f = decodeStreamFrame(event, JSON.parse(data.join("\n")), id);
+  if (f !== null) frames.push(f);
 }

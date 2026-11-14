@@ -1,6 +1,6 @@
 
 
-import { array, big, bool, decimal, int, nullable, object, oneOf, optional, record, str } from "./decode.js";
+import { ShapeError, array, big, bool, decimal, int, nullable, object, oneOf, optional, record, str } from "./decode.js";
 
 export const INDEXED = object({ block: int, timestamp: int });
 
@@ -26,6 +26,7 @@ export const DEV_BUY = object({
   block: int,
   timestamp: int,
   tx: str,
+  id: str,
 });
 
 export const BONDING = object({ tokens: big, sold: big, left: big, priceX64: big });
@@ -92,6 +93,12 @@ const LAUNCH_FIELDS = {
   unlisted: bool,
   quoteDecimals: nullable(int),
   teamSlotRateBps: nullable(int),
+
+  nextBuyPriceX64: optional(nullable(big)),
+  stackEndX64: optional(nullable(big)),
+  stackLeft: optional(nullable(big)),
+  stackSold: optional(nullable(big)),
+  stackSoldBps: optional(nullable(int)),
   bidTopX64: nullable(big),
   teamBuyUnlockAt: nullable(int),
   teamBuyUnlocked: bool,
@@ -111,18 +118,24 @@ const LAUNCH_FIELDS = {
 };
 export const LAUNCH = object(LAUNCH_FIELDS);
 
-export const LISTED_LAUNCH = object({
+const LISTED_FIELDS = {
   ...LAUNCH_FIELDS,
   volume24hGross: nullable(big),
   holders: int,
+
+  maxLossPpm: optional(nullable(int)),
+
   backedPpm: nullable(int),
   volume24hUsd: nullable(decimal),
   marketCapUsd: nullable(decimal),
 
   trendingScore: nullable(big),
-});
 
-export const LIVE_LAUNCH = object({ ...LAUNCH_FIELDS, volume24hGross: nullable(big), holders: int });
+  change24hBps: optional(nullable(int)),
+};
+export const LISTED_LAUNCH = object(LISTED_FIELDS);
+
+export const LIVE_LAUNCH = object({ ...LAUNCH_FIELDS, volume24hGross: nullable(big), holders: int, change24hBps: optional(nullable(int)) });
 
 const TRADE_FIELDS = {
   launch: str,
@@ -206,6 +219,8 @@ export const FLOOR_ROUTED = object({
   indexed,
   launches: array(object({ launch: str, quote: str, floorFee: big, floorMilestone: big })),
   pending: array(object({ quote: str, amount: big })),
+
+  next: optional(nullable(str)),
 });
 
 export const EVENTS = object({
@@ -227,9 +242,22 @@ export const EVENTS = object({
   })),
 });
 
-export const LAUNCHES_ALL = object({ indexed, launches: array(LISTED_LAUNCH) });
+const nextCursor                         = (v, p) => (v === undefined || v === null ? null : str(v, p));
 
-export const LAUNCHES = object({ indexed, total: int, offset: int, launches: array(LISTED_LAUNCH), missing: array(str) });
+const perRow =    (d            )               => (v, p) => (v === undefined ? [] : array(d)(v, p));
+
+export const LAUNCHES = object({
+  indexed, total: int, offset: int, launches: array(LISTED_LAUNCH), missing: array(str),
+  cursors: perRow(str), keys: perRow(nullable(str)), next: optional(nullable(str)),
+});
+
+const SEARCH_SERVED_TIER                             = (v, p) => {
+  const n = int(v, p);
+  if (n < 0 || n > 4) throw new ShapeError(p, "a tier 0..4", v);
+  return n                     ;
+};
+
+export const LAUNCH_SEARCH = object({ indexed, q: str, launches: array(object({ ...LISTED_FIELDS, tier: SEARCH_SERVED_TIER })), next: nextCursor });
 
 export const LAUNCH_ONE = object({ indexed, launch: LISTED_LAUNCH });
 
@@ -241,15 +269,15 @@ export const HOLDERS = object({ indexed, source: oneOf("positions", "trades"), t
 
 export const TRADES = object({ indexed, trades: array(PAGED_TRADE), next: nullable(str) });
 
-export const LAUNCH_CLAIM = object({ launch: str, claimer: str, types: int, quote: str, amount: big, holder: big, teamBuy: optional(big), block: int, ts: int, tx: str });
+export const LAUNCH_CLAIM = object({ launch: str, claimer: str, types: int, quote: str, amount: big, holder: big, teamBuy: optional(big), block: int, ts: int, tx: str, id: optional(str) });
 
-export const LAUNCH_CLAIMS = object({ indexed, claims: array(LAUNCH_CLAIM) });
+export const LAUNCH_CLAIMS = object({ indexed, claims: array(LAUNCH_CLAIM), next: optional(nullable(str)) });
 
-export const DEV_BUYS = object({ indexed, teamBuyUnlocked: bool, teamBuyUnlockedTs: nullable(int), devBuys: array(DEV_BUY) });
+export const DEV_BUYS = object({ indexed, teamBuyUnlocked: bool, teamBuyUnlockedTs: nullable(int), devBuys: array(DEV_BUY), next: optional(nullable(str)) });
 
 export const MEMBER_SOLD_ROW = object({ launch: str, member: str, place: int, amount: big, quoteOut: big, block: int, timestamp: int, tx: str, id: str });
 
-export const MEMBER_SOLD = object({ indexed, memberSold: array(MEMBER_SOLD_ROW) });
+export const MEMBER_SOLD = object({ indexed, memberSold: array(MEMBER_SOLD_ROW), next: optional(nullable(str)) });
 
 export const LAUNCH_ACCOUNT = object({ indexed, launch: str, mint: str, slot: int, data: str });
 
@@ -282,6 +310,8 @@ export const CANDLE = object({
   volumeSellQuoteRaw: big,
   buys: int,
   sells: int,
+
+  floorX64: optional(nullable(big)),
 });
 
 const USD_RATE = object({ centsX64: nullable(big), source: nullable(str), ageS: nullable(int) });
@@ -328,7 +358,7 @@ export const QUOTE_CHAIN = object({ indexed, launch: str, chain: array(object({ 
 
 export const DEV_TRADES = object({ indexed, launch: str, creator: str, trades: array(TRADE) });
 
-export const BURNS = object({ indexed, launch: str, burns: array(object({ amount: big, block: int, timestamp: int })), program: array(BURN), wallet: array(BURN) });
+export const BURNS = object({ indexed, launch: str, burns: array(object({ id: optional(str), amount: big, block: int, timestamp: int })), program: array(object({ ...BURN_FIELDS, id: optional(str) })), wallet: array(object({ ...BURN_FIELDS, id: optional(str) })), next: optional(nullable(str)) });
 
 const LOCK_HOLDER = object({ wallet: str, place: nullable(int) });
 
@@ -349,6 +379,9 @@ export const PRICE = object({
   priceX64: big,
   livePriceX64: big,
   floorX64: big,
+
+  maxLossPpm: optional(nullable(int)),
+
   backedPpm: int,
   bidTopX64: nullable(big),
   lastTrade: nullable(object({ priceAfterX64: big, timestamp: int, block: int })),
@@ -360,15 +393,43 @@ export const PRICE = object({
 
 export const WALLET_TRADES = object({ indexed, wallet: str, trades: array(PAGED_TRADE), next: nullable(str) });
 
-export const POSITIONS = object({ indexed, wallet: str, positions: array(object({ launch: str, token: str, quote: str, tokens: big })) });
+export const TON_ACTIVITY_KINDS = ["buy", "sell", "claim", "team_slot_add", "team_share_buy", "burn", "withdraw", "create", "unlock_team_buy", "backing", "refused", "aborted"]         ;
+
+export const TON_FILL = object({ tokensIn: nullable(big), tokensOut: nullable(big), quoteIn: nullable(big), quoteOut: nullable(big), refund: nullable(big) });
+
+export const TON_REASON = object({ code: oneOf("aborted", "refused"), op: nullable(int), class: nullable(int), refunded: nullable(big) });
+
+export const TON_ACTIVITY_ROW = object({
+  id: str,
+  txnId: str,
+  block: int,
+  timestamp: int,
+  kind: oneOf(...TON_ACTIVITY_KINDS),
+  status: oneOf("landed", "failed"),
+  final: bool,
+  launch: nullable(str),
+  quote: nullable(str),
+  queryId: nullable(str),
+  types: nullable(int),
+  fill: TON_FILL,
+  reason: nullable(TON_REASON),
+});
+
+export const TON_ACTIVITY = object({ indexed, wallet: str, activity: array(TON_ACTIVITY_ROW), next: nullable(str) });
+
+export const TON_OUTCOME = object({ indexed, wallet: str, queryId: str, outcome: oneOf("pending", "landed", "failed"), seen: bool, row: nullable(TON_ACTIVITY_ROW) });
+
+export const POSITIONS = object({ indexed, wallet: str, positions: array(object({ launch: str, token: str, quote: str, tokens: big })), next: optional(nullable(str)) });
 
 export const WALLET_LOCKS = object({
   indexed,
   wallet: str,
   locks: array(object({ launch: str, token: str, kind: oneOf("teamBuy"), direction: oneOf("incoming", "outgoing"), tokens: big, place: nullable(int), createdAt: int, unlocked: bool, unlockedAt: nullable(int), unlockAt: nullable(int), locked: big, claimed: big, holders: array(LOCK_HOLDER) })),
+
+  next: optional(nullable(str)),
 });
 
-const AT = { timestamp: int, block: int };
+const AT = { timestamp: int, block: int, id: optional(str) };
 
 export const INBOX_CLAIMED = object({ ...AT, kind: oneOf("claimed"), launch: str, quote: str, types: int, amount: big, holder: big, txnId: nullable(str) });
 
@@ -376,7 +437,7 @@ export const INBOX_GRADUATED = object({ ...AT, kind: oneOf("graduated"), launch:
 
 export const INBOX_SLOT = object({ ...AT, kind: oneOf("slot"), launch: str, place: int });
 
-export const INBOX_DEV_BURN = object({ ...BURN_FIELDS, kind: oneOf("devBurn"), launch: str });
+export const INBOX_DEV_BURN = object({ ...BURN_FIELDS, id: optional(str), kind: oneOf("devBurn"), launch: str });
 
 export const INBOX_DEV_BUY = object({ ...AT, kind: oneOf("devBuy"), launch: str, wallet: str, role: DEV_BUY_ROLE, count: int, quoteIn: big, tokens: big, txnId: nullable(str) });
 
@@ -394,14 +455,14 @@ export function inboxItem(v         , p        )                   {
   return d(v, p)             ;
 }
 
-export const INBOX = object({ indexed, wallet: str, items: (v         , p        ) => array(inboxItem)(v, p).filter((x)                 => x !== null) });
+export const INBOX = object({ indexed, wallet: str, items: (v         , p        ) => array(inboxItem)(v, p).filter((x)                 => x !== null), next: optional(nullable(str)) });
 
 export const CLAIM_ROW = object({
   block: int,
   timestamp: int,
   txnId: nullable(str),
   sender: str,
-  launch: str,
+  launch: nullable(str),
   quote: str,
   types: int,
   creator: big,
@@ -414,7 +475,7 @@ export const CLAIM_ROW = object({
   teamBuy: big,
 });
 
-export const CLAIM_HISTORY = object({ indexed, wallet: str, claims: array(CLAIM_ROW) });
+export const CLAIM_HISTORY = object({ indexed, wallet: str, claims: array(CLAIM_ROW), next: optional(nullable(str)) });
 
 const QUOTE_TOTAL = object({ quote: str, total: big, types: int });
 
@@ -436,6 +497,8 @@ export const CLAIM_VIEW = object({
     refOwed: optional(array(object({ account: str, quoteMint: str, owed: big }))),
     pendingRollUp: optional(array(object({ traderRef: str, quoteMint: str, amount: big }))),
     owed: optional(array(object({ quote: str, creator: big, creatorRef: big, teamSlot: big, traderRef: big, holder: big, teamBuy: big }))),
+
+    next: optional(nullable(str)),
   }),
 });
 
@@ -450,6 +513,8 @@ export const PEOPLE = object({
   indexed,
   wallet: str,
   people: array(object({ wallet: str, chain: str, roles: array(object({ kind: oneOf("trader", "creator"), tier: int })), earned: PER_QUOTE, teamMilestone: PER_QUOTE })),
+
+  next: optional(nullable(str)),
 });
 
 export const ROLES = object({
@@ -468,12 +533,16 @@ export const ROLES = object({
     holdings: array(object({ launch: str, token: str, amount: big })),
   }),
   claimed: record(big),
+
+  next: optional(nullable(str)),
 });
 
 export const HANDLE_PLACES = object({
   indexed,
   handle: str,
   places: array(object({ launch: str, place: int })),
+
+  next: optional(nullable(str)),
 });
 
 export const TRADER_BOARD = object({
@@ -487,3 +556,8 @@ export const LAUNCHER_BOARD = object({
   launchers: array(object({ creator: str, launches: int, graduated: int, volumeUsd: decimal, liquidityUsd: decimal, bestLaunch: nullable(str), byQuote: record(object({ volume: big, liquidity: big, launches: int })) })),
 });
 
+export function maxLossPct(b                                                                                )                {
+  if (b.maxLossPpm != null) return b.maxLossPpm / 10_000;
+  if (b.maxLossPpm === undefined && b.graduated === true && b.backedPpm != null) return Math.max(0, 1_000_000 - b.backedPpm) / 10_000;
+  return null;
+}

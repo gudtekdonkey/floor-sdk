@@ -1,6 +1,7 @@
 
 
 import { BPS, fail } from "../../math/index.js";
+import { WAGMI_GENESIS_KEEP_USD } from "../../math/v2/rows.js";
 import { fixedRaiseClaim, genesisClaim, genesisWeightListed } from "../../math/genesis.js";
 import { GENESIS_ALLOC_CLAIMED, GENESIS_ALLOC_MIGRATED, GENESIS_ALLOC_REFUNDED, GENESIS_ALLOC_WAGMI_CLAIMED } from "./accounts.js";
 
@@ -50,15 +51,20 @@ export function genesisConvertTake(want        , room        , quote            
   return [take, usdc];
 }
 
-                                                                       
+                                                             
 
-export function genesisWaterfall(p                                                                                                                                                           )                   {
+export function genesisWaterfall(p                                                                                                                                                                                                      )                   {
   if (p.solConverted > p.raisedFinal) fail("Overflow");
   const floorUsdc = p.usdcConverted < p.floorCapUsdc ? p.usdcConverted : p.floorCapUsdc;
   const used = p.floorUsed ?? floorUsdc;
   if (used > floorUsdc) fail("Overflow");
   const left = p.usdcConverted - used;
-  const wagmiOffer = p.wagmiPinned ? left : 0n;
+
+  const px = p.usdcPxX64 ?? 100n << 64n;
+  if (px <= 0n) fail("Zero");
+  const keepAll = (WAGMI_GENESIS_KEEP_USD * 100n * 10n ** BigInt(p.usdcDecimals ?? 6) << 64n) / px;
+  const keep = keepAll > U64_MAX ? U64_MAX : keepAll;
+  const wagmiOffer = p.wagmiPinned ? (left < keep ? left : keep) : 0n;
   const wagmiUsdc = p.wagmiSpent ?? wagmiOffer;
   if (wagmiUsdc > wagmiOffer) fail("Overflow");
   return { floorUsdc, wagmiOffer, wagmiUsdc, usdcRefund: left - wagmiUsdc, solUnconverted: p.raisedFinal - p.solConverted };

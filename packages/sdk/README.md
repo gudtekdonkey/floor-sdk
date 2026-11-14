@@ -27,6 +27,7 @@ Node 22.18 or newer. The package ships compiled JavaScript in `dist/` with the t
 | An aggregator or router | [docs/aggregator.md](docs/aggregator.md): find a route, quote it, build the Solana instructions or the EVM call |
 | A wallet | [docs/wallet.md](docs/wallet.md): decode what a transaction does, read errors, build a claim |
 | A bot or indexer | [docs/bot.md](docs/bot.md): read launches, follow the stream, decode logs |
+| Anyone paging an indexer list | [docs/cursor-pages.md](docs/cursor-pages.md): which key each route pages by, the defaults and the limits |
 | A frontend | [docs/frontend.md](docs/frontend.md): the root entry, the indexer readers, the math for display |
 | Anyone who shows a FLOOR token: chart, screener, terminal, wallet | [docs/floor-line.md](docs/floor-line.md): show the FLOOR line and the FLOOR price (the one ask) |
 
@@ -45,6 +46,14 @@ $FLOOR fee; the other three start at graduation. The rates are the launch's own,
 the quote rather than from a table. Marketcap Milestones are not fees: they sit inside the price, are paid only by buys on
 the way up and never appear in `fees`.
 
+**TON.** The TON module (`src/ton`, see `docs/ton.md`) builds the messages for the FLOOR program on TON, reads its state (`getTeamSlot`, `getPresetRow`, `simBuy`, `simSell`) and parses the book file. It is repository source only: the published package does not export `/ton`.
+
+**Governance actions on TON.** `src/ton/governance.ts` decodes the body of every governance message on TON (the
+timelock's `schedule` / `execute` / `cancel`, and every authority, timelock and upgrade op of the factory and a launch) into
+the op, its target, every field (amounts with their decimals, code hashes, a scheduled action decoded too) and plain text
+lines, so a multisig shows exactly what is signed before anyone signs. It refuses an unknown op, a truncated body, or a bit
+or a reference left over, rather than show part of a body. `buildTonGovBody` builds the same bodies; neither signs nor sends.
+
 **Reading an indexer.** `@floorlaunchpad/sdk/indexer/read` has one reader per indexer route and a decoder for each body. The SDK opens no connection and names no host. You pass a `Get`, a function from a path such as `/floor-amm/launches/<id>` to `{ status, body }`, and it can be `fetch` against your own indexer, a proxy, or a cache:
 
 ```ts
@@ -59,6 +68,11 @@ const { launch } = await readLaunch(get, "42");
 const page = await readTrades(get, launch.id, { limit: 50 });
 const older = page.next === null ? null : await readTrades(get, launch.id, { limit: 50, before: page.next });
 ```
+
+Lists come in pages. `readLaunches` answers 100 launches a page, and no request answers them all. `readLaunchSearch`
+finds launches by symbol, name or token. The wallet lists, such as `readPositions` and `readClaimHistory`, page when you
+ask with `limit` or `cursor`. Each page carries `next`, and [docs/cursor-pages.md](docs/cursor-pages.md) says which key
+takes it back on each route. `readCandles` returns each candle with `floorX64`, the floor at that candle's close.
 
 Amounts come back as `bigint`. A non-200 answer throws an `IndexerError`: `notReady` while the indexer is still catching up to the chain, `unknownLaunch` for an id it does not know. A body of the wrong shape throws a `ShapeError` naming the field. `@floorlaunchpad/sdk/indexer/stream` parses the live stream's frames in the same way, and `indexerPath` builds any route's path if you want to do the request yourself.
 

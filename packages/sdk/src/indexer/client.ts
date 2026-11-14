@@ -1,10 +1,10 @@
 
 
 import { decode } from "./decode.ts";
-import { INDEXER_CONTRACT, clampLimit, routeLimit } from "./contract.ts";
+import { INDEXER_CONTRACT, clampLimit, pageAsked, routeLimit } from "./contract.ts";
 import type { RouteBody, RouteName } from "./contract.ts";
 import { indexerPath, query } from "./paths.ts";
-import type { CandlesQuery, LaunchesQuery, Page, StreamQuery, TradesQuery, WalletTradesQuery } from "./paths.ts";
+import type { CandlesQuery, LaunchSearchQuery, LaunchesQuery, Page, StreamQuery, TradesQuery, WalletPage, WalletTradesQuery } from "./paths.ts";
 import { IndexerError } from "./read.ts";
 import type { Get } from "./read.ts";
 import type { TraderWindow } from "./bodies.ts";
@@ -18,22 +18,23 @@ export interface RouteArgs {
   stream: StreamQuery;
   quotes: void;
   summary: void;
-  floorRouted: void;
+  floorRouted: { limit?: number; cursor?: string } | void;
   events: { fromBlock: number; toBlock: number };
   launches: LaunchesQuery | void;
+  search: LaunchSearchQuery;
   launch: L;
   launchState: L;
   milestones: L;
   holders: L & { limit?: number };
   trades: L & TradesQuery;
-  launchClaims: L & { claimer?: string };
-  devBuys: L;
-  memberSold: L;
+  launchClaims: L & Page & { claimer?: string };
+  devBuys: L & Page;
+  memberSold: L & Page;
   launchAccount: L;
   traders: L & { window?: TraderWindow; limit?: number };
   quoteChain: L;
   devTrades: L & { limit?: number };
-  burns: L;
+  burns: L & Page;
   launchLocks: L;
   marks: L & Page;
   price: L;
@@ -41,16 +42,18 @@ export interface RouteArgs {
   candles: CandlesQuery;
   candleBundle: L & { intervals?: readonly string[]; limit?: number };
   walletTrades: W & WalletTradesQuery;
-  positions: W;
-  inbox: W & { limit?: number };
-  walletLocks: W;
-  claimHistory: W;
+  tonActivity: W & Page;
+  tonOutcome: W & { queryId: bigint | string };
+  positions: W & WalletPage;
+  inbox: W & { limit?: number; before?: string };
+  walletLocks: W & WalletPage;
+  claimHistory: W & WalletPage;
   firsts: W;
   firstsMany: { wallets: readonly string[] };
-  claimView: W;
-  people: W;
-  roles: W;
-  handlePlaces: { handle: string };
+  claimView: W & WalletPage;
+  people: W & WalletPage;
+  roles: W & WalletPage;
+  handlePlaces: { handle: string } & WalletPage;
   traderBoard: { window?: TraderWindow; limit?: number } | void;
   launcherBoard: { limit?: number } | void;
   tokenHolders: { token: string; limit?: number; offset?: number };
@@ -59,7 +62,7 @@ export interface RouteArgs {
   dexPair: { id: string };
   cgPairs: void;
   cgTickers: void;
-  cgHistoricalTrades: { ticker_id: string; type?: "buy" | "sell"; limit?: number; start_time?: number; end_time?: number };
+  cgHistoricalTrades: { ticker_id: string; type?: "buy" | "sell"; limit?: number; before?: string; start_time?: number; end_time?: number };
   llamaTvl: void;
   llamaFees: { from: number; to: number } | void;
   health: void;
@@ -76,22 +79,23 @@ export const routePath: { [N in RouteName]: (a: RouteArgs[N]) => string } = {
   stream: (a) => indexerPath.stream(a),
   quotes: () => indexerPath.quotes(),
   summary: () => indexerPath.summary(),
-  floorRouted: () => indexerPath.floorRouted(),
+  floorRouted: (a) => indexerPath.floorRouted(a ?? {}),
   events: (a) => indexerPath.events(a.fromBlock, a.toBlock),
   launches: (a) => indexerPath.launches(a ?? {}),
+  search: (a) => indexerPath.search(a),
   launch: (a) => indexerPath.launch(a.launch),
   launchState: (a) => indexerPath.launchState(a.launch),
   milestones: (a) => indexerPath.milestones(a.launch),
   holders: ({ launch, ...q }) => indexerPath.holders(launch, q),
   trades: ({ launch, ...q }) => indexerPath.trades(launch, q),
   launchClaims: ({ launch, ...q }) => indexerPath.launchClaims(launch, q),
-  devBuys: (a) => indexerPath.devBuys(a.launch),
-  memberSold: (a) => indexerPath.memberSold(a.launch),
+  devBuys: ({ launch, ...q }) => indexerPath.devBuys(launch, q),
+  memberSold: ({ launch, ...q }) => indexerPath.memberSold(launch, q),
   launchAccount: (a) => indexerPath.launchAccount(a.launch),
   traders: ({ launch, ...q }) => indexerPath.traders(launch, q),
   quoteChain: (a) => indexerPath.quoteChain(a.launch),
   devTrades: ({ launch, ...q }) => indexerPath.devTrades(launch, q),
-  burns: (a) => indexerPath.burns(a.launch),
+  burns: ({ launch, ...q }) => indexerPath.burns(launch, q),
   launchLocks: (a) => indexerPath.launchLocks(a.launch),
   marks: ({ launch, ...q }) => indexerPath.marks(launch, q),
   price: (a) => indexerPath.price(a.launch),
@@ -99,16 +103,18 @@ export const routePath: { [N in RouteName]: (a: RouteArgs[N]) => string } = {
   candles: (a) => indexerPath.candles(a),
   candleBundle: ({ launch, ...q }) => indexerPath.candleBundle(launch, q),
   walletTrades: ({ wallet, ...q }) => indexerPath.walletTrades(wallet, q),
-  positions: (a) => indexerPath.positions(a.wallet),
+  tonActivity: ({ wallet, ...q }) => indexerPath.tonActivity(wallet, q),
+  tonOutcome: (a) => indexerPath.tonOutcome(a.wallet, a.queryId),
+  positions: ({ wallet, ...q }) => indexerPath.positions(wallet, q),
   inbox: ({ wallet, ...q }) => indexerPath.inbox(wallet, q),
-  walletLocks: (a) => indexerPath.walletLocks(a.wallet),
-  claimHistory: (a) => indexerPath.claimHistory(a.wallet),
+  walletLocks: ({ wallet, ...q }) => indexerPath.walletLocks(wallet, q),
+  claimHistory: ({ wallet, ...q }) => indexerPath.claimHistory(wallet, q),
   firsts: (a) => indexerPath.firsts(a.wallet),
   firstsMany: (a) => indexerPath.firstsMany(a.wallets),
-  claimView: (a) => indexerPath.claimView(a.wallet),
-  people: (a) => indexerPath.people(a.wallet),
-  roles: (a) => indexerPath.roles(a.wallet),
-  handlePlaces: (a) => indexerPath.handlePlaces(a.handle),
+  claimView: ({ wallet, ...q }) => indexerPath.claimView(wallet, q),
+  people: ({ wallet, ...q }) => indexerPath.people(wallet, q),
+  roles: ({ wallet, ...q }) => indexerPath.roles(wallet, q),
+  handlePlaces: ({ handle, ...q }) => indexerPath.handlePlaces(handle, q),
   traderBoard: (a) => indexerPath.traderBoard(a ?? {}),
   launcherBoard: (a) => indexerPath.launcherBoard(a ?? {}),
   tokenHolders: (a) => `/floor-amm/holders/${encodeURIComponent(need(a.token, "token"))}${query({ limit: a.limit, offset: a.offset })}`,
@@ -117,7 +123,7 @@ export const routePath: { [N in RouteName]: (a: RouteArgs[N]) => string } = {
   dexPair: (a) => `/v2/dex/pair${query({ id: need(a.id, "id") })}`,
   cgPairs: () => "/v2/coingecko/pairs",
   cgTickers: () => "/v2/coingecko/tickers",
-  cgHistoricalTrades: (a) => `/v2/coingecko/historical_trades${query({ ticker_id: need(a.ticker_id, "ticker_id"), type: a.type, limit: a.limit, start_time: a.start_time, end_time: a.end_time })}`,
+  cgHistoricalTrades: (a) => `/v2/coingecko/historical_trades${query({ ticker_id: need(a.ticker_id, "ticker_id"), type: a.type, limit: a.limit, before: a.before, start_time: a.start_time, end_time: a.end_time })}`,
   llamaTvl: () => "/v2/defillama/tvl",
   llamaFees: (a) => {
     if (a && a.to < a.from) throw new RangeError("from > to");
@@ -126,7 +132,8 @@ export const routePath: { [N in RouteName]: (a: RouteArgs[N]) => string } = {
   health: () => "/health",
 };
 
-export type DrainName = "trades" | "walletTrades" | "launches" | "marks";
+export const DRAIN_NAMES = ["trades", "launchClaims", "memberSold", "burns", "walletTrades", "launches", "search", "marks", "inbox", "positions", "walletLocks", "claimHistory", "people", "roles", "tokenHolders", "tonActivity", "cgHistoricalTrades", "floorRouted", "devBuys", "claimView", "handlePlaces"] as const;
+export type DrainName = (typeof DRAIN_NAMES)[number];
 
 export type ReadName = Exclude<RouteName, "stream">;
 
@@ -150,7 +157,7 @@ export function createIndexerClient(opts: IndexerClientOptions): IndexerClient {
 
   const clamp = (name: RouteName, a: unknown): unknown => {
     if (typeof a !== "object" || a === null || !("limit" in a) || typeof (a as { limit: unknown }).limit !== "number") return a;
-    return { ...a, limit: clampLimit(name, (a as { limit: number }).limit) };
+    return { ...a, limit: clampLimit(name, (a as { limit: number }).limit, pageAsked(name, a as Record<string, unknown>)) };
   };
   const path = (name: RouteName, a?: unknown): string => (routePath[name] as (x: unknown) => string)(clamp(name, a));
   const read = async (name: ReadName, a?: unknown): Promise<unknown> => {
@@ -166,12 +173,27 @@ export function createIndexerClient(opts: IndexerClientOptions): IndexerClient {
     const max = o.maxPages ?? 100;
     const lim = routeLimit(name)!;
     let args: Record<string, unknown> = { ...a };
+
+    if (page.kind === "cursor" && page.optIn !== undefined && args.before === undefined) args = { ...args, before: "" };
+    if (page.kind === "keyset" && page.optIn === true && args.limit === undefined && args.cursor === undefined) args = { ...args, limit: lim.default };
     for (let i = 0; i < max; i++) {
       const body = (await read(name, args)) as { next?: string | null; total?: number };
       yield body;
       if (page.kind === "cursor") {
         if (body.next === null || body.next === undefined) return;
         args = { ...args, before: body.next };
+      } else if (page.kind === "keyset") {
+
+        if (args.ids !== undefined) return;
+        if (args.offset !== undefined) {
+          const step = clampLimit(name, (args.limit as number | undefined) ?? lim.default);
+          const offset = (args.offset as number) + step;
+          if (offset >= (body.total ?? 0)) return;
+          args = { ...args, offset };
+          continue;
+        }
+        if (body.next === null || body.next === undefined) return;
+        args = { ...args, cursor: body.next };
       } else if (page.kind === "offset") {
         const step = clampLimit(name, (args.limit as number | undefined) ?? lim.default);
         const offset = ((args.offset as number | undefined) ?? 0) + step;

@@ -23,7 +23,7 @@ const flatUp = (s      , n        )         => ov(flatMoneyForTokens(s, n, UP));
 
                               
 
-export function splitRowOfRowV2(r                                                                                                                                     )           {
+export function splitRowOfRowV2(r                                                                                                                                                     )           {
   const ck = r.ckTargetBps ?? r.ckBps;
   if (!Number.isInteger(ck)) throw new RangeError("splitRowOfRowV2: the row has no C + K share (`ckTargetBps`)");
   if (r.ckTargetBps !== undefined && r.ckBps !== undefined && r.ckTargetBps !== r.ckBps) {
@@ -32,12 +32,18 @@ export function splitRowOfRowV2(r                                               
   return {
     phiBps: r.phiBps,
     ckBps: ck          ,
-    wcBps: 300,
+
+    wcBps: r.wcBps ?? 300,
     cShareBps: 5_000,
     msClass: r.msClass,
     platformMsBps: (r.flags & 1) !== 0 ? r.platformMsBps : 0,
     floorMsBps: (r.flags & 2) !== 0 ? r.floorMsBps : 0,
   };
+}
+
+export function surplus(sqrtF      , back        , n        )         {
+  const base = flatMoneyForTokens(sqrtF, n, UP);
+  return base === null || base === undefined ? 0n : sat(back, base);
 }
 
 export function split(row          , ranges                  , inp         , pieces                  )        {
@@ -46,6 +52,8 @@ export function split(row          , ranges                  , inp         , pie
   let sr = inp.sNew - tokensSum;
   if (sr < 0n) fail("Overflow");
   let fr = inp.fTotal;
+
+  const s0 = surplus(inp.sqrtF, fr + inp.fClaims, sr + inp.held);
   const phi = BigInt(row.phiBps);
   let ckAdd = 0n;
   let ms = 0n;
@@ -61,7 +69,7 @@ export function split(row          , ranges                  , inp         , pie
     const capB = cdiv(cdiv(pc.money * inp.sqrtF, lo) * inp.sqrtF, lo);
     const cap = min(max(capA, capB), pc.money);
     const n = sr + inp.held;
-    const needAll = max(flatUp(inp.sqrtF, n), cdiv(flatUp(pc.sqrtHi, n) * phi, 10_000n));
+    const needAll = max(flatUp(inp.sqrtF, n) + s0, cdiv(flatUp(pc.sqrtHi, n) * phi, 10_000n));
     if (r.kind !== KIND_TAIL) topNeed = needAll;
     const need = sat(needAll, fr + inp.fClaims);
     const dF = min(cap, need);

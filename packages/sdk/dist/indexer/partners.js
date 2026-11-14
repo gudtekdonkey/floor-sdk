@@ -47,7 +47,8 @@ export const DEX_SUMMARY = object({
 });
 
 export const DEX_PAIR = object({
-  pair: object({ id: str, asset0Id: str, asset1Id: str, createdAtBlockNumber: int, createdAtBlockTimestamp: int, feeBps: nullable(num) }),
+  pair: object({ id: str, asset0Id: str, asset1Id: str, createdAtBlockNumber: int, createdAtBlockTimestamp: int, feeBps: nullable(num), dexKey: str, createdAtTxnId: optional(str), creator: str }),
+  launch: optional(object({ id: str, token: str })),
 });
 
 export const CG_PAIRS = array(object({ ticker_id: str, base: str, target: str, pool_id: str }));
@@ -74,7 +75,7 @@ export const CG_TICKERS = array(object({
 
 export const CG_TRADE = object({ trade_id: int, price: decimal, base_volume: decimal, target_volume: decimal, trade_timestamp: int, type: oneOf("buy", "sell") });
 
-export const CG_HISTORICAL = object({ buy: optional(array(CG_TRADE)), sell: optional(array(CG_TRADE)) });
+export const CG_HISTORICAL = object({ buy: optional(array(CG_TRADE)), sell: optional(array(CG_TRADE)), next: optional(nullable(str)) });
 
 export const LLAMA_TVL = object({ mode: LIQUIDITY_MODE, tvl: record(big), launchTokens: array(str) });
 

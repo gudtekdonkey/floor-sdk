@@ -86,6 +86,14 @@ const ROUTES                                                                    
       "⚠ No WETH9: WRAP_ETH does not apply; only v4 pools in address(0) take the native coin. The zap is for third-token quotes only.",
     ],
   },
+  elysium: {
+    wrappedNative: null,
+    zapRouters: [],
+    notes: [
+      "⚠ Arbitrum Orbit on HyperEVM: in a contract block.number is HyperEVM's block; the receipt's block is Elysium's.",
+      "⚠ No zap routers yet (no DEX read back on chain) and no wrapped HYPE address published: the native coin and listed quotes only.",
+    ],
+  },
 };
 
 export const EVM_CHAINS                             = Object.fromEntries(
@@ -110,7 +118,7 @@ export const FLOOR_SALTS = {
 export const FLOOR_AMM_ADDRESS                = "0xF10000bd05c2C01793C6d55F027346469683d225";
 
 export const FLOOR_AMM_FROM_BLOCK                                            = {
-  ethereum: 26327910, base: 53421827, bsc: 131270813, arbitrum: 520655168, arc: 29205598, robinhood: 104455459, hyperevm: 50398055,
+  ethereum: 26327910, base: 53421827, bsc: 131270813, arbitrum: 520655168, arc: 29205598, robinhood: 104455459, hyperevm: 50398055, elysium: 6058368,
 };
 
 const cat = (...h          )         => "0x" + h.map((x) => bytesToHex(hexToBytes(x)).slice(2)).join("");

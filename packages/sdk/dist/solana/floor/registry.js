@@ -60,6 +60,10 @@ export function nextClaimsPage(pages                       )         {
   return last.count < CLAIMS_PAGE_ENTRIES ? last.page : last.page + 1;
 }
 
+export function hookClaimsPage(pages                       )         {
+  return pages.length === 0 ? 0 : pages[pages.length - 1].page;
+}
+
 function ix(name        , accounts               , args                       , programId = FLOOR_AMM_PROGRAM_ID)              {
   const ev = floorEventAuthorityPda(programId)[0];
   return { programAddress: programId, accounts: [...accounts, R(ev), R(programId)], data: args(new Writer().bytes(instructionDiscriminator(name))).done() };

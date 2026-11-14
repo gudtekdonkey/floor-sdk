@@ -11,6 +11,8 @@ import { Writer } from "./borsh.js";
 import { CLAIM_BITS, CLAIM_KNOWN_MASKS, CLAIM_RESERVED, CLAIM_CREATOR, CLAIM_CREATOR_REF, CLAIM_TEAM_SLOT, CLAIM_TRADER_REF, CLAIM_RESERVED_HOLDER, CLAIM_EXTRA, CLAIM_TEAM_BUY, CLAIM_SHARE_BOUGHT } from "../../generated/index.js";
 import { launchMintPda } from "./mint.js";
 
+import { FLOOR_HOOK_PROGRAM_ID, extraAccountMetasPda, holderBookPda, holderPositionPda, quoteHookBlock } from "../../v2/solana.js";
+
 const pid = (c      )         => c?.programId ?? FLOOR_AMM_PROGRAM_ID;
 const evPair = (c      )                => [R(floorEventAuthorityPda(pid(c))[0]), R(pid(c))];
 function ix(name        , accounts               , args                       , c      )              {
@@ -74,8 +76,11 @@ export function clearTraderRefInstruction(p                                     
   return withRest(i, (p.traderRefs ?? []).map((r) => W(r)));
 }
 
-export function withdrawPlatformInstruction(p                                                                                                                                                                    )              {
-  return ix("withdraw_platform", [RS(p.authority), R(p.config), W(p.launch), R(p.quoteMint), W(p.quoteVault), W(p.destination), R(p.quoteTokenProgram)], (w) => w.u64(p.amount), p);
+export function withdrawPlatformInstruction(p                                                                                                                                                                                                                )              {
+  const i = ix("withdraw_platform", [RS(p.authority), R(p.config), W(p.launch), R(p.quoteMint), W(p.quoteVault), W(p.destination), R(p.quoteTokenProgram)], (w) => w.u64(p.amount), p);
+  if (!p.quoteIsLaunch) return i;
+  if (!p.treasury) throw new RangeError("withdraw_platform: a launch-token quote needs the treasury (its position receives)");
+  return withRest(i, quoteHookBlock(p.quoteMint, p.treasury, [p.launch], p));
 }
 
 export function checkPresetInstruction(p                                                                         )              {
@@ -188,12 +193,16 @@ export function openRefOwedInstruction(p                                        
   return ix("open_ref_owed", [WS(p.payer), R(p.quoteMint), W(p.refOwed), W(p.vault), R(p.quoteTokenProgram), R(ASSOCIATED_TOKEN_PROGRAM_ID), R(SYSTEM_PROGRAM_ID)], (w) => w.pubkey(p.referrer), p);
 }
 
-export function rollUpRefsInstruction(p                                                                                                                                                                              )              {
+export function rollUpRefsInstruction(p                                                                                                                                                                                                       )              {
   if (p.traderRefs.length > 255) throw new RangeError("at most 255 links a roll-up");
   const base = ix("roll_up_refs", [R(p.quoteMint), R(p.quoteTokenProgram)], (w) => w.u8(p.traderRefs.length), p);
   const rest                = [];
-  for (const t of p.traderRefs) rest.push(W(t.traderRef), W(t.escrow));
-  for (const r of p.refOwed) rest.push(W(r.refOwed), W(r.vault));
+  const hook = p.hookProgramId;
+  const ql = p.quoteIsLaunch ? launchPda(p.quoteMint, pid(p))[0] : "";
+  const pos = (owner        )                => (p.quoteIsLaunch ? [W(holderPositionPda(ql, owner, hook)[0])] : []);
+  for (const t of p.traderRefs) rest.push(W(t.traderRef), W(t.escrow), ...pos(t.traderRef));
+  for (const r of p.refOwed) rest.push(W(r.refOwed), W(r.vault), ...pos(r.refOwed));
+  if (p.quoteIsLaunch) rest.push(R(extraAccountMetasPda(p.quoteMint, hook)[0]), R(ql), W(holderBookPda(ql, hook)[0]), R(hook ?? FLOOR_HOOK_PROGRAM_ID));
   return { ...base, accounts: [...base.accounts, ...rest] };
 }
 

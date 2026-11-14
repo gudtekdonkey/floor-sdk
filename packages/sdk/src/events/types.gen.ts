@@ -24,11 +24,12 @@ export interface SolLaunchCreatedFields {
 }
 export interface SolGraduatedFields {
   launch: string;
-  priceX64: bigint;
+  windowPriceX64: bigint;
   windowRaised: bigint;
   windowTokens: bigint;
   slot: bigint;
   ts: bigint;
+  priceX64: bigint;
 }
 export interface SolPotsSweptFields {
   launch: string;

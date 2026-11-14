@@ -13,6 +13,7 @@ import { launchMintPda } from "./mint.ts";
 
 export type { Ctx } from "../../v2/solana.ts";
 import type { Ctx } from "../../v2/solana.ts";
+import { FLOOR_HOOK_PROGRAM_ID, extraAccountMetasPda, holderBookPda, holderPositionPda, quoteHookBlock } from "../../v2/solana.ts";
 
 const pid = (c?: Ctx): string => c?.programId ?? FLOOR_AMM_PROGRAM_ID;
 const evPair = (c?: Ctx): AccountMeta[] => [R(floorEventAuthorityPda(pid(c))[0]), R(pid(c))];
@@ -77,8 +78,11 @@ export function clearTraderRefInstruction(p: { authority: string; config: string
   return withRest(i, (p.traderRefs ?? []).map((r) => W(r)));
 }
 
-export function withdrawPlatformInstruction(p: { authority: string; config: string; launch: string; quoteMint: string; quoteVault: string; destination: string; quoteTokenProgram: string; amount: bigint } & Ctx): Instruction {
-  return ix("withdraw_platform", [RS(p.authority), R(p.config), W(p.launch), R(p.quoteMint), W(p.quoteVault), W(p.destination), R(p.quoteTokenProgram)], (w) => w.u64(p.amount), p);
+export function withdrawPlatformInstruction(p: { authority: string; config: string; launch: string; quoteMint: string; quoteVault: string; destination: string; quoteTokenProgram: string; amount: bigint; quoteIsLaunch?: boolean; treasury?: string } & Ctx): Instruction {
+  const i = ix("withdraw_platform", [RS(p.authority), R(p.config), W(p.launch), R(p.quoteMint), W(p.quoteVault), W(p.destination), R(p.quoteTokenProgram)], (w) => w.u64(p.amount), p);
+  if (!p.quoteIsLaunch) return i;
+  if (!p.treasury) throw new RangeError("withdraw_platform: a launch-token quote needs the treasury (its position receives)");
+  return withRest(i, quoteHookBlock(p.quoteMint, p.treasury, [p.launch], p));
 }
 
 export function checkPresetInstruction(p: { authority: string; config: string; preset: string; id: number } & Ctx): Instruction {
@@ -224,12 +228,16 @@ export function openRefOwedInstruction(p: { payer: string; quoteMint: string; re
   return ix("open_ref_owed", [WS(p.payer), R(p.quoteMint), W(p.refOwed), W(p.vault), R(p.quoteTokenProgram), R(ASSOCIATED_TOKEN_PROGRAM_ID), R(SYSTEM_PROGRAM_ID)], (w) => w.pubkey(p.referrer), p);
 }
 
-export function rollUpRefsInstruction(p: { quoteMint: string; quoteTokenProgram: string; traderRefs: readonly { traderRef: string; escrow: string }[]; refOwed: readonly { refOwed: string; vault: string }[] } & Ctx): Instruction {
+export function rollUpRefsInstruction(p: { quoteMint: string; quoteTokenProgram: string; traderRefs: readonly { traderRef: string; escrow: string }[]; refOwed: readonly { refOwed: string; vault: string }[]; quoteIsLaunch?: boolean } & Ctx): Instruction {
   if (p.traderRefs.length > 255) throw new RangeError("at most 255 links a roll-up");
   const base = ix("roll_up_refs", [R(p.quoteMint), R(p.quoteTokenProgram)], (w) => w.u8(p.traderRefs.length), p);
   const rest: AccountMeta[] = [];
-  for (const t of p.traderRefs) rest.push(W(t.traderRef), W(t.escrow));
-  for (const r of p.refOwed) rest.push(W(r.refOwed), W(r.vault));
+  const hook = p.hookProgramId;
+  const ql = p.quoteIsLaunch ? launchPda(p.quoteMint, pid(p))[0] : "";
+  const pos = (owner: string): AccountMeta[] => (p.quoteIsLaunch ? [W(holderPositionPda(ql, owner, hook)[0])] : []);
+  for (const t of p.traderRefs) rest.push(W(t.traderRef), W(t.escrow), ...pos(t.traderRef));
+  for (const r of p.refOwed) rest.push(W(r.refOwed), W(r.vault), ...pos(r.refOwed));
+  if (p.quoteIsLaunch) rest.push(R(extraAccountMetasPda(p.quoteMint, hook)[0]), R(ql), W(holderBookPda(ql, hook)[0]), R(hook ?? FLOOR_HOOK_PROGRAM_ID));
   return { ...base, accounts: [...base.accounts, ...rest] };
 }
 

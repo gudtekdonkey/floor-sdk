@@ -21,7 +21,7 @@ snippet on this page. Open it in a browser. It needs no network and no key.
 
 **Anything more is a bonus.** In rough order of how much it helps:
 
-- How far the price is above the floor, as `% backed` (floor ÷ price) or `price is 1.33× the floor`.
+- The Max Loss: how far the price can fall to the floor, `1 − floor ÷ price` as a percentage before fees (`Max Loss 25%`), or `price is 1.33× the floor`.
 - A FLOOR column in token lists and screeners.
 - The FLOOR price in a wallet's holding row, next to the holding's value.
 - An alert when the price comes near the floor.
@@ -50,7 +50,7 @@ URL is refused). Ask for a key at contact@floor.supply or on X. The reference is
 |---|---|---|
 | `GET /launches/{chain}/{token}` | `data.market.floorPriceQuote` | The floor now, whole quote per whole token |
 | | `data.market.floorPriceUsd` | The same in USD at the live rate |
-| | `data.market.priceQuote`, `data.market.backedPct` | The price now, and floor ÷ price as a percentage |
+| | `data.market.priceQuote`, `data.market.maxLossPct` | The price now, and the Max Loss (1 − floor ÷ price, before fees) as a percentage |
 | `GET /launches/{chain}/{token}/trades` | `data[].floorPriceQuote` | The floor after each trade: the history of the line |
 
 `null` means there is no floor yet (the launch is still in Bonding) or the figure was not read. Never draw a `null` as 0.
@@ -115,6 +115,11 @@ per whole token from a Q64.64 value:
 ```ts
 const floor = Number((floorX64 * 10n ** 6n * 10n ** 12n) / (1n << 64n)) / 10 ** (quoteDecimals + 12);
 ```
+
+If you draw candles from the FLOOR indexer, you need no second read: every candle of `readCandles(get, { launch, interval })`
+carries `floorX64`, the floor at that bucket's close, in the same Q64.64 units. Draw one floor point per candle. It is
+`null` where a bucket has none and absent from an indexer older than SDK 0.4.0, so fall back to the launch's own
+`floorX64` then.
 
 ## Draw it
 
@@ -193,7 +198,7 @@ previous floor, then a vertical step up to the new floor. The example page does 
 <div class="stat">
   <span class="label">FLOOR</span>
   <span class="value" style="color:#FF6A1A">$0.0189</span>
-  <span class="note">75% backed</span> <!-- bonus -->
+  <span class="note">Max Loss 25%</span> <!-- bonus -->
 </div>
 ```
 
@@ -230,6 +235,6 @@ not a promise about the market price, and the market price can sit far above it.
 - [ ] Nothing is drawn before graduation; `null` is never drawn as 0.
 - [ ] The line keeps its history and keeps going after graduation.
 - [ ] Market-cap mode scales the floor by the same supply as the price, or hides it.
-- [ ] Optional: `% backed`, a list column, a wallet row, an alert.
+- [ ] Optional: the Max Loss, a list column, a wallet row, an alert.
 
 Shipped it, or stuck? Tell us at contact@floor.supply. We will check it with you and point FLOOR holders to your page.

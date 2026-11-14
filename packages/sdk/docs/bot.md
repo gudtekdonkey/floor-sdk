@@ -18,7 +18,42 @@ const { launch } = await readLaunch(get, "42");
 const page = await readTrades(get, launch.id, { limit: 100 });
 ```
 
-Pages carry a `next` cursor; pass it as `before` for the next page, and stop when it is `null`. Amounts are `bigint`. A non-200 answer throws an `IndexerError` (`notReady` while the indexer catches up, `unknownLaunch` for an id it does not know). A body of the wrong shape throws a `ShapeError` that names the field.
+Pages carry a `next` cursor; stop when it is `null`. On trades, marks and the inbox pass it back as `before`; on `launches`, `search` and the other wallet routes pass it back as `cursor`. Amounts are `bigint`. A non-200 answer throws an `IndexerError` (`notReady` while the indexer catches up, `unknownLaunch` for an id it does not know). A body of the wrong shape throws a `ShapeError` that names the field.
+
+### List and search launches
+
+`readLaunches` answers one page, 100 launches by default. No request answers every launch, so walk the pages:
+
+```ts
+import { readLaunches, readLaunchSearch, readCandles } from "@floorlaunchpad/sdk/indexer/read";
+
+let cursor: string | undefined;
+do {
+  const page = await readLaunches(get, { limit: 100, cursor });
+  // page.launches …
+  cursor = page.next ?? undefined;
+} while (cursor !== undefined);
+
+const hits = await readLaunchSearch(get, { q: "wagmi" }); // best match first, each row with its tier
+```
+
+A client made with `createIndexerClient` walks them for you: `for await (const page of ix.drain("launches", {}))`.
+
+### Wallet lists
+
+Called with neither `limit` nor `cursor`, `readPositions`, `readWalletLocks`, `readClaimHistory`, `readRoles` and
+`readPeople` return the whole list. Pass either one to get pages: a page is 100 rows unless `limit` asks for another
+size, and 500 at most. `readInbox` pages with `before`. Every list is in [cursor-pages.md](cursor-pages.md).
+
+### Candles with the floor
+
+```ts
+const { candles } = await readCandles(get, { launch: launch.id, interval: "1h" });
+```
+
+Each candle carries `floorX64`, the floor at the bucket's close, in the same Q64.64 units as a launch's `floorX64`. It is
+`null` where a bucket has none, and absent from an indexer older than this build. Use the launch's own `floorX64` for
+that candle then. [floor-line.md](floor-line.md) shows how to draw it.
 
 ## Follow the live stream
 

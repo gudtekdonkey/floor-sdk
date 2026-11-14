@@ -9,11 +9,14 @@ import { errorCode } from "./contract.js";
 export * from "./bodies.js";
 export { ShapeError, decode } from "./decode.js";
 
-export { FIRSTS_MAX, IDS_MAX, INDEXER_ROUTES, LAUNCHES_PAGE_MAX, LAUNCH_SORTS, STREAM_STATE_MAX, indexerPath, query } from "./paths.js";
-export * from "./partners.js";
-export { INDEXER_CONTRACT, INDEXER_ERROR_CODES, LIMITS, OPEN_ROUTES, ROUTE_NAMES, UNITS, clampLimit, errorCode, matchRoute, queryArg, queryBool, queryLimit, queryRefusal, routeLimit, spanRefusal } from "./contract.js";
+export { FIRSTS_MAX, IDS_MAX, INDEXER_ROUTES, LAUNCHES_PAGE_DEFAULT, LAUNCHES_PAGE_MAX, LAUNCH_CURSOR_MAX, LAUNCH_SORTS, PRESET_FILTER_MAX, STREAM_STATE_MAX, INBOX_PAGE_DEFAULT, INBOX_PAGE_MAX, WALLET_CURSOR_MAX, WALLET_PAGE_DEFAULT, WALLET_PAGE_MAX, indexerPath, query } from "./paths.js";
+export { ADDRESS_PREFIX_MIN, SEARCH_PAGE_DEFAULT, SEARCH_PAGE_MAX, SEARCH_PARITY_CORPUS, SEARCH_Q_MAX, SEARCH_SUBSTRING_MIN, searchFold, searchNeedle, searchNeedles, searchServed, searchServedTier, searchTier, searchTierFolded } from "./search.js";
 
-export { createIndexerClient, routePath } from "./client.js";
+export * from "./partners.js";
+export * from "./stack-edge.js";
+export { INDEXER_CONTRACT, INDEXER_ERROR_CODES, LIMITS, OPEN_ROUTES, ROUTE_NAMES, UNITS, clampLimit, errorCode, matchRoute, pageAsked, pageLimit, queryArg, queryBool, queryLimit, queryRefusal, routeLimit, spanRefusal } from "./contract.js";
+
+export { DRAIN_NAMES, createIndexerClient, routePath } from "./client.js";
 
 export class IndexerError extends Error {
            status        ;
@@ -55,6 +58,8 @@ export const readEvents = (get     , fromBlock        , toBlock        )        
 
 export const readLaunches = (get     , q                = {})                      => readRoute(get, indexerPath.launches(q), B.LAUNCHES);
 
+export const readLaunchSearch = (get     , q                   )                          => readRoute(get, indexerPath.search(q), B.LAUNCH_SEARCH);
+
 export const readLaunch = (get     , id          )                                           => readRoute(get, indexerPath.launch(id), B.LAUNCH_ONE);
 
 export const readLaunchState = (get     , id          )                         => readRoute(get, indexerPath.launchState(id), B.LAUNCH_STATE);
@@ -63,10 +68,10 @@ export const readMilestones = (get     , id          )                          
 export const readHolders = (get     , id          , q                     = {})                     => readRoute(get, indexerPath.holders(id, q), B.HOLDERS);
 
 export const readTrades = (get     , id          , q              = {})                    => readRoute(get, indexerPath.trades(id, q), B.TRADES);
-export const readLaunchClaims = (get     , id          , q                       = {})                                            => readRoute(get, indexerPath.launchClaims(id, q), B.LAUNCH_CLAIMS);
-export const readDevBuys = (get     , id          )                     => readRoute(get, indexerPath.devBuys(id), B.DEV_BUYS);
+export const readLaunchClaims = (get     , id          , q                              = {})                          => readRoute(get, indexerPath.launchClaims(id, q), B.LAUNCH_CLAIMS);
+export const readDevBuys = (get     , id          , q       = {})                     => readRoute(get, indexerPath.devBuys(id, q), B.DEV_BUYS);
 
-export const readMemberSold = (get     , id          )                            => readRoute(get, indexerPath.memberSold(id), B.MEMBER_SOLD);
+export const readMemberSold = (get     , id          , q       = {})                            => readRoute(get, indexerPath.memberSold(id, q), B.MEMBER_SOLD);
 
 export const readLaunchAccount = (get     , id          )                               => readRoute(get, indexerPath.launchAccount(id), B.LAUNCH_ACCOUNT);
 
@@ -81,7 +86,7 @@ export const readTraders = (get     , id          , q                           
 export const readQuoteChain = (get     , id          )                        => readRoute(get, indexerPath.quoteChain(id), B.QUOTE_CHAIN);
 
 export const readDevTrades = (get     , id          , q                     = {})                       => readRoute(get, indexerPath.devTrades(id, q), B.DEV_TRADES);
-export const readBurns = (get     , id          )                   => readRoute(get, indexerPath.burns(id), B.BURNS);
+export const readBurns = (get     , id          , q       = {})                   => readRoute(get, indexerPath.burns(id, q), B.BURNS);
 export const readLaunchLocks = (get     , id          )                         => readRoute(get, indexerPath.launchLocks(id), B.LAUNCH_LOCKS);
 
 export const readMarks = (get     , id          , q       = {})                   => readRoute(get, indexerPath.marks(id, q), B.MARKS);
@@ -92,20 +97,22 @@ export const readCandleBundle = (get     , id          , q                      
 export const readHighs = (get     , id          , q                                                = {})                   => readRoute(get, indexerPath.highs(id, q), B.HIGHS);
 
 export const readWalletTrades = (get     , wallet        , q                    = {})                          => readRoute(get, indexerPath.walletTrades(wallet, q), B.WALLET_TRADES);
-export const readPositions = (get     , wallet        )                       => readRoute(get, indexerPath.positions(wallet), B.POSITIONS);
+export const readTonActivity = (get     , wallet        , q       = {})                         => readRoute(get, indexerPath.tonActivity(wallet, q), B.TON_ACTIVITY);
+export const readTonOutcome = (get     , wallet        , queryId                 )                        => readRoute(get, indexerPath.tonOutcome(wallet, queryId), B.TON_OUTCOME);
+export const readPositions = (get     , wallet        , q             = {})                       => readRoute(get, indexerPath.positions(wallet, q), B.POSITIONS);
 
-export const readInbox = (get     , wallet        , q                     = {})                   => readRoute(get, indexerPath.inbox(wallet, q), B.INBOX);
-export const readWalletLocks = (get     , wallet        )                         => readRoute(get, indexerPath.walletLocks(wallet), B.WALLET_LOCKS);
-export const readClaimHistory = (get     , wallet        )                          => readRoute(get, indexerPath.claimHistory(wallet), B.CLAIM_HISTORY);
+export const readInbox = (get     , wallet        , q                                      = {})                   => readRoute(get, indexerPath.inbox(wallet, q), B.INBOX);
+export const readWalletLocks = (get     , wallet        , q             = {})                         => readRoute(get, indexerPath.walletLocks(wallet, q), B.WALLET_LOCKS);
+export const readClaimHistory = (get     , wallet        , q             = {})                          => readRoute(get, indexerPath.claimHistory(wallet, q), B.CLAIM_HISTORY);
 
-export const readClaimView = (get     , wallet        )                       => readRoute(get, indexerPath.claimView(wallet), B.CLAIM_VIEW);
+export const readClaimView = (get     , wallet        , q             = {})                       => readRoute(get, indexerPath.claimView(wallet, q), B.CLAIM_VIEW);
 export const readFirsts = (get     , wallet        )                                              => readRoute(get, indexerPath.firsts(wallet), B.FIRSTS);
 
 export const readFirstsMany = (get     , wallets                   )                                                      => readRoute(get, indexerPath.firstsMany(wallets), B.FIRSTS_MANY);
-export const readPeople = (get     , wallet        )                    => readRoute(get, indexerPath.people(wallet), B.PEOPLE);
-export const readRoles = (get     , wallet        )                   => readRoute(get, indexerPath.roles(wallet), B.ROLES);
+export const readPeople = (get     , wallet        , q             = {})                    => readRoute(get, indexerPath.people(wallet, q), B.PEOPLE);
+export const readRoles = (get     , wallet        , q             = {})                   => readRoute(get, indexerPath.roles(wallet, q), B.ROLES);
 
-export const readHandlePlaces = (get     , handle        )                          => readRoute(get, indexerPath.handlePlaces(handle), B.HANDLE_PLACES);
+export const readHandlePlaces = (get     , handle        , q             = {})                          => readRoute(get, indexerPath.handlePlaces(handle, q), B.HANDLE_PLACES);
 
 export const readTraderBoard = (get     , q                                              = {})                         => readRoute(get, indexerPath.traderBoard(q), B.TRADER_BOARD);
 export const readLauncherBoard = (get     , q                     = {})                           => readRoute(get, indexerPath.launcherBoard(q), B.LAUNCHER_BOARD);
@@ -119,4 +126,9 @@ export function offPriceBps(price                               , quotedX64     
   const p = price.livePriceX64;
   if (p === 0n) return null;
   return Number(((quotedX64 - p) * 10_000n) / p);
+}
+
+export function cursorPage                     (body                                                                , rows   )                {
+  if (body.next === undefined) throw new Error(`not a page: the body has no next (rows ${rows})`);
+  return { rows: body[rows], next: body.next };
 }

@@ -2,6 +2,72 @@
 
 All notable changes to `@floorlaunchpad/sdk`. The version follows semver; while the major number is 0, a minor bump may rename or remove an export and a patch bump never does.
 
+## 0.4.0
+
+Removed:
+
+- `LAUNCHES_ALL` (the body of `floor-amm/launches` with no query key). No request answers every launch any more: a bare
+  `floor-amm/launches` is one page, decoded by `LAUNCHES`.
+
+Changed:
+
+- `INDEXER_CONTRACT.launches`: the default `limit` is `LAUNCHES_PAGE_DEFAULT` (100, was 1000); the page kind is the new
+  `keyset` (`Pagination` gains `{ kind: "keyset", limit, cursor: "cursor", next: "next" }`); the keys gain `preset` and
+  `cursor` (`cursor` not with `offset` or `ids`).
+- `LAUNCHES` (the list body) gains `cursors` (the cursor after each row), `keys` (each row's ranked key as a decimal
+  string, null in the unread tail) and `next` (the last cursor while rows remain, else null). `cursors` and `keys` are []
+  with `ids` or `offset`; an indexer without them decodes with `cursors` / `keys` [] and `next` absent.
+- A `string` query key's `max` bounds the raw length as sent; a `list` key may bound each item (`item`); `required` is
+  refused by the table on `search` only.
+- `drain("launches")` follows `next` as `cursor` (by `total` with `offset`).
+
+- The six wallet routes page on request: `positions`, `walletLocks`, `claimHistory`, `people` and `roles` take `limit`
+  (default `WALLET_PAGE_DEFAULT` 100, at most `WALLET_PAGE_MAX` 500) and `cursor` (opaque, at most `WALLET_CURSOR_MAX`
+  characters) and answer `next`; `inbox` takes `before` (`""` the newest; default `INBOX_PAGE_DEFAULT` 100, at most
+  `INBOX_PAGE_MAX` 500) and answers `next`. With neither key each answers every row, as before. Their decoders
+  (`POSITIONS`, `WALLET_LOCKS`, `CLAIM_HISTORY`, `PEOPLE`, `ROLES`, `INBOX`) gain an optional `next`; the readers
+  (`readPositions`, `readWalletLocks`, `readClaimHistory`, `readPeople`, `readRoles`, `readInbox`) take the page keys.
+- Four more routes page, with a page of 100 rows when no key is sent: `floorRouted` (`limit` up to `LAUNCHES_PAGE_MAX`
+  1,000, `cursor` the last launch id, create order; `pending` stays the whole per-quote sum on every page), `devBuys`
+  (`limit` up to 500, `before` a block or a row id, newest first), `claimView` (`limit` up to `WALLET_PAGE_MAX` 500,
+  `cursor` the last row key: `l:<launch>`, `r:<account>`, `p:<traderRef>` or `o:<quote>`; `quotes` and `totals` stay
+  whole) and `handlePlaces` (`limit` up to 500, `cursor` `<launch>:<place>`). Each body (`FLOOR_ROUTED`, `DEV_BUYS`,
+  `CLAIM_VIEW`, `HANDLE_PLACES`) gains an optional `next`, null on the last page; `indexerPath`, `routePath` and the readers
+  (`readDevBuys`, `readClaimView`, `readHandlePlaces`) take the page keys, and `DRAIN_NAMES` gains the four.
+- **Breaking:** a `DEV_BUY` row carries a required `id` (`<block>:<txnIndex>:<eventIndex>`, the `before` cursor). This
+  build's decoder refuses a dev-buys body from an indexer older than it, which sends rows without `id`.
+- A candle (`readCandles`, `floor-amm/candles` and the candle bundle) gains `floorX64`: the floor at the bucket's close, a
+  Q64.64 price as a launch's own `floorX64`. It is absent from an indexer older than this build and null where the bucket
+  has none.
+- `DEX_PAIR`: the pair gains `dexKey`, `createdAtTxnId` (optional) and `creator`; the body gains an optional `launch`
+  (`{ id, token }`), so a pair resolves to its launch in one read.
+- **Breaking:** `roles.traderRefOf[].tier` is 1-based (1..3), as `creatorRefOf`'s; it was 0-based. A client that
+  added 1 to show a tier must stop.
+
+Added:
+
+- Indexer: the route `GET /floor-amm/search?q=` (also under `/floor-amm/v2/`; `INDEXER_CONTRACT.search`,
+  `indexerPath.search`, reader `search`, `readLaunchSearch`, decoder `LAUNCH_SEARCH`, type `LaunchSearch`): launches whose
+  symbol, name or token match, best first, each row with its `tier` (0..4), keyset pages by `next`; keys `q`, `limit`
+  (default `SEARCH_PAGE_DEFAULT` 12, at most `SEARCH_PAGE_MAX` 100), `cursor`, `rankable`, `graduated`, `quote`, `preset`.
+- `src/indexer/search.ts`: `searchFold`, `searchNeedle`, `searchNeedles` (a query with a leading `$` has two readings,
+  without and with it; its tier is the better), `searchTier`, `searchTierFolded`, `searchServed`, `searchServedTier`,
+  `SEARCH_PARITY_CORPUS`, `SEARCH_Q_MAX`, `SEARCH_PAGE_DEFAULT`, `SEARCH_PAGE_MAX`, `ADDRESS_PREFIX_MIN`,
+  `SEARCH_SUBSTRING_MIN`; `paths.ts`: `LAUNCHES_PAGE_DEFAULT`, `LAUNCH_CURSOR_MAX`, `PRESET_FILTER_MAX`, the `preset` and
+  `cursor` keys of `LaunchesQuery`, `LaunchSearchQuery`.
+- `cursorPage` / `CursorPage` (one `{ rows, next }` off any page body), `pageAsked`, `pageLimit`, the type `WalletPage`.
+- Indexer (TON only): `GET /floor-amm/wallets/<wallet>/ton-activity` (`limit` ≤ 200, `before`; `INDEXER_CONTRACT.tonActivity`, `indexerPath.tonActivity`, reader `readTonActivity`, decoder `TON_ACTIVITY` / `TON_ACTIVITY_ROW`) and `GET /floor-amm/wallets/<wallet>/ton-outcome?queryId=` (`tonOutcome`, `readTonOutcome`, `TON_OUTCOME`): a TON wallet's recent FLOOR events, and one pending / landed / failed outcome with its fill by the message's query id. Other chains answer `unknown route`.
+- TON (repository source only, not in the published package): `getTeamSlot` (`get_team_slot`, places decoded and ordered), `getPresetRow` (`get_preset_row`, typed result), `parseRefMap` / `decodeTonSlotPlace`, and `defaultClaimValue` exported from the barrel.
+- TON (repository source only, not in the published package): the price write: `tonPriceCell`, `tonPriceDigest`, `tonSetQuotePriceBody`, `buildTonSetQuotePrice`, `tonQuotePriceFresh` (`TON_PRICE_WINDOW_S`, `TON_PRICE_AHEAD_CAP_S`, `TON_PRICE_WRITE_VALUE`, type `TonPriceArgs`), `getTonQuotePrice` (type `TonQuotePrice`); `addressItem` and `getQuote` take `null` (the GRAM quote).
+- Chains: `elysium` (Elysium, chain 99901, native HYPE; Kinetiq's Arbitrum Orbit L2 on HyperEVM) in the chain registry,
+  `EVM_CHAINS` and the config rows, marked `v2DayOne: false` (an added chain, not v2 day one): `v2DayOneChains()` still
+  returns the seven, `FLOOR_AMM_FROM_BLOCK.elysium` is 6058368 (no code at block 6058367; the live proxy has code from 6058368), no zap routers and no wrapped native yet.
+- Elysium is live: FLOOR is deployed on Elysium 99901 at the same address as the other EVM chains, and the config now lists stock quotes (`deploy/config/quotes/elysium.json`).
+
+Fixed:
+
+- TON `fromBoc`: a BoC whose data ends in a zero completion byte no longer loops forever, and a truncated, oversized-count or out-of-range one throws a `RangeError` (never `undefined`, never a partial cell).
+
 ## 0.3.2
 
 Added:

@@ -11,7 +11,7 @@ const S = (...f: [string, T][]): [string, T][] => f;
 export const EVENTS: Record<string, [string, T][]> = {
   LaunchCreated: S(["launch", "pubkey"], ["mint", "pubkey"], ["quoteMint", "pubkey"], ["creator", "pubkey"], ["id", "u64"], ["presetId", "u8"], ["presetVersion", "u32"], ["presetHash", "bytes:32"], ["p0X64", "u128"], ["raise", "u64"], ["windowTokens", "u64"], ["creatorBuyTokens", "u64"], ["createFee", "u64"], ["name", "bytes:32"], ["symbol", "bytes:10"], ["slot", "u64"], ["ts", "i64"], ["listed", "bool"], ["quoteUsdCentsX64", "u128"], ["nativeCreateFee", "u64"]),
 
-  Graduated: S(["launch", "pubkey"], ["priceX64", "u128"], ["windowRaised", "u64"], ["windowTokens", "u64"], ["slot", "u64"], ["ts", "i64"]),
+  Graduated: S(["launch", "pubkey"], ["windowPriceX64", "u128"], ["windowRaised", "u64"], ["windowTokens", "u64"], ["slot", "u64"], ["ts", "i64"], ["priceX64", "u128"]),
   PotsSwept: S(["launch", "pubkey"], ["amount", "u64"], ["reason", "u8"]),
   Claimed: S(["wallet", "pubkey"], ["sender", "pubkey"], ["launch", "pubkey"], ["quoteMint", "pubkey"], ["types", "u8"], ["creator", "u64"], ["creatorRef", "u64"], ["teamSlot", "u64"], ["traderRef", "u64"], ["extra", "u64"], ["amount", "u64"], ["teamBuy", "u64?"], ["shareBought", "u64?"], ["typesHi", "u8?"]),
 

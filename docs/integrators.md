@@ -9,6 +9,28 @@ own money buys back every sell, holding a price floor that rises as the token is
 **How it works.** Buys walk up a fixed price curve and take tokens from the program. Sells are bought back by the
 program's own money. Part of every buy is added to the floor, which never falls.
 
+## One ask: show the FLOOR
+
+If your product shows a FLOOR token to people (a chart, a token page, a screener, a wallet, a terminal), please show its
+floor. The minimum is two things:
+
+1. **The FLOOR line on the token's price chart:** FLOOR orange `#FF6A1A`, 2 px, a step line labelled `FLOOR`, under the price.
+2. **The FLOOR price on the token's page,** next to the price.
+
+Anything more (the Max Loss, a FLOOR column in lists, the floor in a wallet's holding row, an alert near the floor) is a
+bonus. It is a request, not a requirement, and it is highly appreciated: the floor is the one number a holder of a FLOOR
+token most wants to see, and today they can only see it on floor.supply.
+
+Where to read it:
+
+- **Partner API:** `GET /launches/{chain}/{token}` → `market.floorPriceQuote` (whole quote per whole token, `null` before
+  graduation); `GET /launches/{chain}/{token}/trades` → each trade's `floorPriceQuote`, the history of the line.
+- **Your own indexer:** every trade event carries `sqrtF` (EVM `Trade.sqrtF`, Solana `TradeV2.sqrt_f`).
+  `floor = sqrtF² × 10^6 ÷ (2^144 × 10^quoteDecimals)`; `0` means no floor yet.
+
+The guide, with drop-in code for Lightweight Charts, TradingView and plain SVG: [docs/floor-line.md](floor-line.md). A
+working page with the finished result: [examples/floor-line.html](../examples/floor-line.html).
+
 ## Words used on this page
 
 - **Launch:** one token and its market. The pair is `[launch token, quote]`, for life.
@@ -57,6 +79,7 @@ program's own money. Part of every buy is added to the floor, which never falls.
 - Volume: the quote side of every buy and sell, before fees.
 - Liquidity: the money the program holds to buy back, `F + C + K` (`bid_money` on Solana, `bidMoney` on EVM), plus Bonding's money before graduation. The `/api/dex` adapter serves this sum.
 - Supply: burns are real. Total supply is the live supply.
+- Floor: the price the program's floor money bids, after each trade (`sqrtF` on the trade event, `floorPriceQuote` in the Partner API). Please show it: [One ask: show the FLOOR](#one-ask-show-the-floor).
 - Graduation is a state change on the same program. The pair, the address and the pool id do not change.
 - DEX Screener adapter (spec v1.1), one base URL per chain. On EVM its pair id is `pairIdOf(id)`, `keccak256(abi.encode(FloorAmm, id))`, not the launch id: [examples/dex-adapter.md](../examples/dex-adapter.md).
 - Data API: `/api/v1` with an OpenAPI file. Fees and revenue: the five fees are in each trade event; Milestones are not fees and are not counted as fees.

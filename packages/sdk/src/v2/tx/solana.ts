@@ -134,7 +134,7 @@ export function teamShareBuyAndClaimInstructionsV2(
   });
   return [
     ...(open ? [createAssociatedTokenAccountIdempotentInstruction({ payer: p.member, owner: p.member, mint: p.baseMint, tokenProgram: TOKEN_2022_PROGRAM_ID })] : []),
-    teamShareBuyInstructionV2({ ...buy, teamSlot, memberBase }),
+    teamShareBuyInstructionV2({ ...buy, teamSlot, memberBase, quoteTokenProgram, quoteIsLaunch }),
     claim,
   ];
 }

@@ -3,7 +3,8 @@
 import { unknown } from "./decode.js";
 import * as B from "./bodies.js";
 import * as P from "./partners.js";
-import { FIRSTS_MAX, IDS_MAX, LAUNCHES_PAGE_MAX, LAUNCH_SORTS, STREAM_STATE_MAX } from "./paths.js";
+import { FIRSTS_MAX, IDS_MAX, INBOX_PAGE_DEFAULT, INBOX_PAGE_MAX, LAUNCHES_PAGE_DEFAULT, LAUNCHES_PAGE_MAX, LAUNCH_CURSOR_MAX, LAUNCH_SORTS, PRESET_FILTER_MAX, STREAM_STATE_MAX, WALLET_CURSOR_MAX, WALLET_PAGE_DEFAULT, WALLET_PAGE_MAX } from "./paths.js";
+import { SEARCH_PAGE_DEFAULT, SEARCH_PAGE_MAX, SEARCH_Q_MAX } from "./search.js";
 
 export const UNITS = {
   site: "raw quote base units, token math units (6 dp), Q64.64 prices, unix s; bigint as decimal strings; USD as decimal strings",
@@ -64,6 +65,15 @@ const limit = (dflt        , max        ) => ({ kind: "limit", limit: { default:
 const cursor = (dflt        , max        ) => ({ kind: "cursor", limit: { default: dflt, max }, cursor: "before", next: "next" })         ;
 const LIMIT = (dflt        , max        )           => ({ kind: "int", doc: "rows", min: 1, max, default: dflt });
 const BEFORE           = { kind: "cursor", doc: "a block, or a row id <block>:<txnIndex>:<eventIndex> (a page's next): rows strictly before it" };
+const keyset = (dflt        , max        ) => ({ kind: "keyset", limit: { default: dflt, max }, cursor: "cursor", next: "next" })         ;
+const PRESETS           = { kind: "list", doc: "only launches of these presets (ids 0..255)", max: PRESET_FILTER_MAX, item: { kind: "int", min: 0, max: 255 } }         ;
+
+const WALLET_PAGE = { kind: "keyset", limit: { default: WALLET_PAGE_DEFAULT, max: WALLET_PAGE_MAX }, cursor: "cursor", next: "next", optIn: true }         ;
+const WALLET_PAGE_KEYS = (cursorDoc        )                           => ({
+  limit: { kind: "int", doc: "rows (asks a page)", min: 1, max: WALLET_PAGE_MAX, default: WALLET_PAGE_DEFAULT },
+  cursor: { kind: "string", doc: `a page's next (asks a page): ${cursorDoc}`, max: WALLET_CURSOR_MAX },
+});
+const KEYSET_CURSOR = (without                   )           => ({ kind: "string", doc: "a page's next: the rows after its last one (opaque)", max: LAUNCH_CURSOR_MAX, ...(without.length > 0 ? { without } : {}) });
 const WINDOW           = { kind: "enum", doc: "the volume window", values: B.TRADER_WINDOWS, default: "24h" };
 
 const GATED = ["not_ready", "upstream"]         ;
@@ -97,7 +107,16 @@ export const INDEXER_CONTRACT = {
   }),
   quotes: site({ pattern: "/floor-amm/quotes", body: B.QUOTES }),
   summary: site({ pattern: "/floor-amm/summary", aliases: ["/floor-amm/v2/summary"], body: B.SUMMARY }),
-  floorRouted: site({ pattern: "/floor-amm/floor-routed", aliases: ["/floor-amm/v2/floor-routed"], body: B.FLOOR_ROUTED }),
+  floorRouted: site({
+    pattern: "/floor-amm/floor-routed",
+    aliases: ["/floor-amm/v2/floor-routed"],
+    query: {
+      limit: LIMIT(LAUNCHES_PAGE_DEFAULT, LAUNCHES_PAGE_MAX),
+      cursor: { kind: "string", doc: "a page's next: the launches after this launch id, in create order", max: LAUNCH_CURSOR_MAX },
+    },
+    page: keyset(LAUNCHES_PAGE_DEFAULT, LAUNCHES_PAGE_MAX),
+    body: B.FLOOR_ROUTED,
+  }),
   events: site({
     pattern: "/floor-amm/events",
     aliases: ["/events", "/v2/dex/events"],
@@ -113,18 +132,37 @@ export const INDEXER_CONTRACT = {
     query: {
       sort: { kind: "enum", doc: "the order (larger first with order=desc)", values: LAUNCH_SORTS, default: "created" },
       order: { kind: "enum", doc: "asc or desc", values: ["asc", "desc"], default: "desc" },
-      q: { kind: "string", doc: "name or symbol contains, or an id, token or creator equals" },
+      q: { kind: "string", doc: "name or symbol contains, or an id, token or creator equals", max: SEARCH_Q_MAX },
       ids: { kind: "list", doc: "these launches (ids or tokens), in the order asked without sort", max: IDS_MAX },
       quote: { kind: "string", doc: "launches quoted in this coin" },
       creator: { kind: "string", doc: "launches by this creator" },
       rankable: { kind: "bool", doc: "true (or 1) listed only, false (or 0) unlisted only" },
       graduated: { kind: "bool", doc: "graduated or not (true / false, or 1 / 0)" },
-      limit: LIMIT(LAUNCHES_PAGE_MAX, LAUNCHES_PAGE_MAX),
-      offset: { kind: "int", doc: "rows skipped", min: 0, default: 0 },
+      preset: PRESETS,
+      limit: LIMIT(LAUNCHES_PAGE_DEFAULT, LAUNCHES_PAGE_MAX),
+      cursor: KEYSET_CURSOR(["offset", "ids"]),
+      offset: { kind: "int", doc: "rows skipped (with total: an offset page)", min: 0, default: 0 },
     },
-    page: { kind: "offset", limit: { default: LAUNCHES_PAGE_MAX, max: LAUNCHES_PAGE_MAX }, total: "total" },
+
+    page: keyset(LAUNCHES_PAGE_DEFAULT, LAUNCHES_PAGE_MAX),
     errors: [...GATED, "bad_query"],
     body: B.LAUNCHES,
+  }),
+  search: site({
+    pattern: "/floor-amm/search",
+    v2: true,
+    query: {
+      q: { kind: "string", doc: "the search: symbol, name or token (tiers 0-4, search.ts)", required: true, max: SEARCH_Q_MAX },
+      limit: LIMIT(SEARCH_PAGE_DEFAULT, SEARCH_PAGE_MAX),
+      cursor: KEYSET_CURSOR([]),
+      rankable: { kind: "bool", doc: "true (or 1) listed only, false (or 0) unlisted only" },
+      graduated: { kind: "bool", doc: "graduated or not (true / false, or 1 / 0)" },
+      quote: { kind: "string", doc: "launches quoted in this coin" },
+      preset: PRESETS,
+    },
+    page: keyset(SEARCH_PAGE_DEFAULT, SEARCH_PAGE_MAX),
+    errors: [...GATED, "bad_query"],
+    body: B.LAUNCH_SEARCH,
   }),
   launch: site({ pattern: "/floor-amm/launches/<launch>", v2: true, errors: LAUNCH_ERR, body: B.LAUNCH_ONE }),
   launchState: site({ pattern: "/floor-amm/launches/<launch>/state", v2: true, errors: ["not_ready", "unknown_launch"], body: B.LAUNCH_STATE }),
@@ -138,16 +176,16 @@ export const INDEXER_CONTRACT = {
     errors: [...LAUNCH_ERR, "bad_query"],
     body: B.TRADES,
   }),
-  launchClaims: site({ pattern: "/floor-amm/launches/<launch>/claims", v2: true, query: { claimer: { kind: "string", doc: "only this claimer's rows" } }, errors: LAUNCH_ERR, body: B.LAUNCH_CLAIMS }),
-  devBuys: site({ pattern: "/floor-amm/launches/<launch>/dev-buys", v2: true, errors: LAUNCH_ERR, body: B.DEV_BUYS }),
+  launchClaims: site({ pattern: "/floor-amm/launches/<launch>/claims", v2: true, query: { limit: LIMIT(100, 500), before: BEFORE, claimer: { kind: "string", doc: "only this claimer's rows" } }, page: cursor(100, 500), errors: [...LAUNCH_ERR, "bad_query"], body: B.LAUNCH_CLAIMS }),
+  devBuys: site({ pattern: "/floor-amm/launches/<launch>/dev-buys", v2: true, query: { limit: LIMIT(100, 500), before: BEFORE }, page: cursor(100, 500), errors: [...LAUNCH_ERR, "bad_query"], body: B.DEV_BUYS }),
 
-  memberSold: site({ pattern: "/floor-amm/launches/<launch>/member-sold", v2: true, errors: LAUNCH_ERR, body: B.MEMBER_SOLD }),
+  memberSold: site({ pattern: "/floor-amm/launches/<launch>/member-sold", v2: true, query: { limit: LIMIT(100, 500), before: BEFORE }, page: cursor(100, 500), errors: [...LAUNCH_ERR, "bad_query"], body: B.MEMBER_SOLD }),
 
   launchAccount: site({ pattern: "/floor-amm/launches/<launch>/account", v2: true, errors: LAUNCH_ERR, body: B.LAUNCH_ACCOUNT }),
   traders: site({ pattern: "/floor-amm/launches/<launch>/traders", v2: true, query: { window: WINDOW, limit: LIMIT(100, 500) }, page: limit(100, 500), errors: [...LAUNCH_ERR, "bad_query"], body: B.LAUNCH_TRADERS }),
   quoteChain: site({ pattern: "/floor-amm/launches/<launch>/chain", v2: true, errors: LAUNCH_ERR, body: B.QUOTE_CHAIN }),
   devTrades: site({ pattern: "/floor-amm/launches/<launch>/dev", v2: true, query: { limit: LIMIT(100, 500) }, page: limit(100, 500), errors: [...LAUNCH_ERR, "bad_query"], body: B.DEV_TRADES }),
-  burns: site({ pattern: "/floor-amm/launches/<launch>/burns", v2: true, errors: LAUNCH_ERR, body: B.BURNS }),
+  burns: site({ pattern: "/floor-amm/launches/<launch>/burns", v2: true, query: { limit: LIMIT(100, 500), before: BEFORE }, page: cursor(100, 500), errors: [...LAUNCH_ERR, "bad_query"], body: B.BURNS }),
   launchLocks: site({ pattern: "/floor-amm/launches/<launch>/locks", v2: true, errors: LAUNCH_ERR, body: B.LAUNCH_LOCKS }),
   marks: site({
     pattern: "/floor-amm/launches/<launch>/marks",
@@ -201,17 +239,44 @@ export const INDEXER_CONTRACT = {
     errors: [...WALLET_ERR, "unknown_launch"],
     body: B.WALLET_TRADES,
   }),
-  positions: site({ pattern: "/floor-amm/wallets/<wallet>/positions", v2: true, errors: WALLET_ERR, body: B.POSITIONS }),
-  inbox: site({ pattern: "/floor-amm/wallets/<wallet>/inbox", v2: true, query: { limit: LIMIT(1_000, 1_000) }, page: limit(1_000, 1_000), errors: WALLET_ERR, body: B.INBOX }),
-  walletLocks: site({ pattern: "/floor-amm/wallets/<wallet>/locks", v2: true, errors: WALLET_ERR, body: B.WALLET_LOCKS }),
-  claimHistory: site({ pattern: "/floor-amm/wallets/<wallet>/claims", errors: WALLET_ERR, body: B.CLAIM_HISTORY }),
+
+  tonActivity: site({
+    pattern: "/floor-amm/wallets/<wallet>/ton-activity",
+    query: { limit: LIMIT(100, 200), before: BEFORE },
+    page: cursor(100, 200),
+    errors: WALLET_ERR,
+    body: B.TON_ACTIVITY,
+  }),
+  tonOutcome: site({
+    pattern: "/floor-amm/wallets/<wallet>/ton-outcome",
+    query: { queryId: { kind: "string", doc: "the query id (uint64, decimal) the SDK message carried", required: true } },
+    errors: WALLET_ERR,
+    body: B.TON_OUTCOME,
+  }),
+
+  positions: site({ pattern: "/floor-amm/wallets/<wallet>/positions", v2: true, query: WALLET_PAGE_KEYS("opaque, launch create order"), page: WALLET_PAGE, errors: WALLET_ERR, body: B.POSITIONS }),
+
+  inbox: site({
+    pattern: "/floor-amm/wallets/<wallet>/inbox",
+    v2: true,
+    query: { limit: LIMIT(1_000, 1_000), before: { kind: "cursor", doc: "asks a page: empty = the newest; a page's next (opaque): items strictly before it" } },
+    page: { kind: "cursor", limit: { default: 1_000, max: 1_000 }, cursor: "before", next: "next", optIn: { default: INBOX_PAGE_DEFAULT, max: INBOX_PAGE_MAX } },
+    errors: WALLET_ERR,
+    body: B.INBOX,
+  }),
+  walletLocks: site({ pattern: "/floor-amm/wallets/<wallet>/locks", v2: true, query: WALLET_PAGE_KEYS("opaque, launch create order"), page: WALLET_PAGE, errors: WALLET_ERR, body: B.WALLET_LOCKS }),
+  claimHistory: site({ pattern: "/floor-amm/wallets/<wallet>/claims", query: WALLET_PAGE_KEYS("opaque, newest first"), page: WALLET_PAGE, errors: WALLET_ERR, body: B.CLAIM_HISTORY }),
   firsts: site({ pattern: "/floor-amm/wallets/<wallet>/firsts", errors: WALLET_ERR, body: B.FIRSTS }),
   firstsMany: site({ pattern: "/floor-amm/wallets/firsts", query: { wallets: { kind: "list", doc: "the wallets", required: true, min: 1, max: FIRSTS_MAX } }, errors: WALLET_ERR, body: B.FIRSTS_MANY }),
-  claimView: site({ pattern: "/floor-amm/claims/<wallet>", errors: [...WALLET_ERR, "no_reader"], body: B.CLAIM_VIEW }),
-  people: site({ pattern: "/floor-amm/referrals/<wallet>/people", errors: WALLET_ERR, body: B.PEOPLE }),
-  roles: site({ pattern: "/floor-amm/roles/<wallet>", errors: WALLET_ERR, body: B.ROLES }),
+  claimView: site({ pattern: "/floor-amm/claims/<wallet>", query: WALLET_PAGE_KEYS("a page's next: the last row key (l:<launch>, r:<account>, p:<traderRef>, o:<quote>), string order"), page: WALLET_PAGE, errors: [...WALLET_ERR, "bad_query", "no_reader"], body: B.CLAIM_VIEW }),
+  people: site({ pattern: "/floor-amm/referrals/<wallet>/people", query: WALLET_PAGE_KEYS("opaque, referred wallet order"), page: WALLET_PAGE, errors: WALLET_ERR, body: B.PEOPLE }),
+  roles: site({ pattern: "/floor-amm/roles/<wallet>", query: WALLET_PAGE_KEYS("opaque, a page of launches in create order"), page: WALLET_PAGE, errors: WALLET_ERR, body: B.ROLES }),
 
-  handlePlaces: site({ pattern: "/floor-amm/handles/<handle>/places", errors: WALLET_ERR, body: B.HANDLE_PLACES }),
+  handlePlaces: site({
+    pattern: "/floor-amm/handles/<handle>/places",
+    query: { limit: LIMIT(100, 500), cursor: { kind: "string", doc: "a page's next: <launch>:<place>, rows strictly after it", max: WALLET_CURSOR_MAX } },
+    page: keyset(100, 500),
+    errors: WALLET_ERR, body: B.HANDLE_PLACES }),
 
   traderBoard: site({ pattern: "/floor-amm/leaderboards/traders", v2: true, query: { window: WINDOW, limit: LIMIT(100, 500) }, page: limit(100, 500), errors: [...GATED, "bad_query"], body: B.TRADER_BOARD }),
   launcherBoard: site({ pattern: "/floor-amm/leaderboards/launchers", v2: true, query: { limit: LIMIT(100, 500) }, page: limit(100, 500), errors: [...GATED, "bad_query"], body: B.LAUNCHER_BOARD }),
@@ -236,12 +301,14 @@ export const INDEXER_CONTRACT = {
     query: {
       ticker_id: { kind: "string", doc: "<token>_<quote>", required: true },
       type: { kind: "enum", doc: "one side only", values: ["buy", "sell"] },
-      limit: { kind: "int", doc: "rows per side (0: all)", min: 0 },
+      limit: { kind: "int", doc: "rows per side (absent: 500; 0: all, refused past 5000 rows in all: 413, page with before)", min: 0, max: 5000, default: 500 },
+      before: BEFORE,
       start_time: { kind: "unix", doc: "from (10^11 and over: milliseconds)" },
       end_time: { kind: "unix", doc: "to (10^11 and over: milliseconds)" },
     },
-    page: { kind: "range", from: "start_time", to: "end_time" },
-    errors: [...GATED, "bad_query", "not_found"],
+
+    page: cursor(500, 5000),
+    errors: [...GATED, "bad_query", "not_found", "too_many"],
     body: P.CG_HISTORICAL,
   }),
   llamaTvl: partner({ pattern: "/v2/defillama/tvl", errors: GATED, body: P.LLAMA_TVL }),
@@ -283,7 +350,7 @@ export const OPEN_ROUTES = {
 
 export function routeLimit(name           )                                                            {
   const p             = INDEXER_CONTRACT[name].page;
-  return p.kind === "limit" || p.kind === "offset" || p.kind === "cursor" ? p.limit : null;
+  return p.kind === "limit" || p.kind === "offset" || p.kind === "cursor" || p.kind === "keyset" ? p.limit : null;
 }
 
 export const LIMITS = Object.fromEntries(ROUTE_NAMES.flatMap((n) => {
@@ -291,9 +358,29 @@ export const LIMITS = Object.fromEntries(ROUTE_NAMES.flatMap((n) => {
   return l === null ? [] : [[n, l]];
 }))                                                                                            ;
 
-export function clampLimit(name           , n        )         {
-  const l = routeLimit(name);
-  return l === null ? n : Math.min(Math.max(1, Math.trunc(n)), l.max);
+export function clampLimit(name           , n        , paged = false)         {
+  const p             = INDEXER_CONTRACT[name].page;
+  const l = paged && p.kind === "cursor" && p.optIn !== undefined ? p.optIn : routeLimit(name);
+
+  const lo = (INDEXER_CONTRACT[name].query                            ).limit?.min ?? 1;
+  return l === null ? n : Math.min(Math.max(lo, Math.trunc(n)), l.max);
+}
+
+export function pageAsked(name           , _q                                            )          {
+  const p             = INDEXER_CONTRACT[name].page;
+
+  if (p.kind === "cursor" && p.optIn !== undefined) return true;
+  if (p.kind === "keyset" && p.optIn === true) return true;
+  return false;
+}
+
+export function pageLimit(name           , q                 )         {
+  const p             = INDEXER_CONTRACT[name].page;
+  if (p.kind === "cursor" && p.optIn !== undefined) {
+    const raw = q.get("limit");
+    return raw === null || raw === "" || !DIGITS.test(raw) ? p.optIn.default : Math.min(Math.max(1, Number(raw)), p.optIn.max);
+  }
+  return queryLimit(name, q);
 }
 
 const DIGITS = /^\d+$/;
@@ -309,7 +396,11 @@ export function queryRefusal(name           , q                 )               
   const spec                                     = INDEXER_CONTRACT[name].query;
   for (const [key, k] of Object.entries(spec)) {
     const raw = q.get(key);
-    if (raw === null || raw === "") continue;
+    if (raw === null || raw === "") {
+      if (k.required === true && TABLE_REQUIRED.has(name)) return `${key} is required`;
+      continue;
+    }
+    for (const w of k.without ?? []) if ((q.get(w) ?? "") !== "") return `${key} cannot be given with ${w}`;
     switch (k.kind) {
       case "int": {
         const lo = k.min ?? 0;
@@ -318,10 +409,15 @@ export function queryRefusal(name           , q                 )               
         break;
       }
       case "list": {
-        const n = raw.split(",").filter((s) => s !== "").length;
-        if (k.max !== undefined && n > k.max) return `at most ${k.max} ${key}`;
+        const parts = raw.split(",").filter((s) => s !== "");
+        if (k.max !== undefined && parts.length > k.max) return `at most ${k.max} ${key}`;
+        const it = k.item;
+        if (it !== undefined && parts.some((x) => !DIGITS.test(x) || Number(x) < it.min || Number(x) > it.max)) return `each ${key} must be an integer ${it.min}..${it.max}`;
         break;
       }
+      case "string":
+        if (k.max !== undefined && raw.length > k.max) return `${key} must be at most ${k.max} characters`;
+        break;
       case "enum":
         if (k.values !== undefined && !k.values.includes(raw)) return `${key} must be one of ${k.values.join(", ")}`;
         break;
@@ -332,8 +428,16 @@ export function queryRefusal(name           , q                 )               
         break;
     }
   }
+
+  const pg             = INDEXER_CONTRACT[name].page;
+  if (pg.kind === "cursor" && pg.optIn !== undefined && q.get(pg.cursor) !== null) {
+    const raw = q.get("limit");
+    if (raw !== null && raw !== "" && Number(raw) > pg.optIn.max) return `limit must be 1..${pg.optIn.max} with ${pg.cursor}`;
+  }
   return spanRefusal(name, q);
 }
+
+const TABLE_REQUIRED                         = new Set           (["search"]);
 
 const BOOLS                                    = { true: true, false: false, 1: true, 0: false };
 

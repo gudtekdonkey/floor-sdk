@@ -3,6 +3,7 @@
 import { checksumAddress } from "../abi.js";
 import { decodeEventLog, itemTopic } from "../items.js";
 
+import { LEGACY_CLAIMED_TOPIC, LEGACY_EVENTS, normalizeLegacyClaimed } from "./legacy-events.js";
 import { FLOOR_AMM_ABI, FLOOR_AMM_UNFROZEN_EVENTS, FLOOR_ZAP_ABI } from "./iface.js";
 
        
@@ -28,10 +29,17 @@ for (const i of ALL.filter((i) => i.type === "event").reverse()) {
     });
 }
 
+export const FLOOR_LEGACY_EVENT_TOPICS                         = { Claimed: LEGACY_CLAIMED_TOPIC };
+
 export function decodeFloorLog(log     , from                    )                       {
   if (from && (!log.address || !from.some((a) => a.toLowerCase() === log.address .toLowerCase()))) return null;
   const d                       = decodeEventLog(ALL, log);
-  if (!d) return null;
+  if (!d) {
+    const old = decodeEventLog(LEGACY_EVENTS, log);
+    if (!old) return null;
+    const e                = { ...old, args: normalizeLegacyClaimed(old.args), legacy: true };
+    return log.address ? { ...e, address: checksumAddress(log.address) } : e;
+  }
   if (UNFROZEN().has((log.topics[0] ?? "").toLowerCase())) d.unfrozen = true;
   return log.address ? { ...d, address: checksumAddress(log.address) } : d;
 }

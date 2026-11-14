@@ -8,7 +8,7 @@ import { LEG_BACKING, LEG_FLOOR, LEG_HOLDER, LEG_PLATFORM, LEG_TEAM } from "../.
 import { priceImpactV2, quoteSellImpactV2 } from "../../math/v2/receipt.ts";
 import { sCirc } from "../../math/v2/supply.ts";
 import { CLAIM_SHARE_BOUGHT, CLAIM_TEAM_BUY, CLAIM_TRADER_REF } from "../../solana/floor/instructions.ts";
-import { FLOOR_AMM_PROGRAM_ID, configPda, launchPda, refOwedPda, refOwedVault, teamSlotPda, traderRefEscrow, traderRefPda } from "../../solana/floor/program.ts";
+import { FLOOR_AMM_PROGRAM_ID, configPda, launchPda, refOwedPda, refOwedVault, teamSlotPda, traderLinkPda, traderRefEscrow, traderRefPda } from "../../solana/floor/program.ts";
 import { MAX_COMPUTE_UNIT_LIMIT, computeUnitLimitInstruction } from "../../solana/instruction.ts";
 import type { Instruction } from "../../solana/instruction.ts";
 import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID, WSOL_MINT, associatedTokenAddress } from "../../solana/pda.ts";
@@ -99,14 +99,23 @@ export function createSolanaClient(opts: FloorClientOptions<"solana">): FloorCli
     return { address, l };
   }
 
-  async function tradeAccounts(address: string, l: LaunchV2Account, trader: string, baseOwner: string, quoteOwner: string): Promise<TradeAccountsV2 & { programId: string; hookProgramId: string }> {
+  async function quoteIsLaunchOf(l: LaunchV2Account): Promise<boolean> {
+    if (l.quoteTokenProgram !== TOKEN_2022_PROGRAM_ID) return false;
+    const a = await get(launchPda(l.quoteMint, pid)[0]);
+    return a !== null && a.owner === pid;
+  }
+
+  async function tradeAccounts(address: string, l: LaunchV2Account, trader: string, baseOwner: string, quoteOwner: string, isBuy: boolean): Promise<TradeAccountsV2 & { programId: string; hookProgramId: string }> {
     const ref = traderRefPda(trader, l.quoteMint, pid)[0];
-    const hasRef = (await get(ref)) !== null;
+    const linked = (await get(traderLinkPda(trader, pid)[0])) !== null;
+    const hasRef = linked || (await get(ref)) !== null;
+    const out = isBuy ? baseOwner : quoteOwner;
     return {
       programId: pid, hookProgramId: hid, trader, launch: address, baseMint: l.baseMint, quoteMint: l.quoteMint, tokenVault: l.tokenVault, quoteVault: l.quoteVault,
       traderBase: associatedTokenAddress(baseOwner, l.baseMint, TOKEN_2022_PROGRAM_ID), traderQuote: associatedTokenAddress(quoteOwner, l.quoteMint, l.quoteTokenProgram),
       quoteTokenProgram: l.quoteTokenProgram, traderRef: hasRef ? ref : null, escrow: hasRef ? traderRefEscrow(ref, l.quoteMint, l.quoteTokenProgram) : null,
-      baseOwner, quoteOwner,
+      baseOwner, quoteOwner, quoteIsLaunch: await quoteIsLaunchOf(l),
+      ...(linked ? { user: trader, recipient: out !== trader ? out : null } : {}),
     };
   }
 
@@ -188,7 +197,7 @@ export function createSolanaClient(opts: FloorClientOptions<"solana">): FloorCli
       if (p.amountIn <= 0n) throw bad("amountIn must be > 0");
       const { address, l } = await launchOf(p.launch);
       const owner = p.recipient ?? p.trader;
-      const a = await tradeAccounts(address, l, p.trader, owner, p.trader);
+      const a = await tradeAccounts(address, l, p.trader, owner, p.trader, true);
 
       const hasPosition = owner !== p.trader || (await get(holderPositionPda(address, owner, hid)[0])) !== null;
       const wsol = await wsolLegs(l, p.trader, p.trader);
@@ -206,7 +215,7 @@ export function createSolanaClient(opts: FloorClientOptions<"solana">): FloorCli
       if (p.tokensIn <= 0n) throw bad("tokensIn must be > 0");
       const { address, l } = await launchOf(p.launch);
       const to = p.recipient ?? p.trader;
-      const a = await tradeAccounts(address, l, p.trader, p.trader, to);
+      const a = await tradeAccounts(address, l, p.trader, p.trader, to, false);
       const wsol = await wsolLegs(l, to, p.trader);
       const instructions: Instruction[] = [
         computeUnitLimitInstruction(MAX_COMPUTE_UNIT_LIMIT),
@@ -221,10 +230,12 @@ export function createSolanaClient(opts: FloorClientOptions<"solana">): FloorCli
       const tok = (p.types & (CLAIM_TEAM_BUY | CLAIM_SHARE_BOUGHT)) !== 0;
       const launches: ClaimLaunchV2[] = [];
       let qtp: string | null = null;
+      let qIsLaunch = false;
       for (const mint of p.launches) {
         const { address, l } = await launchOf(mint);
         if (l.quoteMint !== p.quote) throw bad(`launch ${mint} trades in ${l.quoteMint}, not ${p.quote}`);
         qtp = l.quoteTokenProgram;
+        qIsLaunch = await quoteIsLaunchOf(l);
         const slot = teamSlotPda(address, pid)[0];
         launches.push({
           launch: address, quoteVault: l.quoteVault, teamSlot: (await get(slot)) !== null ? slot : null, baseMint: l.baseMint,
@@ -235,12 +246,13 @@ export function createSolanaClient(opts: FloorClientOptions<"solana">): FloorCli
         const m = await get(p.quote);
         if (m === null) throw new FloorError("BadAccount", `no quote mint ${p.quote}`, { source: "sdk" });
         qtp = m.owner;
+        qIsLaunch = await quoteIsLaunchOf({ quoteMint: p.quote, quoteTokenProgram: qtp } as LaunchV2Account);
       }
       const ro = (p.types & CLAIM_TRADER_REF) !== 0 ? refOwedPda(p.wallet, p.quote, pid)[0] : null;
       const claim = claimInstructionV2({
         ...ids, sender: p.wallet, wallet: p.wallet, quoteMint: p.quote, quoteTokenProgram: qtp, destination: associatedTokenAddress(p.wallet, p.quote, qtp),
         config: configPda(pid)[0], refOwed: ro, refOwedVault: ro ? refOwedVault(ro, p.quote, qtp) : null, types: p.types, launches,
-        unwrap: p.quote === WSOL_MINT && qtp === TOKEN_PROGRAM_ID,
+        unwrap: p.quote === WSOL_MINT && qtp === TOKEN_PROGRAM_ID, quoteIsLaunch: qIsLaunch,
       });
       return { family: "solana", instructions: [computeUnitLimitInstruction(CLAIM_COMPUTE_UNIT_LIMIT_V2), claim] };
     }),

@@ -6,18 +6,21 @@ import * as B from "./bodies.ts";
 import { indexerPath } from "./paths.ts";
 import { errorCode } from "./contract.ts";
 import type { IndexerErrorCode } from "./contract.ts";
-import type { CandlesQuery, LaunchesQuery, Page, TradesQuery, WalletTradesQuery } from "./paths.ts";
+import type { CandlesQuery, LaunchSearchQuery, LaunchesQuery, Page, TradesQuery, WalletPage, WalletTradesQuery } from "./paths.ts";
 
 export * from "./bodies.ts";
 export { ShapeError, decode } from "./decode.ts";
 export type { Decoder, Infer } from "./decode.ts";
-export { FIRSTS_MAX, IDS_MAX, INDEXER_ROUTES, LAUNCHES_PAGE_MAX, LAUNCH_SORTS, STREAM_STATE_MAX, indexerPath, query } from "./paths.ts";
+export { FIRSTS_MAX, IDS_MAX, INDEXER_ROUTES, LAUNCHES_PAGE_DEFAULT, LAUNCHES_PAGE_MAX, LAUNCH_CURSOR_MAX, LAUNCH_SORTS, PRESET_FILTER_MAX, STREAM_STATE_MAX, INBOX_PAGE_DEFAULT, INBOX_PAGE_MAX, WALLET_CURSOR_MAX, WALLET_PAGE_DEFAULT, WALLET_PAGE_MAX, indexerPath, query } from "./paths.ts";
+export { ADDRESS_PREFIX_MIN, SEARCH_PAGE_DEFAULT, SEARCH_PAGE_MAX, SEARCH_PARITY_CORPUS, SEARCH_Q_MAX, SEARCH_SUBSTRING_MIN, searchFold, searchNeedle, searchNeedles, searchServed, searchServedTier, searchTier, searchTierFolded } from "./search.ts";
+export type { SearchSubject, SearchTier } from "./search.ts";
 export * from "./partners.ts";
-export { INDEXER_CONTRACT, INDEXER_ERROR_CODES, LIMITS, OPEN_ROUTES, ROUTE_NAMES, UNITS, clampLimit, errorCode, matchRoute, queryArg, queryBool, queryLimit, queryRefusal, routeLimit, spanRefusal } from "./contract.ts";
+export * from "./stack-edge.ts";
+export { INDEXER_CONTRACT, INDEXER_ERROR_CODES, LIMITS, OPEN_ROUTES, ROUTE_NAMES, UNITS, clampLimit, errorCode, matchRoute, pageAsked, pageLimit, queryArg, queryBool, queryLimit, queryRefusal, routeLimit, spanRefusal } from "./contract.ts";
 export type { IndexerErrorCode, Pagination, PathParam, QueryKey, RouteBody, RouteContract, RouteName, Served, ServedBody, ServedKeys, Units } from "./contract.ts";
-export { createIndexerClient, routePath } from "./client.ts";
+export { DRAIN_NAMES, createIndexerClient, routePath } from "./client.ts";
 export type { DrainName, IndexerClient, IndexerClientOptions, ReadName, RouteArgs } from "./client.ts";
-export type { CandlesQuery, IndexerRoute, IndexerRouteName, LaunchSort, LaunchesQuery, Page, StreamQuery, TradesQuery, WalletTradesQuery } from "./paths.ts";
+export type { CandlesQuery, IndexerRoute, IndexerRouteName, LaunchSearchQuery, LaunchSort, LaunchesQuery, Page, StreamQuery, TradesQuery, WalletPage, WalletTradesQuery } from "./paths.ts";
 
 export type LaunchId = string;
 
@@ -65,6 +68,8 @@ export const readEvents = (get: Get, fromBlock: number, toBlock: number): Promis
 
 export const readLaunches = (get: Get, q: LaunchesQuery = {}): Promise<B.Launches> => readRoute(get, indexerPath.launches(q), B.LAUNCHES);
 
+export const readLaunchSearch = (get: Get, q: LaunchSearchQuery): Promise<B.LaunchSearch> => readRoute(get, indexerPath.search(q), B.LAUNCH_SEARCH);
+
 export const readLaunch = (get: Get, id: LaunchId): Promise<At & { launch: B.ListedLaunch }> => readRoute(get, indexerPath.launch(id), B.LAUNCH_ONE);
 
 export const readLaunchState = (get: Get, id: LaunchId): Promise<B.LaunchState> => readRoute(get, indexerPath.launchState(id), B.LAUNCH_STATE);
@@ -73,10 +78,10 @@ export const readMilestones = (get: Get, id: LaunchId): Promise<B.LaunchMileston
 export const readHolders = (get: Get, id: LaunchId, q: { limit?: number } = {}): Promise<B.Holders> => readRoute(get, indexerPath.holders(id, q), B.HOLDERS);
 
 export const readTrades = (get: Get, id: LaunchId, q: TradesQuery = {}): Promise<B.Trades> => readRoute(get, indexerPath.trades(id, q), B.TRADES);
-export const readLaunchClaims = (get: Get, id: LaunchId, q: { claimer?: string } = {}): Promise<At & { claims: B.LaunchClaim[] }> => readRoute(get, indexerPath.launchClaims(id, q), B.LAUNCH_CLAIMS);
-export const readDevBuys = (get: Get, id: LaunchId): Promise<B.DevBuys> => readRoute(get, indexerPath.devBuys(id), B.DEV_BUYS);
+export const readLaunchClaims = (get: Get, id: LaunchId, q: Page & { claimer?: string } = {}): Promise<B.LaunchClaims> => readRoute(get, indexerPath.launchClaims(id, q), B.LAUNCH_CLAIMS);
+export const readDevBuys = (get: Get, id: LaunchId, q: Page = {}): Promise<B.DevBuys> => readRoute(get, indexerPath.devBuys(id, q), B.DEV_BUYS);
 
-export const readMemberSold = (get: Get, id: LaunchId): Promise<B.MemberSoldBody> => readRoute(get, indexerPath.memberSold(id), B.MEMBER_SOLD);
+export const readMemberSold = (get: Get, id: LaunchId, q: Page = {}): Promise<B.MemberSoldBody> => readRoute(get, indexerPath.memberSold(id, q), B.MEMBER_SOLD);
 
 export const readLaunchAccount = (get: Get, id: LaunchId): Promise<B.LaunchAccountBody> => readRoute(get, indexerPath.launchAccount(id), B.LAUNCH_ACCOUNT);
 
@@ -91,7 +96,7 @@ export const readTraders = (get: Get, id: LaunchId, q: { window?: B.TraderWindow
 export const readQuoteChain = (get: Get, id: LaunchId): Promise<B.QuoteChain> => readRoute(get, indexerPath.quoteChain(id), B.QUOTE_CHAIN);
 
 export const readDevTrades = (get: Get, id: LaunchId, q: { limit?: number } = {}): Promise<B.DevTrades> => readRoute(get, indexerPath.devTrades(id, q), B.DEV_TRADES);
-export const readBurns = (get: Get, id: LaunchId): Promise<B.Burns> => readRoute(get, indexerPath.burns(id), B.BURNS);
+export const readBurns = (get: Get, id: LaunchId, q: Page = {}): Promise<B.Burns> => readRoute(get, indexerPath.burns(id, q), B.BURNS);
 export const readLaunchLocks = (get: Get, id: LaunchId): Promise<B.LaunchLocks> => readRoute(get, indexerPath.launchLocks(id), B.LAUNCH_LOCKS);
 
 export const readMarks = (get: Get, id: LaunchId, q: Page = {}): Promise<B.Marks> => readRoute(get, indexerPath.marks(id, q), B.MARKS);
@@ -102,20 +107,22 @@ export const readCandleBundle = (get: Get, id: LaunchId, q: { intervals?: readon
 export const readHighs = (get: Get, id: LaunchId, q: { atLeast?: bigint | string; limit?: number } = {}): Promise<B.Highs> => readRoute(get, indexerPath.highs(id, q), B.HIGHS);
 
 export const readWalletTrades = (get: Get, wallet: string, q: WalletTradesQuery = {}): Promise<B.WalletTrades> => readRoute(get, indexerPath.walletTrades(wallet, q), B.WALLET_TRADES);
-export const readPositions = (get: Get, wallet: string): Promise<B.Positions> => readRoute(get, indexerPath.positions(wallet), B.POSITIONS);
+export const readTonActivity = (get: Get, wallet: string, q: Page = {}): Promise<B.TonActivity> => readRoute(get, indexerPath.tonActivity(wallet, q), B.TON_ACTIVITY);
+export const readTonOutcome = (get: Get, wallet: string, queryId: bigint | string): Promise<B.TonOutcome> => readRoute(get, indexerPath.tonOutcome(wallet, queryId), B.TON_OUTCOME);
+export const readPositions = (get: Get, wallet: string, q: WalletPage = {}): Promise<B.Positions> => readRoute(get, indexerPath.positions(wallet, q), B.POSITIONS);
 
-export const readInbox = (get: Get, wallet: string, q: { limit?: number } = {}): Promise<B.Inbox> => readRoute(get, indexerPath.inbox(wallet, q), B.INBOX);
-export const readWalletLocks = (get: Get, wallet: string): Promise<B.WalletLocks> => readRoute(get, indexerPath.walletLocks(wallet), B.WALLET_LOCKS);
-export const readClaimHistory = (get: Get, wallet: string): Promise<B.ClaimHistory> => readRoute(get, indexerPath.claimHistory(wallet), B.CLAIM_HISTORY);
+export const readInbox = (get: Get, wallet: string, q: { limit?: number; before?: string } = {}): Promise<B.Inbox> => readRoute(get, indexerPath.inbox(wallet, q), B.INBOX);
+export const readWalletLocks = (get: Get, wallet: string, q: WalletPage = {}): Promise<B.WalletLocks> => readRoute(get, indexerPath.walletLocks(wallet, q), B.WALLET_LOCKS);
+export const readClaimHistory = (get: Get, wallet: string, q: WalletPage = {}): Promise<B.ClaimHistory> => readRoute(get, indexerPath.claimHistory(wallet, q), B.CLAIM_HISTORY);
 
-export const readClaimView = (get: Get, wallet: string): Promise<B.ClaimView> => readRoute(get, indexerPath.claimView(wallet), B.CLAIM_VIEW);
+export const readClaimView = (get: Get, wallet: string, q: WalletPage = {}): Promise<B.ClaimView> => readRoute(get, indexerPath.claimView(wallet, q), B.CLAIM_VIEW);
 export const readFirsts = (get: Get, wallet: string): Promise<At & { wallet: string } & B.Firsts> => readRoute(get, indexerPath.firsts(wallet), B.FIRSTS);
 
 export const readFirstsMany = (get: Get, wallets: readonly string[]): Promise<At & { wallets: Record<string, B.Firsts> }> => readRoute(get, indexerPath.firstsMany(wallets), B.FIRSTS_MANY);
-export const readPeople = (get: Get, wallet: string): Promise<B.People> => readRoute(get, indexerPath.people(wallet), B.PEOPLE);
-export const readRoles = (get: Get, wallet: string): Promise<B.Roles> => readRoute(get, indexerPath.roles(wallet), B.ROLES);
+export const readPeople = (get: Get, wallet: string, q: WalletPage = {}): Promise<B.People> => readRoute(get, indexerPath.people(wallet, q), B.PEOPLE);
+export const readRoles = (get: Get, wallet: string, q: WalletPage = {}): Promise<B.Roles> => readRoute(get, indexerPath.roles(wallet, q), B.ROLES);
 
-export const readHandlePlaces = (get: Get, handle: string): Promise<B.HandlePlaces> => readRoute(get, indexerPath.handlePlaces(handle), B.HANDLE_PLACES);
+export const readHandlePlaces = (get: Get, handle: string, q: WalletPage = {}): Promise<B.HandlePlaces> => readRoute(get, indexerPath.handlePlaces(handle, q), B.HANDLE_PLACES);
 
 export const readTraderBoard = (get: Get, q: { window?: B.TraderWindow; limit?: number } = {}): Promise<B.TraderBoard> => readRoute(get, indexerPath.traderBoard(q), B.TRADER_BOARD);
 export const readLauncherBoard = (get: Get, q: { limit?: number } = {}): Promise<B.LauncherBoard> => readRoute(get, indexerPath.launcherBoard(q), B.LAUNCHER_BOARD);
@@ -129,4 +136,13 @@ export function offPriceBps(price: Pick<B.Price, "livePriceX64">, quotedX64: big
   const p = price.livePriceX64;
   if (p === 0n) return null;
   return Number(((quotedX64 - p) * 10_000n) / p);
+}
+
+export interface CursorPage<T> {
+  rows: readonly T[];
+  next: string | null;
+}
+export function cursorPage<K extends string, T>(body: { readonly [k in K]: readonly T[] } & { next?: string | null }, rows: K): CursorPage<T> {
+  if (body.next === undefined) throw new Error(`not a page: the body has no next (rows ${rows})`);
+  return { rows: body[rows], next: body.next };
 }
