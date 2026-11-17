@@ -62,7 +62,7 @@ A buyer who holds the native coin, or an ERC-20 that is not the launch's quote, 
 
 ## FloorRouter addresses (EVM)
 
-`evmRouteCallV2` takes the FloorRouter's address as `router`. The SDK books one per chain and zap slot: `FLOOR_ROUTER_ADDRESSES` and each zap row's `floorRouter` (`@floorlaunchpad/sdk/evm/chains`), the same address for a slot on every chain that has it. They are derived ahead of the routers' deploy, so an address is usable only once it has code on that chain. Before then a call to it still succeeds and buys nothing, and a native-in buy's coin goes to the empty address and is lost. Check it first (`getCode` answering "0x" or `undefined` is no code):
+`evmRouteCallV2` takes the FloorRouter's address as `router`. The SDK books one per chain and zap slot: `FLOOR_ROUTER_ADDRESSES` and each zap row's `floorRouter` (`@floorlaunchpad/sdk/evm/chains`), the same address for a slot on every chain that has it. All 15 are deployed (2026-11-17) on the eight EVM chains, behind `FLOOR_ROUTER_DEPLOYER`; `FLOOR_ROUTER_FROM_BLOCK` is the block that deployer was created in on each chain, where an indexer of router events starts. The addresses are still derived, not read back, so a slot added later is usable only once it has code on its chain: a call to an address with no code succeeds and buys nothing, and a native-in buy's coin goes to the empty address and is lost. Check it first (`getCode` answering "0x" or `undefined` is no code):
 
 ```ts
 import { FLOOR_ROUTER_ADDRESSES } from "@floorlaunchpad/sdk/evm/chains";
