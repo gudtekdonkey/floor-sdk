@@ -56,6 +56,7 @@ export const readFloorRouted = (get     )                         => readRoute(g
 
 export const readEvents = (get     , fromBlock        , toBlock        )                    => readRoute(get, indexerPath.events(fromBlock, toBlock), B.EVENTS);
 
+export const readLaunchLists = (get     , q                  )                         => readRoute(get, indexerPath.launchLists(q), B.LAUNCH_LISTS);
 export const readLaunches = (get     , q                = {})                      => readRoute(get, indexerPath.launches(q), B.LAUNCHES);
 
 export const readLaunchSearch = (get     , q                   )                          => readRoute(get, indexerPath.search(q), B.LAUNCH_SEARCH);
@@ -93,6 +94,8 @@ export const readMarks = (get     , id          , q       = {})                 
 export const readPrice = (get     , id          )                   => readRoute(get, indexerPath.price(id), B.PRICE);
 
 export const readCandles = (get     , q              )                     => readRoute(get, indexerPath.candles(q), B.CANDLES);
+
+export const readCandlesMany = (get     , q                  )                         => readRoute(get, indexerPath.candlesMany(q), B.CANDLES_MANY);
 export const readCandleBundle = (get     , id          , q                                                    = {})                          => readRoute(get, indexerPath.candleBundle(id, q), B.CANDLE_BUNDLE);
 export const readHighs = (get     , id          , q                                                = {})                   => readRoute(get, indexerPath.highs(id, q), B.HIGHS);
 

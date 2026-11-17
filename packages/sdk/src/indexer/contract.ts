@@ -4,7 +4,7 @@ import type { Decoder } from "./decode.ts";
 import { unknown } from "./decode.ts";
 import * as B from "./bodies.ts";
 import * as P from "./partners.ts";
-import { FIRSTS_MAX, IDS_MAX, INBOX_PAGE_DEFAULT, INBOX_PAGE_MAX, LAUNCHES_PAGE_DEFAULT, LAUNCHES_PAGE_MAX, LAUNCH_CURSOR_MAX, LAUNCH_SORTS, PRESET_FILTER_MAX, STREAM_STATE_MAX, WALLET_CURSOR_MAX, WALLET_PAGE_DEFAULT, WALLET_PAGE_MAX } from "./paths.ts";
+import { CANDLES_MANY_IDS_MAX, CANDLES_MANY_LIMIT_DEFAULT, CANDLES_MANY_ROWS_MAX, FIRSTS_MAX, IDS_MAX, LAUNCH_LISTS_QUOTES_MAX, LAUNCH_LISTS_ROWS_MAX, INBOX_PAGE_DEFAULT, INBOX_PAGE_MAX, LAUNCHES_PAGE_DEFAULT, LAUNCHES_PAGE_MAX, LAUNCH_CURSOR_MAX, LAUNCH_SORTS, PRESET_FILTER_MAX, STREAM_STATE_MAX, WALLET_CURSOR_MAX, WALLET_PAGE_DEFAULT, WALLET_PAGE_MAX } from "./paths.ts";
 import { SEARCH_PAGE_DEFAULT, SEARCH_PAGE_MAX, SEARCH_Q_MAX } from "./search.ts";
 
 export const UNITS = {
@@ -211,6 +211,25 @@ export const INDEXER_CONTRACT = {
     errors: [...GATED, "bad_query"],
     body: B.LAUNCHES,
   }),
+
+  launchLists: site({
+    pattern: "/floor-amm/launch-lists",
+    v2: true,
+    query: {
+      quotes: { kind: "list", doc: "one list per quote coin, in this order (no repeat)", required: true, min: 1, max: LAUNCH_LISTS_QUOTES_MAX },
+      cursors: { kind: "list", doc: "parallel to quotes, one each: that list's page next (- = its first page)", max: LAUNCH_LISTS_QUOTES_MAX },
+      sort: { kind: "enum", doc: "the order (larger first with order=desc)", values: LAUNCH_SORTS, default: "created" },
+      order: { kind: "enum", doc: "asc or desc", values: ["asc", "desc"], default: "desc" },
+      creator: { kind: "string", doc: "launches by this creator" },
+      rankable: { kind: "bool", doc: "true (or 1) listed only, false (or 0) unlisted only" },
+      graduated: { kind: "bool", doc: "graduated or not (true / false, or 1 / 0)" },
+      preset: PRESETS,
+      limit: LIMIT(LAUNCHES_PAGE_DEFAULT, LAUNCHES_PAGE_MAX),
+    },
+    page: limit(LAUNCHES_PAGE_DEFAULT, LAUNCHES_PAGE_MAX),
+    errors: [...GATED, "bad_query"],
+    body: B.LAUNCH_LISTS,
+  }),
   search: site({
     pattern: "/floor-amm/search",
     v2: true,
@@ -281,6 +300,20 @@ export const INDEXER_CONTRACT = {
     page: { kind: "range", from: "from", to: "to", span: { interval: "interval", max: B.CANDLES_MAX } },
     errors: [...GATED, "bad_query", "unknown_launch", "not_found"],
     body: B.CANDLES,
+  }),
+
+  candlesMany: site({
+    pattern: "/floor-amm/candles/many",
+    aliases: ["/floor-amm/v2/candles/many"],
+    query: {
+      ids: { kind: "list", doc: "these launches (ids or tokens), one series each in the order asked", required: true, min: 1, max: CANDLES_MANY_IDS_MAX },
+      interval: { kind: "enum", doc: "the bucket", values: B.CANDLE_INTERVALS, default: "1h" },
+      before: { kind: "unix", doc: "the newest limit traded buckets starting before it (absent: past the indexed head)" },
+      limit: { kind: "int", doc: "buckets per launch", min: 1, max: B.CANDLES_MAX, default: CANDLES_MANY_LIMIT_DEFAULT },
+    },
+    page: limit(CANDLES_MANY_LIMIT_DEFAULT, B.CANDLES_MAX),
+    errors: [...GATED, "bad_query"],
+    body: B.CANDLES_MANY,
   }),
   candleBundle: site({
     pattern: "/floor-amm/launches/<launch>/candle-bundle",
@@ -508,6 +541,14 @@ export function queryRefusal(name: RouteName, q: URLSearchParams): string | null
     }
   }
 
+  const prod = ROWS_PRODUCT[name];
+  if (prod !== undefined) {
+    const n = (q.get(prod.list) ?? "").split(",").filter((s) => s !== "").length;
+    const raw = q.get("limit");
+    const lim = raw === null || raw === "" ? routeLimit(name)!.default : Number(raw);
+    if (n * lim > prod.max) return `${prod.list} × limit must be at most ${prod.max} (asked ${n} × ${lim})`;
+  }
+
   const pg: Pagination = INDEXER_CONTRACT[name].page;
   if (pg.kind === "cursor" && pg.optIn !== undefined && q.get(pg.cursor) !== null) {
     const raw = q.get("limit");
@@ -516,7 +557,12 @@ export function queryRefusal(name: RouteName, q: URLSearchParams): string | null
   return spanRefusal(name, q);
 }
 
-const TABLE_REQUIRED: ReadonlySet<RouteName> = new Set<RouteName>(["search"]);
+const ROWS_PRODUCT: Partial<Record<RouteName, { list: string; max: number }>> = {
+  launchLists: { list: "quotes", max: LAUNCH_LISTS_ROWS_MAX },
+  candlesMany: { list: "ids", max: CANDLES_MANY_ROWS_MAX },
+};
+
+const TABLE_REQUIRED: ReadonlySet<RouteName> = new Set<RouteName>(["search", "launchLists", "candlesMany"]);
 
 const BOOLS: Readonly<Record<string, boolean>> = { true: true, false: false, 1: true, 0: false };
 

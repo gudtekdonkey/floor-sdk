@@ -9,6 +9,7 @@ export const INDEXER_ROUTES = {
   floorRouted: { pattern: "/floor-amm/floor-routed", keys: ["limit", "cursor"] },
   events: { pattern: "/floor-amm/events", keys: ["fromBlock", "toBlock"] },
   launches: { pattern: "/floor-amm/launches", keys: ["sort", "order", "q", "ids", "quote", "creator", "rankable", "graduated", "preset", "limit", "cursor", "offset"] },
+  launchLists: { pattern: "/floor-amm/launch-lists", keys: ["quotes", "cursors", "sort", "order", "creator", "rankable", "graduated", "preset", "limit"] },
   search: { pattern: "/floor-amm/search", keys: ["q", "limit", "cursor", "rankable", "graduated", "quote", "preset"] },
   launch: { pattern: "/floor-amm/launches/<launch>", keys: [] },
   launchState: { pattern: "/floor-amm/launches/<launch>/state", keys: [] },
@@ -29,6 +30,7 @@ export const INDEXER_ROUTES = {
   highs: { pattern: "/floor-amm/launches/<launch>/highs", keys: ["atLeast", "limit"] },
   candleBundle: { pattern: "/floor-amm/launches/<launch>/candle-bundle", keys: ["intervals", "limit"] },
   candles: { pattern: "/floor-amm/candles", keys: ["launch", "interval", "from", "to", "before", "limit"] },
+  candlesMany: { pattern: "/floor-amm/candles/many", keys: ["ids", "interval", "before", "limit"] },
   walletTrades: { pattern: "/floor-amm/wallets/<wallet>/trades", keys: ["limit", "before", "launch"] },
   tonActivity: { pattern: "/floor-amm/wallets/<wallet>/ton-activity", keys: ["limit", "before"] },
   tonOutcome: { pattern: "/floor-amm/wallets/<wallet>/ton-outcome", keys: ["queryId"] },
@@ -53,6 +55,15 @@ export const IDS_MAX = 100;
 export const LAUNCHES_PAGE_MAX = 1_000;
 
 export const LAUNCHES_PAGE_DEFAULT = 100;
+
+export const LAUNCH_LISTS_QUOTES_MAX = 16;
+export const LAUNCH_LISTS_ROWS_MAX = 1_000;
+
+export const LAUNCH_LISTS_FIRST = "-";
+
+export const CANDLES_MANY_IDS_MAX = 40;
+export const CANDLES_MANY_LIMIT_DEFAULT = 1_000;
+export const CANDLES_MANY_ROWS_MAX = 40_000;
 
 export const LAUNCH_CURSOR_MAX = 512;
 
@@ -90,6 +101,10 @@ const presets = (p                               )                              
 const launchPath = (id        , tail = "")         => `/floor-amm/launches/${seg(id)}${tail}`;
 const walletPath = (w        , tail        )         => `/floor-amm/wallets/${seg(w)}${tail}`;
 
+                                       
+
+                                                            
+
 export const indexerPath = {
   head: ()         => "/floor-amm/head",
   latestBlock: ()         => "/floor-amm/latest-block",
@@ -112,6 +127,13 @@ export const indexerPath = {
     if (q.q.trim() === "") throw new RangeError("an empty search");
     if (q.preset !== undefined && q.preset.length > PRESET_FILTER_MAX) throw new RangeError(`at most ${PRESET_FILTER_MAX} presets`);
     return `/floor-amm/search${query({ q: q.q, limit: q.limit, cursor: q.cursor, rankable: q.rankable, graduated: q.graduated, quote: q.quote, preset: presets(q.preset) })}`;
+  },
+  launchLists: (q                  )         => {
+    if (q.quotes.length < 1 || q.quotes.length > LAUNCH_LISTS_QUOTES_MAX) throw new RangeError(`1..${LAUNCH_LISTS_QUOTES_MAX} quotes`);
+    if (q.cursors !== undefined && q.cursors.length !== q.quotes.length) throw new RangeError("one cursor per quote");
+    if (q.preset !== undefined && q.preset.length > PRESET_FILTER_MAX) throw new RangeError(`at most ${PRESET_FILTER_MAX} presets`);
+    const cursors = q.cursors?.some((c) => c !== null && c !== "") ? q.cursors.map((c) => (c === null || c === "" ? LAUNCH_LISTS_FIRST : c)) : undefined;
+    return `/floor-amm/launch-lists${query({ quotes: q.quotes, cursors, sort: q.sort, order: q.order, creator: q.creator, rankable: q.rankable, graduated: q.graduated, preset: presets(q.preset), limit: q.limit })}`;
   },
   launch: (id        )         => launchPath(id),
   launchState: (id        )         => launchPath(id, "/state"),
@@ -137,6 +159,10 @@ export const indexerPath = {
     if (q.before !== undefined && (q.from !== undefined || q.to !== undefined)) throw new RangeError("before cannot be given with from / to");
     if (q.limit !== undefined && q.before === undefined) throw new RangeError("limit is read only with before");
     return `/floor-amm/candles${query({ launch: need(q.launch), interval: q.interval, from: q.from, to: q.to, before: q.before, limit: q.limit })}`;
+  },
+  candlesMany: (q                  )         => {
+    if (q.ids.length < 1 || q.ids.length > CANDLES_MANY_IDS_MAX) throw new RangeError(`1..${CANDLES_MANY_IDS_MAX} ids`);
+    return `/floor-amm/candles/many${query({ ids: q.ids, interval: q.interval, before: q.before, limit: q.limit })}`;
   },
   walletTrades: (w        , q                    = {})         => walletPath(w, `/trades${query({ limit: q.limit, before: q.before, launch: q.launch })}`),
 

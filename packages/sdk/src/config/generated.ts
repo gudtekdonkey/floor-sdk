@@ -27120,7 +27120,7 @@ export const CHAIN_ROWS = [
     "name": "elysium",
     "label": "Elysium",
     "family": "evm",
-    "v2DayOne": false,
+    "v2DayOne": true,
     "chainId": 99901,
     "native": "HYPE",
     "nativeName": "Hype",

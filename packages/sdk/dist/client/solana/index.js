@@ -227,19 +227,24 @@ export function createSolanaClient(opts                              )          
 
     claim: (p                       )                    => guard(async () => {
       const tok = (p.types & (CLAIM_TEAM_BUY | CLAIM_SHARE_BOUGHT)) !== 0;
-      const launches                  = [];
       let qtp                = null;
       let qIsLaunch = false;
-      for (const mint of p.launches) {
+
+      const read = await Promise.all(p.launches.map(async (mint) => {
         const { address, l } = await launchOf(mint);
         if (l.quoteMint !== p.quote) throw bad(`launch ${mint} trades in ${l.quoteMint}, not ${p.quote}`);
-        qtp = l.quoteTokenProgram;
-        qIsLaunch = await quoteIsLaunchOf(l);
         const slot = teamSlotPda(address, pid)[0];
-        launches.push({
-          launch: address, quoteVault: l.quoteVault, teamSlot: (await get(slot)) !== null ? slot : null, baseMint: l.baseMint,
-          ...(tok ? { teamBuy: { baseMint: l.baseMint, tokenVault: l.tokenVault, walletBase: associatedTokenAddress(p.wallet, l.baseMint, TOKEN_2022_PROGRAM_ID) } } : {}),
-        });
+        const [isLaunch, slotAcc] = await Promise.all([quoteIsLaunchOf(l), get(slot)]);
+        return { mint, address, l, slot, isLaunch, slotAcc };
+      }));
+      const launches                  = read.map(({ address, l, slot, slotAcc }) => ({
+        launch: address, quoteVault: l.quoteVault, teamSlot: slotAcc !== null ? slot : null, baseMint: l.baseMint,
+        ...(tok ? { teamBuy: { baseMint: l.baseMint, tokenVault: l.tokenVault, walletBase: associatedTokenAddress(p.wallet, l.baseMint, TOKEN_2022_PROGRAM_ID) } } : {}),
+      }));
+      const last = read.at(-1);
+      if (last !== undefined) {
+        qtp = last.l.quoteTokenProgram;
+        qIsLaunch = last.isLaunch;
       }
       if (qtp === null) {
         const m = await get(p.quote);

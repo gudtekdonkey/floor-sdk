@@ -115,7 +115,7 @@ export const CHAIN_REGISTRY = [
     "slug": "elysium",
     "label": "Elysium",
     "family": "evm",
-    "v2DayOne": false,
+    "v2DayOne": true,
     "chainId": 99901,
     "soakChainId": 99801,
     "native": {

@@ -36,18 +36,20 @@ export function teamSlotWallets(slot: DevTeam["teamSlot"]): string[] {
 
 export const impactBps = (before: bigint, after: bigint): bigint => (before === 0n ? 0n : ((after - before) * 10_000n) / before);
 
-export function devBuyFromTrade(t: TradeEventV2, team: DevTeam, ctx: { teamBuy?: boolean; teamShareBuy?: boolean } = {}): DevBuy | null {
+export function devBuyFromTrade(t: TradeEventV2, team: DevTeam, ctx: { teamBuy?: boolean; teamShareBuy?: boolean; buyer?: string } = {}): DevBuy | null {
   if (!t.isBuy) return null;
+
+  const person = ctx.buyer ?? t.trader;
   let role: DevBuyRole | null = null;
   if (t.kind === TRADE_KIND_TEAM_BUY || ctx.teamBuy) role = "team_buy";
   else if (t.kind === TRADE_KIND_TEAM_SHARE_BUY || ctx.teamShareBuy) role = "team_share_buy";
-  else if (t.trader === team.creator) role = "creator";
-  else if (teamSlotWallets(team.teamSlot).includes(t.trader)) role = "team_member";
+  else if (person === team.creator) role = "creator";
+  else if (teamSlotWallets(team.teamSlot).includes(person)) role = "team_member";
   if (role === null) return null;
   const priceBeforeX64 = priceX64(t.sqrtBefore);
   const priceAfterX64 = priceX64(t.sqrtAfter);
   return {
-    launch: t.launch, trader: t.trader, role, quoteIn: t.quoteGross - t.refund, tokens: t.tokens, priceBeforeX64, priceAfterX64,
+    launch: t.launch, trader: person, role, quoteIn: t.quoteGross - t.refund, tokens: t.tokens, priceBeforeX64, priceAfterX64,
     impactBps: impactBps(priceBeforeX64, priceAfterX64), slot: t.slot,
   };
 }

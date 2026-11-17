@@ -6,7 +6,7 @@ import * as B from "./bodies.ts";
 import { indexerPath } from "./paths.ts";
 import { errorCode } from "./contract.ts";
 import type { IndexerErrorCode } from "./contract.ts";
-import type { CandlesQuery, LaunchSearchQuery, LaunchesQuery, Page, TradesQuery, WalletPage, WalletTradesQuery } from "./paths.ts";
+import type { CandlesManyQuery, CandlesQuery, LaunchListsQuery, LaunchSearchQuery, LaunchesQuery, Page, TradesQuery, WalletPage, WalletTradesQuery } from "./paths.ts";
 
 export * from "./bodies.ts";
 export { ShapeError, decode } from "./decode.ts";
@@ -20,7 +20,7 @@ export { INDEXER_CONTRACT, INDEXER_ERROR_CODES, LIMITS, OPEN_ROUTES, ROUTE_NAMES
 export type { IndexerErrorCode, Pagination, PathParam, QueryKey, RouteBody, RouteContract, RouteName, Served, ServedBody, ServedKeys, Units } from "./contract.ts";
 export { DRAIN_NAMES, createIndexerClient, routePath } from "./client.ts";
 export type { DrainName, IndexerClient, IndexerClientOptions, ReadName, RouteArgs } from "./client.ts";
-export type { CandlesQuery, IndexerRoute, IndexerRouteName, LaunchSearchQuery, LaunchSort, LaunchesQuery, Page, StreamQuery, TradesQuery, WalletPage, WalletTradesQuery } from "./paths.ts";
+export type { CandlesManyQuery, CandlesQuery, LaunchListsQuery, IndexerRoute, IndexerRouteName, LaunchSearchQuery, LaunchSort, LaunchesQuery, Page, StreamQuery, TradesQuery, WalletPage, WalletTradesQuery } from "./paths.ts";
 
 export type LaunchId = string;
 
@@ -66,6 +66,7 @@ export const readFloorRouted = (get: Get): Promise<B.FloorRouted> => readRoute(g
 
 export const readEvents = (get: Get, fromBlock: number, toBlock: number): Promise<B.Events> => readRoute(get, indexerPath.events(fromBlock, toBlock), B.EVENTS);
 
+export const readLaunchLists = (get: Get, q: LaunchListsQuery): Promise<B.LaunchLists> => readRoute(get, indexerPath.launchLists(q), B.LAUNCH_LISTS);
 export const readLaunches = (get: Get, q: LaunchesQuery = {}): Promise<B.Launches> => readRoute(get, indexerPath.launches(q), B.LAUNCHES);
 
 export const readLaunchSearch = (get: Get, q: LaunchSearchQuery): Promise<B.LaunchSearch> => readRoute(get, indexerPath.search(q), B.LAUNCH_SEARCH);
@@ -103,6 +104,8 @@ export const readMarks = (get: Get, id: LaunchId, q: Page = {}): Promise<B.Marks
 export const readPrice = (get: Get, id: LaunchId): Promise<B.Price> => readRoute(get, indexerPath.price(id), B.PRICE);
 
 export const readCandles = (get: Get, q: CandlesQuery): Promise<B.Candles> => readRoute(get, indexerPath.candles(q), B.CANDLES);
+
+export const readCandlesMany = (get: Get, q: CandlesManyQuery): Promise<B.CandlesMany> => readRoute(get, indexerPath.candlesMany(q), B.CANDLES_MANY);
 export const readCandleBundle = (get: Get, id: LaunchId, q: { intervals?: readonly string[]; limit?: number } = {}): Promise<B.CandleBundle> => readRoute(get, indexerPath.candleBundle(id, q), B.CANDLE_BUNDLE);
 export const readHighs = (get: Get, id: LaunchId, q: { atLeast?: bigint | string; limit?: number } = {}): Promise<B.Highs> => readRoute(get, indexerPath.highs(id, q), B.HIGHS);
 

@@ -55,6 +55,14 @@ Each candle carries `floorX64`, the floor at the bucket's close, in the same Q64
 `null` where a bucket has none, and absent from an indexer older than this build. Use the launch's own `floorX64` for
 that candle then. [floor-line.md](floor-line.md) shows how to draw it.
 
+### Many launches in one request
+
+`readLaunchLists(get, { quotes, cursors })` returns one `launches` page per quote coin (up to 16) in one answer, each list resumed with its own cursor (`"-"` asks a first page). `readCandlesMany(get, { ids, interval })` returns the newest candles of up to 40 launches at once. Both are in `@floorlaunchpad/sdk/indexer/read`; the limits are in [cursor-pages.md](cursor-pages.md).
+
+### Dev buys through a zap or router
+
+A buy through a zap or a router has the contract as the trade's `trader`. Pass the person that contract's own event names as `ctx.buyer` to `devBuyFromTrade` (`@floorlaunchpad/sdk/v2/devbuy`), and a creator's or team member's buy through it counts as a dev buy, with that person as `trader`. The trade's recipient alone never names one.
+
 ## Follow the live stream
 
 ```ts

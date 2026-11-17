@@ -274,6 +274,10 @@ export const LAUNCHES = object({
 });
 export type Launches = Infer<typeof LAUNCHES>;
 
+export const LAUNCH_LIST = object({ quote: str, total: int, launches: array(LISTED_LAUNCH), cursors: array(str), keys: array(nullable(str)), next: nullable(str) });
+export const LAUNCH_LISTS = object({ indexed, lists: array(LAUNCH_LIST) });
+export type LaunchLists = Infer<typeof LAUNCH_LISTS>;
+
 const SEARCH_SERVED_TIER: Decoder<0 | 1 | 2 | 3 | 4> = (v, p) => {
   const n = int(v, p);
   if (n < 0 || n > 4) throw new ShapeError(p, "a tier 0..4", v);
@@ -364,6 +368,9 @@ export const CANDLES = object({
   candles: array(CANDLE),
 });
 export type Candles = Infer<typeof CANDLES>;
+
+export const CANDLES_MANY = object({ indexed, interval: str, series: array(CANDLES), missing: array(str) });
+export type CandlesMany = Infer<typeof CANDLES_MANY>;
 
 export const CANDLE_BUNDLE = object({
   indexed,

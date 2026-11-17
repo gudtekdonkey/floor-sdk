@@ -4,7 +4,7 @@ import { decode } from "./decode.ts";
 import { INDEXER_CONTRACT, clampLimit, pageAsked, routeLimit } from "./contract.ts";
 import type { RouteBody, RouteName } from "./contract.ts";
 import { indexerPath, query } from "./paths.ts";
-import type { CandlesQuery, LaunchSearchQuery, LaunchesQuery, Page, StreamQuery, TradesQuery, WalletPage, WalletTradesQuery } from "./paths.ts";
+import type { CandlesManyQuery, CandlesQuery, LaunchListsQuery, LaunchSearchQuery, LaunchesQuery, Page, StreamQuery, TradesQuery, WalletPage, WalletTradesQuery } from "./paths.ts";
 import { IndexerError } from "./read.ts";
 import type { Get } from "./read.ts";
 import type { TraderWindow } from "./bodies.ts";
@@ -21,6 +21,7 @@ export interface RouteArgs {
   floorRouted: { limit?: number; cursor?: string } | void;
   events: { fromBlock: number; toBlock: number };
   launches: LaunchesQuery | void;
+  launchLists: LaunchListsQuery;
   search: LaunchSearchQuery;
   launch: L;
   launchState: L;
@@ -40,6 +41,7 @@ export interface RouteArgs {
   price: L;
   highs: L & { atLeast?: bigint | string; limit?: number };
   candles: CandlesQuery;
+  candlesMany: CandlesManyQuery;
   candleBundle: L & { intervals?: readonly string[]; limit?: number };
   walletTrades: W & WalletTradesQuery;
   tonActivity: W & Page;
@@ -82,6 +84,7 @@ export const routePath: { [N in RouteName]: (a: RouteArgs[N]) => string } = {
   floorRouted: (a) => indexerPath.floorRouted(a ?? {}),
   events: (a) => indexerPath.events(a.fromBlock, a.toBlock),
   launches: (a) => indexerPath.launches(a ?? {}),
+  launchLists: (a) => indexerPath.launchLists(a),
   search: (a) => indexerPath.search(a),
   launch: (a) => indexerPath.launch(a.launch),
   launchState: (a) => indexerPath.launchState(a.launch),
@@ -101,6 +104,7 @@ export const routePath: { [N in RouteName]: (a: RouteArgs[N]) => string } = {
   price: (a) => indexerPath.price(a.launch),
   highs: ({ launch, ...q }) => indexerPath.highs(launch, q),
   candles: (a) => indexerPath.candles(a),
+  candlesMany: (a) => indexerPath.candlesMany(a),
   candleBundle: ({ launch, ...q }) => indexerPath.candleBundle(launch, q),
   walletTrades: ({ wallet, ...q }) => indexerPath.walletTrades(wallet, q),
   tonActivity: ({ wallet, ...q }) => indexerPath.tonActivity(wallet, q),

@@ -251,6 +251,9 @@ export const LAUNCHES = object({
   cursors: perRow(str), keys: perRow(nullable(str)), next: optional(nullable(str)),
 });
 
+export const LAUNCH_LIST = object({ quote: str, total: int, launches: array(LISTED_LAUNCH), cursors: array(str), keys: array(nullable(str)), next: nullable(str) });
+export const LAUNCH_LISTS = object({ indexed, lists: array(LAUNCH_LIST) });
+
 const SEARCH_SERVED_TIER                             = (v, p) => {
   const n = int(v, p);
   if (n < 0 || n > 4) throw new ShapeError(p, "a tier 0..4", v);
@@ -329,6 +332,8 @@ export const CANDLES = object({
   usd: USD_RATE,
   candles: array(CANDLE),
 });
+
+export const CANDLES_MANY = object({ indexed, interval: str, series: array(CANDLES), missing: array(str) });
 
 export const CANDLE_BUNDLE = object({
   indexed,

@@ -65,19 +65,19 @@ export function buyHookErc20(p                                                  
   };
 }
 
-export function buyHookNative(p                                                                                      )            {
+export function buyHookNative(p                                                                                                      )            {
   checkCommon(p);
   const user = checkUser(p);
   if (p.minQuoteIn <= 0n || p.minTokensOut <= 0n) throw new SquidHookError("NO_MINIMUM", "minQuoteIn and minTokensOut must be > 0");
   const zap = lc(p.zap, "zap");
-  return {
-    provider: "FLOOR",
-    description: "Buy a FLOOR launch token with the native coin",
-    calls: [
-      call(SQUID_CALL.FullNativeBalance, zap, 0n, bytesToHex(encodeCall("buyWithEth(uint256,bytes,uint256,uint256,address,uint256)", [p.launchId, p.swapData, p.minQuoteIn, p.minTokensOut, user, p.deadline])), "0x", SQUID_GAS.zapBuy),
-      call(SQUID_CALL.FullNativeBalance, user, 0n, "0x", "0x", SQUID_GAS.passOn),
-    ],
-  };
+  const quote = lc(p.quote ?? ZERO, "quote");
+  const calls = [
+    call(SQUID_CALL.FullNativeBalance, zap, 0n, bytesToHex(encodeCall("buyWithEth(uint256,bytes,uint256,uint256,address,uint256)", [p.launchId, p.swapData, p.minQuoteIn, p.minTokensOut, user, p.deadline])), "0x", SQUID_GAS.zapBuy),
+    call(SQUID_CALL.FullNativeBalance, user, 0n, "0x", "0x", SQUID_GAS.passOn),
+  ];
+
+  if (quote !== ZERO) calls.push(call(SQUID_CALL.FullTokenBalance, quote, 0n, bytesToHex(encodeCall("transfer(address,uint256)", [user, SQUID_FULL])), bytesToHex(encodeAbi(["address", "uint256"], [quote, 1n])), SQUID_GAS.transfer));
+  return { provider: "FLOOR", description: "Buy a FLOOR launch token with the native coin", calls };
 }
 
 export function sellHook(p                                                                                        )            {

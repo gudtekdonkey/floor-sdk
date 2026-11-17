@@ -30,6 +30,8 @@ import { decodeErrorV2 } from "@floorlaunchpad/sdk/v2/evm";
 const name = decodeErrorV2(revertData); // the custom error's name, or null
 ```
 
+`decodeEvmProgramError` (`@floorlaunchpad/sdk/errors`) returns the same name with the module and code, and also knows five errors from the contracts' math libraries that the ABI does not list: `PriceOrder()`, `ZeroLiquidity()`, `SqrtRange()`, `Zero()` and `VaultShareOutOfRange()`.
+
 Show the name and your own plain wording for it. The SDK gives you the identifier, not a sentence.
 
 ## Claim

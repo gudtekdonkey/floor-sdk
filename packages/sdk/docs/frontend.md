@@ -24,6 +24,8 @@ Use the routing functions in [docs/aggregator.md](aggregator.md). For a single l
 
 - Route modules in `src/route` and `src/v2/route.ts` contain no host names, so a strict content security policy does not trip on them. Anything that talks to a hosted service is in `route-jupiter.ts` and is opt-in.
 - Keep the quote fresh: re-quote when the user changes the amount and just before they sign.
+- A buy paid in another coin goes through the chain's FloorZap: take its address from the zap row's `zap` (`FLOOR_ZAP_ADDRESSES`, `@floorlaunchpad/sdk/evm/chains`) and its swap from `zapSwapData`; [aggregator.md](aggregator.md) has the details.
+- The create page's preset menu on EVM: `readPresetMenuEvmV2` (`@floorlaunchpad/sdk/v2/presetRowEvm`) reads the rows through one Multicall3 `aggregate3` per 100 ids. Pass `{ multicall }` for another Multicall3 address, or `{ multicall: null }` on a chain without one (one call per id). A row that fails throws; the menu never has a gap.
 - Chain choice happens once, at the edge. Past that point the same quote and build calls work on both chains.
 
 See also: [README](../README.md), [wallet guide](wallet.md).
