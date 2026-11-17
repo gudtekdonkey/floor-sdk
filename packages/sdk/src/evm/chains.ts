@@ -215,6 +215,13 @@ export const FLOOR_AMM_FROM_BLOCK: Readonly<Record<ChainKey, number | null>> = {
   ethereum: 26327910, base: 53421827, bsc: 131270813, arbitrum: 520655168, arc: 29205598, robinhood: 104455459, hyperevm: 50398055, elysium: 6058368,
 };
 
+/** The block `FLOOR_ROUTER_DEPLOYER` was created in on each chain (read back: its CREATE2 receipt, no code the block before), or
+ *  null where it is not deployed. Every `FLOOR_ROUTER_ADDRESSES` instance on that chain was deployed in the same run, at or after
+ *  this block: an indexer of FloorRouter events starts here. */
+export const FLOOR_ROUTER_FROM_BLOCK: Readonly<Record<ChainKey, number | null>> = {
+  ethereum: 26436550, base: 58748267, bsc: 134167426, arbitrum: 525110992, arc: 31754413, robinhood: 116788942, hyperevm: 51527477, elysium: 7600804,
+};
+
 const cat = (...h: string[]): string => "0x" + h.map((x) => bytesToHex(hexToBytes(x)).slice(2)).join("");
 const at = (s: string, init: string): string => create2Address({ deployer: CREATE2_FACTORY, salt: s, initCode: init });
 

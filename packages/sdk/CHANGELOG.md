@@ -2,6 +2,18 @@
 
 All notable changes to `@floorlaunchpad/sdk`. The version follows semver; while the major number is 0, a minor bump may rename or remove an export and a patch bump never does.
 
+## 0.4.2
+
+Added:
+
+- `FLOOR_ROUTER_FROM_BLOCK` (`evm/chains.ts`): the block `FLOOR_ROUTER_DEPLOYER` (`0x3e70158e54E91d2984c0F3B66ce2cE730d1E0e11`) was created in on each EVM chain, read back from its CREATE2 receipt: Ethereum 26436550, Base 58748267, BNB Chain 134167426, Arbitrum 525110992, Arc 31754413, Robinhood 116788942, HyperEVM 51527477, Elysium 7600804. Every FloorRouter on a chain was deployed at or after it, so an indexer of FloorRouter events (`Bought`, `Sold`) starts there.
+
+Changed:
+
+- The 15 FloorRouters in `FLOOR_ROUTER_ADDRESSES` are deployed (2026-11-17) and read back on all eight EVM chains: each instance has code, its `router()` is its zap row's DEX router and its `floorAmm()` is `FLOOR_AMM_ADDRESS`. The addresses and `floorRouterAddress` are unchanged; `floorRouterLive` / `assertFloorRouterLive` stay the check for a slot added later.
+
+No export removed or renamed, no signature changed.
+
 ## 0.4.1
 
 Fixed:
