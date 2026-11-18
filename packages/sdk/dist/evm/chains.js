@@ -186,6 +186,10 @@ export const FLOOR_ROUTER_FROM_BLOCK = {
   ethereum: 26436550, base: 58748267, bsc: 134167426, arbitrum: 525110992, arc: 31754413, robinhood: 116788942, hyperevm: 51527477, elysium: 7600804,
 };
 
+export const FLOOR_ROUTER_FROM_BLOCK_SOAK = {
+  ethereum: 12157629, base: null, bsc: null, arbitrum: null, arc: null, robinhood: null, hyperevm: 69903031, elysium: null,
+};
+
 const cat = (...h          )         => "0x" + h.map((x) => bytesToHex(hexToBytes(x)).slice(2)).join("");
 const at = (s        , init        )         => create2Address({ deployer: CREATE2_FACTORY, salt: s, initCode: init });
 

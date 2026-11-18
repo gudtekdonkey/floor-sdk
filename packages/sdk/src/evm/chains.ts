@@ -222,6 +222,14 @@ export const FLOOR_ROUTER_FROM_BLOCK: Readonly<Record<ChainKey, number | null>> 
   ethereum: 26436550, base: 58748267, bsc: 134167426, arbitrum: 525110992, arc: 31754413, robinhood: 116788942, hyperevm: 51527477, elysium: 7600804,
 };
 
+/** The block `FLOOR_ROUTER_DEPLOYER` was created in on each chain's soak testnet (`soakChainId` in the registry), read back
+ *  from its CREATE2 receipt, or null where it is not deployed. The FloorRouter addresses are the same as mainnet (CREATE3).
+ *  Sepolia (11155111) has `uniswap-ur`; HyperEVM testnet (998) has `hyperswap`. Robinhood testnet and Elysium testnet have
+ *  none (no official DEX). Base Sepolia, BNB testnet, Arbitrum Sepolia and Arc testnet have no FloorAmm. */
+export const FLOOR_ROUTER_FROM_BLOCK_SOAK: Readonly<Record<ChainKey, number | null>> = {
+  ethereum: 12157629, base: null, bsc: null, arbitrum: null, arc: null, robinhood: null, hyperevm: 69903031, elysium: null,
+};
+
 const cat = (...h: string[]): string => "0x" + h.map((x) => bytesToHex(hexToBytes(x)).slice(2)).join("");
 const at = (s: string, init: string): string => create2Address({ deployer: CREATE2_FACTORY, salt: s, initCode: init });
 
