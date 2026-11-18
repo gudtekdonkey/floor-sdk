@@ -2,6 +2,18 @@
 
 All notable changes to `@floorlaunchpad/sdk`. The version follows semver; while the major number is 0, a minor bump may rename or remove an export and a patch bump never does.
 
+## 0.4.3
+
+Added:
+
+- `FLOOR_ROUTER_FROM_BLOCK_SOAK` (`evm/chains.ts`): the block `FLOOR_ROUTER_DEPLOYER` (`0x3e70158e54E91d2984c0F3B66ce2cE730d1E0e11`) was created in on each chain's soak testnet, read back from its CREATE2 receipt, or `null` where it is not deployed: Sepolia (ethereum, 11155111) 12157629, HyperEVM testnet (hyperevm, 998) 69903031. The FloorRouter addresses are the same as mainnet (CREATE3 of the slot). Sepolia has `uniswap-ur` (`0xB7aC…CFde`); HyperEVM testnet has `hyperswap` (`0x8C2b…D119`). Robinhood testnet and Elysium testnet have none (no official DEX). The other soak ids have no FloorAmm.
+
+Changed:
+
+- The Sepolia and HyperEVM testnet FloorRouters are deployed (2026-11-17) and read back: each instance has code, its `router()` is the official testnet DEX (Sepolia Uniswap Universal Router 2.1.1 `0x7DfD…1468`, HyperEVM testnet HyperSwap V3 SwapRouter02 `0x51c5…e14A`) and its `floorAmm()` is `FLOOR_AMM_ADDRESS`. Mainnet `FLOOR_ROUTER_ADDRESSES`, `FLOOR_ROUTER_FROM_BLOCK` and `floorRouterAddress` are unchanged.
+
+No export removed or renamed, no signature changed.
+
 ## 0.4.2
 
 Added:
