@@ -1,6 +1,6 @@
 {
   "name": "@floorlaunchpad/sdk",
-  "version": "0.4.3",
+  "version": "0.6.0",
   "description": "The FLOOR Program in TypeScript: the math, the quoter, decoders, PDAs and instruction builders for Solana and EVM",
   "license": "Apache-2.0",
   "type": "module",
@@ -185,6 +185,11 @@
       "types": "./src/indexer/stream.ts",
       "import": "./dist/indexer/stream.js",
       "default": "./dist/indexer/stream.js"
+    },
+    "./ton": {
+      "types": "./src/ton/index.ts",
+      "import": "./dist/ton/index.js",
+      "default": "./dist/ton/index.js"
     },
     "./evm/balances": {
       "types": "./src/evm/balances.ts",

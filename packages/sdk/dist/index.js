@@ -87,6 +87,7 @@ export * as abi from "./abi/index.js";
 export * as v2Press from "./v2/press.js";
 export * as v2ReceiptTx from "./v2/receipt-tx.js";
 export * as config from "./config/index.js";
+export * as ton from "./ton/index.js";
 export * as fixtures from "./fixtures.js";
 export * as client from "./client/index.js";
 export * as errors from "./errors.js";

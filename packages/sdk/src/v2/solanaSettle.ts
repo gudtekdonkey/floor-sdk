@@ -72,6 +72,8 @@ export function solanaSettleInputsV2(l: LaunchV2Account, opts: { mintSupply?: bi
     nBands: l.nBands,
     bandEdge: [...l.bandEdge], bandMoney: [...l.bandMoney], bandTokens: [...l.bandTokens],
     nC: l.nC, bandF: [...l.bandF], bandFClaim: [...l.bandFClaim], ckAtF: l.ckAtF, ckFloorTokens: l.ckFloorTokens,
+
+    kpot: l.kpot !== 0, kAtF: l.kAtF, kFloorTokens: l.kFloorTokens,
     feePpm: l.feePpm.map(n), feeStartPpm: l.feeStartPpm.map(n), sqrtFeeA: l.sqrtFeeA, sqrtFeeB: l.sqrtFeeB,
     graduated: l.graduated !== 0, nRanges: l.nRanges, ranges,
 

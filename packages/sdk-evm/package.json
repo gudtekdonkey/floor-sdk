@@ -1,6 +1,6 @@
 {
   "name": "@floorlaunchpad/sdk-evm",
-  "version": "0.4.3",
+  "version": "0.6.0",
   "description": "The FLOOR Program on EVM chains: ABIs, call builders, event decoders, chain config and reads, over @floorlaunchpad/sdk",
   "license": "Apache-2.0",
   "type": "module",
@@ -20,6 +20,6 @@
     }
   },
   "dependencies": {
-    "@floorlaunchpad/sdk": "0.4.3"
+    "@floorlaunchpad/sdk": "0.6.0"
   }
 }

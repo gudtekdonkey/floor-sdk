@@ -22,7 +22,7 @@ export const CLAIM_KNOWN_V2_EVM = CLAIM_KNOWN_MASKS.evm.v2;
 
 const BOOK_RANGE = "(uint128,uint128,uint64,uint64,uint64,uint128,uint16,uint16,uint8,uint8)";
 
-const LAUNCH_BOOK = `(uint128,uint128,uint128,uint128[],uint8,${BOOK_RANGE}[48],uint128,uint64,uint64[],uint128[],uint8,uint8,uint128[],uint128[],uint128,uint64,bool,uint32[5])`;
+const LAUNCH_BOOK = `(uint128,uint128,uint128,uint128[],uint8,${BOOK_RANGE}[48],uint128,uint64,uint64[],uint128[],uint8,uint8,uint128[],uint128[],uint128,uint64,bool,uint32[5],uint128,uint64,bool)`;
 
 const BUY_OUT = "(uint256,uint256,uint256,uint128,uint8,bool,bool)";
 
@@ -128,6 +128,8 @@ export interface LaunchBookV2 {
   bandF: bigint[]; bandFClaim: bigint[];
 
   ckAtF: bigint; ckFloorTokens: bigint;
+
+  kpot: boolean; kAtF: bigint; kFloorTokens: bigint;
   graduated: boolean;
 
   feePpm: number[];
@@ -155,6 +157,7 @@ export function decodeLaunchBook(data: string | Uint8Array): LaunchBookV2 {
     sqrtP: big(t[0]), sqrtF: big(t[1]), f: big(t[2]), bandMoney: bigs(t[3]), nRanges: nR, ranges,
     sqrtLMax: big(t[6]), floorTokens: big(t[7]), bandTokens: bigs(t[8]), bandEdge: bigs(t[9]), nBands: n(t[10]), nC: n(t[11]),
     bandF: bigs(t[12]), bandFClaim: bigs(t[13]), ckAtF: big(t[14]), ckFloorTokens: big(t[15]), graduated: t[16] as boolean, feePpm: nums(t[17]),
+    kAtF: big(t[18]), kFloorTokens: big(t[19]), kpot: t[20] as boolean,
   };
 }
 export function decodeSimBuy(data: string | Uint8Array): SimBuyV2 {
@@ -294,6 +297,7 @@ export function evmSettleInputsV2(b: LaunchBookV2, row: SplitRow, sup: Supply, m
     bandEdge: pad(b.bandEdge, BIDS_MAX + 1, 0n).slice(0, BIDS_MAX + 1), bandMoney: pad(b.bandMoney, BIDS_MAX, 0n).slice(0, BIDS_MAX),
     bandTokens: pad(b.bandTokens, BIDS_MAX, 0n).slice(0, BIDS_MAX), bandF: pad(b.bandF, BIDS_MAX, 0n).slice(0, BIDS_MAX),
     bandFClaim: pad(b.bandFClaim, BIDS_MAX, 0n).slice(0, BIDS_MAX), ckAtF: b.ckAtF, ckFloorTokens: b.ckFloorTokens,
+    kpot: b.kpot, kAtF: b.kAtF, kFloorTokens: b.kFloorTokens,
     feePpm: [...b.feePpm], graduated: b.graduated,
 
     feeStartPpm: curve ? [...curve.feeStartPpm] : [0, 0, 0, 0, 0], sqrtFeeA: curve?.sqrtFeeA ?? 0n, sqrtFeeB: curve?.sqrtFeeB ?? 0n,

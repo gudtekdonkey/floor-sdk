@@ -19,7 +19,7 @@ export class SquidHookError extends Error {
 
 export const SQUID_TOKEN_SCALE = 10n ** 12n;
 
-export const SQUID_GAS = { transfer: 65_000, buy: 700_000, sell: 750_000, zapBuy: 900_000, passOn: 30_000 }         ;
+export const SQUID_GAS = { transfer: 65_000, buy: 1_100_000, sell: 850_000, zapBuy: 1_300_000, passOn: 30_000 }         ;
 
 const ZERO = "0x" + "0".repeat(40);
 const lc = (a        , what        )         => {
@@ -65,12 +65,12 @@ export function buyHookErc20(p                                                  
   };
 }
 
-export function buyHookNative(p                                                                                                      )            {
+export function buyHookNative(p                                                                                                     )            {
   checkCommon(p);
   const user = checkUser(p);
   if (p.minQuoteIn <= 0n || p.minTokensOut <= 0n) throw new SquidHookError("NO_MINIMUM", "minQuoteIn and minTokensOut must be > 0");
   const zap = lc(p.zap, "zap");
-  const quote = lc(p.quote ?? ZERO, "quote");
+  const quote = lc(p.quote, "quote");
   const calls = [
     call(SQUID_CALL.FullNativeBalance, zap, 0n, bytesToHex(encodeCall("buyWithEth(uint256,bytes,uint256,uint256,address,uint256)", [p.launchId, p.swapData, p.minQuoteIn, p.minTokensOut, user, p.deadline])), "0x", SQUID_GAS.zapBuy),
     call(SQUID_CALL.FullNativeBalance, user, 0n, "0x", "0x", SQUID_GAS.passOn),

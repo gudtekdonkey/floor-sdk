@@ -35,7 +35,7 @@ working page with the finished result: [examples/floor-line.html](../examples/fl
 
 - **Launch:** one token and its market. The pair is `[launch token, quote]`, for life.
 - **Floor (`F`):** the money the program holds to bid for the token at one flat price, the floor price.
-- **Cushion (`C`, with `K` below it):** a second pot of buy-back money laid under the price.
+- **Cushion (`C`, with `K` below it):** the first pot of buy-back money, laid under the price. `K` is a second pot with its own money, laid from the Cushion's bottom down to the floor; it bids only once the Cushion is empty.
 - **Bonding:** the first phase, a flat opening price. **Graduation:** the first window sells out and the launch moves up the price curve on the same program. A `Graduated` event fires and nothing migrates.
 - **Fees:** charged on top of every trade, each may be 0: the Backing Fee, Team Fee, Platform fee, `$FLOOR` fee and Holder Fee.
 - **Marketcap Milestones:** not fees. They are a share of a buy's money, paid inside the price, so they are already in the amount out.

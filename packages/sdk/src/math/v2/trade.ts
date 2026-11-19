@@ -3,11 +3,11 @@
 import { fail } from "../index.ts";
 import { U128_MAX } from "./wide.ts";
 import {
-  Undo, ckHeld, ckMoney, cloneBook, fClaims, fOwn, feesAt, feesNow, MAX_WALK_STEPS, moneyHeld, tokensHeld, walkDownAcc, walkUpFrom,
+  Undo, cMoney, ckHeld, cloneBook, kMoney, fClaims, fOwn, feesAt, feesNow, MAX_WALK_STEPS, moneyHeld, tokensHeld, walkDownAcc, walkUpFrom,
 } from "./book.ts";
 import type { Book } from "./book.ts";
 import { FeeAcc, LEG_BACKING, cheaper, feeTotal, netFromGross } from "./fees.ts";
-import { relay } from "./relay.ts";
+import { kpotUpgrade, relayPots } from "./relay.ts";
 import type { Relay } from "./relay.ts";
 import { split } from "./split.ts";
 import type { Split, SplitRow } from "./split.ts";
@@ -30,9 +30,14 @@ export interface BookSell {
   relay: Relay;
 }
 
-const noSplit = (): Split => ({ dF: 0n, ckAdd: 0n, ckTake: 0n, ms: 0n, booked: [0n, 0n, 0n, 0n], sqrtFNew: 0n });
-const noRelay = (): Relay => ({ nC: 0, nK: 0, laidC: 0n, laidK: 0n, atF: 0n, kept: 0 });
+const noSplit = (): Split => ({ dF: 0n, ckAdd: 0n, ckTake: 0n, cAdd: 0n, kAdd: 0n, cTake: 0n, kTake: 0n, ms: 0n, booked: [0n, 0n, 0n, 0n], sqrtFNew: 0n });
+const noRelay = (): Relay => ({ nC: 0, nK: 0, laidC: 0n, laidK: 0n, atF: 0n, kAtF: 0n, kept: 0 });
 const add = (a: bigint, b: bigint): bigint => (a + b > U128_MAX ? fail("Overflow") : a + b);
+
+function upgrade(b: Book, row: SplitRow, sup: Supply): void {
+  if (b.kpot) return;
+  kpotUpgrade(b, row, b.graduated ? sCirc(b, sup) : 0n);
+}
 
 function commit(dst: Book, src: Book): void {
   Object.assign(dst, src);
@@ -45,6 +50,8 @@ function buyOn(book: Book, side: Side, gross: bigint, minTokens: bigint, walkSte
   const budget = netFromGross(gross, ppm);
   if (budget === 0n) fail("NothingToDo");
   const w = cloneBook(book);
+
+  if (side !== null) upgrade(w, side.row, side.sup);
   const u = new Undo();
 
   const acc = new FeeAcc(ppm);
@@ -70,12 +77,12 @@ function buyOn(book: Book, side: Side, gross: bigint, minTokens: bigint, walkSte
 
     if (u.bought.length > 0) {
       sp = split(side.row, w.ranges.slice(0, w.nRanges), {
-        sqrtF: w.sqrtF, sqrtP1: w.sqrtP, fTotal: fOwn(w), fClaims: fClaims(w), ck0: ckMoney(w), held: ckHeld(w), sNew,
+        sqrtF: w.sqrtF, sqrtP1: w.sqrtP, fTotal: fOwn(w), fClaims: fClaims(w), c0: cMoney(w), k0: kMoney(w), held: ckHeld(w), sNew,
       }, u.bought);
       w.floor = add(w.floor, sp.dF);
       w.sqrtF = sp.sqrtFNew;
     }
-    rl = relay(w, side.row, sp.ckAdd, sNew, sp.ckTake);
+    rl = relayPots(w, side.row, { c: sp.cAdd, k: sp.kAdd }, { c: sp.cTake, k: sp.kTake }, sNew);
   }
   const r: BookBuy = {
     gross, net: walked.money, refund: gross - paid, tokens: walked.tokens, fees, fromResale: walked.fromResale, fromFirst: walked.fromFirst,
@@ -88,8 +95,9 @@ function buyOn(book: Book, side: Side, gross: bigint, minTokens: bigint, walkSte
 
 function sellOn(book: Book, side: Side, tokens: bigint, minOut: bigint, keep = true): BookSell {
   if (tokens === 0n) fail("NothingToDo");
-  const ppm = feesNow(book);
   const w = cloneBook(book);
+  if (side !== null) upgrade(w, side.row, side.sup);
+  const ppm = feesNow(w);
 
   const acc = new FeeAcc(ppm);
   const walked = walkDownAcc(w, tokens, acc);
@@ -100,7 +108,7 @@ function sellOn(book: Book, side: Side, tokens: bigint, minOut: bigint, keep = t
   if (out < minOut) fail("SlippageExceeded");
   w.floor = add(w.floor, fees[LEG_BACKING]);
 
-  const rl = w.graduated && side !== null ? relay(w, side.row, 0n, sCirc(w, side.sup)) : noRelay();
+  const rl = w.graduated && side !== null ? relayPots(w, side.row, { c: 0n, k: 0n }, { c: 0n, k: 0n }, sCirc(w, side.sup)) : noRelay();
   const r: BookSell = {
     tokensIn: tokens, unfilled: tokens - walked.tokens, gross: walked.money, fees, out, steps: walked.steps, sqrtBefore: book.sqrtP, sqrtAfter: w.sqrtP,
     fromF: walked.fromF, fromK: walked.fromK, fromC: walked.fromC, relay: rl,

@@ -66,6 +66,12 @@ export interface Book {
   ckAtF: bigint;
 
   ckFloorTokens: bigint;
+
+  kpot: boolean;
+
+  kAtF: bigint;
+
+  kFloorTokens: bigint;
   feePpm: number[];
 
   feeStartPpm: number[];
@@ -125,7 +131,7 @@ export function emptyBook(sqrtP: Sqrt, feePpm: readonly number[]): Book {
   return {
     sqrtP, sqrtF: 0n, sqrtLMax: 0n, floor: 0n, floorTokens: 0n, nBands: 0, nC: 0,
     bandEdge: new Array(BIDS_MAX + 1).fill(0n), bandMoney: new Array(BIDS_MAX).fill(0n), bandTokens: new Array(BIDS_MAX).fill(0n),
-    bandF: new Array(BIDS_MAX).fill(0n), bandFClaim: new Array(BIDS_MAX).fill(0n), ckAtF: 0n, ckFloorTokens: 0n, feePpm: [...feePpm], feeStartPpm: [0, 0, 0, 0, 0], sqrtFeeA: 0n, sqrtFeeB: 0n, graduated: false, nRanges: 0, ranges: Array.from({ length: RANGES_MAX }, emptyRange),
+    bandF: new Array(BIDS_MAX).fill(0n), bandFClaim: new Array(BIDS_MAX).fill(0n), ckAtF: 0n, ckFloorTokens: 0n, kpot: true, kAtF: 0n, kFloorTokens: 0n, feePpm: [...feePpm], feeStartPpm: [0, 0, 0, 0, 0], sqrtFeeA: 0n, sqrtFeeB: 0n, graduated: false, nRanges: 0, ranges: Array.from({ length: RANGES_MAX }, emptyRange),
   };
 }
 
@@ -249,6 +255,21 @@ export const ckMoney = (b: Book): bigint => sum(b.bandMoney, b.nBands) - sum(b.b
 
 export const ckHeld = (b: Book): bigint => sum(b.bandTokens, b.nBands) + b.ckFloorTokens;
 
+export const kSeg = (b: Book): number | null => (b.kpot && b.nBands === b.nC + 1 ? b.nC : null);
+
+export const cMoney = (b: Book): bigint => sum(b.bandMoney, b.nC) - sum(b.bandF, b.nC) + (b.ckAtF - b.kAtF);
+
+export const kMoney = (b: Book): bigint => ckMoney(b) - cMoney(b);
+
+export const cHeld = (b: Book): bigint => sum(b.bandTokens, b.nC) + (b.ckFloorTokens - b.kFloorTokens);
+
+export const kHeld = (b: Book): bigint => ckHeld(b) - cHeld(b);
+
+export function kHolds(b: Book): boolean {
+  const k = kSeg(b);
+  return k !== null && (b.bandTokens[k] > 0n || b.bandFClaim[k] > 0n);
+}
+
 const bidMoneySum = (b: Book): bigint => b.floor + sum(b.bandMoney, b.nBands);
 
 export const placeMoney = (b: Book): bigint => {
@@ -312,6 +333,8 @@ export function checkBook(b: Book): void {
     }
   }
   if (b.ckAtF > b.floor || b.ckFloorTokens > b.floorTokens) fail("Overflow");
+  if (b.kAtF > b.ckAtF || b.kFloorTokens > b.ckFloorTokens) fail("Overflow");
+  if (b.kpot && b.nBands > b.nC + 1) fail("SqrtRange");
 }
 
 function flatUp(b: Book): FlatPart | null {
@@ -396,6 +419,14 @@ function floorRebuy(b: Book, take: bigint, cost: bigint): void {
   if (xe > 0n) {
     const back = (cost * xe) / x0;
     const gone = min((take * xe + x0 - 1n) / x0, xe);
+
+    const xk = b.kFloorTokens;
+    if (xk > 0n) {
+      const backK = (back * xk) / xe;
+      const goneK = min(min((gone * xk + xe - 1n) / xe, xk), gone);
+      b.kAtF = u128(b.kAtF + backK);
+      b.kFloorTokens -= goneK;
+    }
     b.ckAtF = u128(b.ckAtF + back);
     b.ckFloorTokens -= gone;
   }
@@ -587,12 +618,14 @@ export function walkDownAcc(b: Book, tokens: bigint, acc: FeeAcc, u: Undo = new 
       charge(b, acc, q);
       if (fp.t === "floor") {
 
-        const ce = min(q, b.ckAtF);
-        if (ce > 0n) {
-          const xe = min(ov(flatTokensForMoney(s, ce, DOWN)), take);
-          b.ckAtF -= ce;
-          b.ckFloorTokens = u64(b.ckFloorTokens + xe);
-        }
+        const ce = min(q, b.ckAtF - b.kAtF);
+        const ke = min(q - ce, b.kAtF);
+        const xc = ce > 0n ? min(ov(flatTokensForMoney(s, ce, DOWN)), take) : 0n;
+        const xk = ke > 0n ? min(ov(flatTokensForMoney(s, ke, DOWN)), take - xc) : 0n;
+        b.ckAtF -= ce + ke;
+        b.kAtF -= ke;
+        b.ckFloorTokens = u64(b.ckFloorTokens + xc + xk);
+        b.kFloorTokens = u64(b.kFloorTokens + xk);
         b.floor -= q;
         b.floorTokens = u64(b.floorTokens + take);
         w.fromF += q;
@@ -638,6 +671,8 @@ export function walkDownAcc(b: Book, tokens: bigint, acc: FeeAcc, u: Undo = new 
 
         b.floor = u128(b.floor + b.bandMoney[j]);
         b.ckAtF = u128(b.ckAtF + b.bandMoney[j] - b.bandF[j]);
+
+        if (kSeg(b) === j) b.kAtF = u128(b.kAtF + b.bandMoney[j] - b.bandF[j]);
         b.bandMoney[j] = 0n;
         b.bandF[j] = 0n;
       }

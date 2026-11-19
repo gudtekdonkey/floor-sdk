@@ -3,19 +3,24 @@
 import { fail } from "../index.js";
 import { U128_MAX } from "./wide.js";
 import {
-  Undo, ckHeld, ckMoney, cloneBook, fClaims, fOwn, feesAt, feesNow, MAX_WALK_STEPS, moneyHeld, tokensHeld, walkDownAcc, walkUpFrom,
+  Undo, cMoney, ckHeld, cloneBook, kMoney, fClaims, fOwn, feesAt, feesNow, MAX_WALK_STEPS, moneyHeld, tokensHeld, walkDownAcc, walkUpFrom,
 } from "./book.js";
 
 import { FeeAcc, LEG_BACKING, cheaper, feeTotal, netFromGross } from "./fees.js";
-import { relay } from "./relay.js";
+import { kpotUpgrade, relayPots } from "./relay.js";
 
 import { split } from "./split.js";
 
 import { sCirc } from "./supply.js";
 
-const noSplit = ()        => ({ dF: 0n, ckAdd: 0n, ckTake: 0n, ms: 0n, booked: [0n, 0n, 0n, 0n], sqrtFNew: 0n });
-const noRelay = ()        => ({ nC: 0, nK: 0, laidC: 0n, laidK: 0n, atF: 0n, kept: 0 });
+const noSplit = ()        => ({ dF: 0n, ckAdd: 0n, ckTake: 0n, cAdd: 0n, kAdd: 0n, cTake: 0n, kTake: 0n, ms: 0n, booked: [0n, 0n, 0n, 0n], sqrtFNew: 0n });
+const noRelay = ()        => ({ nC: 0, nK: 0, laidC: 0n, laidK: 0n, atF: 0n, kAtF: 0n, kept: 0 });
 const add = (a        , b        )         => (a + b > U128_MAX ? fail("Overflow") : a + b);
+
+function upgrade(b      , row          , sup        )       {
+  if (b.kpot) return;
+  kpotUpgrade(b, row, b.graduated ? sCirc(b, sup) : 0n);
+}
 
 function commit(dst      , src      )       {
   Object.assign(dst, src);
@@ -26,6 +31,8 @@ function buyOn(book      , side      , gross        , minTokens        , walkSte
   const budget = netFromGross(gross, ppm);
   if (budget === 0n) fail("NothingToDo");
   const w = cloneBook(book);
+
+  if (side !== null) upgrade(w, side.row, side.sup);
   const u = new Undo();
 
   const acc = new FeeAcc(ppm);
@@ -51,12 +58,12 @@ function buyOn(book      , side      , gross        , minTokens        , walkSte
 
     if (u.bought.length > 0) {
       sp = split(side.row, w.ranges.slice(0, w.nRanges), {
-        sqrtF: w.sqrtF, sqrtP1: w.sqrtP, fTotal: fOwn(w), fClaims: fClaims(w), ck0: ckMoney(w), held: ckHeld(w), sNew,
+        sqrtF: w.sqrtF, sqrtP1: w.sqrtP, fTotal: fOwn(w), fClaims: fClaims(w), c0: cMoney(w), k0: kMoney(w), held: ckHeld(w), sNew,
       }, u.bought);
       w.floor = add(w.floor, sp.dF);
       w.sqrtF = sp.sqrtFNew;
     }
-    rl = relay(w, side.row, sp.ckAdd, sNew, sp.ckTake);
+    rl = relayPots(w, side.row, { c: sp.cAdd, k: sp.kAdd }, { c: sp.cTake, k: sp.kTake }, sNew);
   }
   const r          = {
     gross, net: walked.money, refund: gross - paid, tokens: walked.tokens, fees, fromResale: walked.fromResale, fromFirst: walked.fromFirst,
@@ -69,8 +76,9 @@ function buyOn(book      , side      , gross        , minTokens        , walkSte
 
 function sellOn(book      , side      , tokens        , minOut        , keep = true)           {
   if (tokens === 0n) fail("NothingToDo");
-  const ppm = feesNow(book);
   const w = cloneBook(book);
+  if (side !== null) upgrade(w, side.row, side.sup);
+  const ppm = feesNow(w);
 
   const acc = new FeeAcc(ppm);
   const walked = walkDownAcc(w, tokens, acc);
@@ -81,7 +89,7 @@ function sellOn(book      , side      , tokens        , minOut        , keep = t
   if (out < minOut) fail("SlippageExceeded");
   w.floor = add(w.floor, fees[LEG_BACKING]);
 
-  const rl = w.graduated && side !== null ? relay(w, side.row, 0n, sCirc(w, side.sup)) : noRelay();
+  const rl = w.graduated && side !== null ? relayPots(w, side.row, { c: 0n, k: 0n }, { c: 0n, k: 0n }, sCirc(w, side.sup)) : noRelay();
   const r           = {
     tokensIn: tokens, unfilled: tokens - walked.tokens, gross: walked.money, fees, out, steps: walked.steps, sqrtBefore: book.sqrtP, sqrtAfter: w.sqrtP,
     fromF: walked.fromF, fromK: walked.fromK, fromC: walked.fromC, relay: rl,

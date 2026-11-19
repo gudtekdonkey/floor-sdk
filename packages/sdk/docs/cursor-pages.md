@@ -22,8 +22,6 @@ newest page. Asked with none of these, each route answers its whole list in one 
 | `search?q=` | `readLaunchSearch` | `cursor` | `SEARCH_PAGE_DEFAULT` (12) | `SEARCH_PAGE_MAX` (100) |
 | `wallets/<w>/positions`, `locks`, `claims`, `roles/<w>`, `referrals/<w>/people` | `readPositions`, `readWalletLocks`, `readClaimHistory`, `readRoles`, `readPeople` | `cursor` | `WALLET_PAGE_DEFAULT` (100) | `WALLET_PAGE_MAX` (500) |
 | `wallets/<w>/inbox` | `readInbox` | `before` | `INBOX_PAGE_DEFAULT` (100) | `INBOX_PAGE_MAX` (500) |
-| `launch-lists` (up to 16 quotes) | `readLaunchLists` | `cursors`, one per quote (`"-"` = its first page) | 100 per list | `limit` × quotes ≤ 1,000 rows |
-| `candles/many` (up to 40 launches) | `readCandlesMany` | `before` | 1,000 candles per launch | `limit` × ids ≤ 40,000 candles |
 
 No request answers every launch: a bare `launches` is one page of 100. The list body also carries `cursors` (the cursor
 after each row) and `keys` (each row's ranked key); `launches` takes a `preset` filter.

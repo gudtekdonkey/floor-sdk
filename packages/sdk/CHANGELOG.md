@@ -2,57 +2,98 @@
 
 All notable changes to `@floorlaunchpad/sdk`. The version follows semver; while the major number is 0, a minor bump may rename or remove an export and a patch bump never does.
 
-## 0.4.3
+## 0.6.0
+
+The Cushion's bid is now two pots, C and K, each with its own money and its own tokens. This version quotes a launch on a
+program that runs the two pots. ⚠ Use it only against a chain whose program has been upgraded to the two pots; 0.4.3 and
+older quote the one-pot program (see "Which version to use" below). 0.5.0 was never published: its entries (below) ship
+in this version.
+
+What changed in the program, for an integrator:
+
+- Two pots under the price. C (the Cushion) is re-laid after every trade from the price down, as the mirror of the ask,
+  with C's money only. K is ONE constant-product piece from C's bottom down to the floor price `f`. While K holds no
+  tokens it is re-shaped to `[f, C's bottom]` with all its money; once a sell walks into it, it moves only along its own
+  curve until a buy takes back all its tokens. While K holds tokens, any C money waits at `f`; C is never laid over K.
+- The sell path is C, then K (sliding down to `f`), then F's flat bid at `f`. `fromC`, `fromK` and `fromF` on a sell keep
+  their meaning.
+- New money is split between the pots by the launch row's `c_share_bps` (5,000 on every row today: half each). Each pot
+  has its own target (`T_C = ceil(T × c_share_bps ÷ 10,000)`, `T_K = T − T_C`, `T` the one C + K target of before); the
+  share for C rounds up; a pot at its target passes the rest of its part to the other pot; the rest goes on as before. The
+  money above a piece's Marketcap Milestone cap is split the same way.
+- F's top-up takes half from each pot: first this buy's C and K parts, half each (the half for C rounds up; a part short of
+  its half passes the rest to the other), then this buy's Marketcap Milestones, then C's and K's pots, half each.
+- Resale: what a buy pays for tokens a pot holds returns to that pot (`f` to F, the premium to the pot). The money parked
+  at `f` is kept per pot.
+- A launch created before the program upgrade moves to the two pots on its first trade after it: C's pot from its C
+  segments' money, K's from its K segments', the money parked at `f` half each (the half for C rounds up), F's backing in
+  those segments back to F, tokens held before the upgrade resell into C. Then the normal re-lay runs. Nothing else is
+  needed; trading never pauses.
+- Reads that keep their meaning: vault and bid money (`vaultV2`, `dexLiquidityV2`, an indexer's `bidMoney`) are F + C + K;
+  `ckMoney`, `ckHeld` and a receipt's `cushion` are C + K; `Book.ckAtF` / `ckFloorTokens` are the money and tokens parked
+  at `f` for both pots together.
 
 Added:
 
-- `FLOOR_ROUTER_FROM_BLOCK_SOAK` (`evm/chains.ts`): the block `FLOOR_ROUTER_DEPLOYER` (`0x3e70158e54E91d2984c0F3B66ce2cE730d1E0e11`) was created in on each chain's soak testnet, read back from its CREATE2 receipt, or `null` where it is not deployed: Sepolia (ethereum, 11155111) 12157629, HyperEVM testnet (hyperevm, 998) 69903031. The FloorRouter addresses are the same as mainnet (CREATE3 of the slot). Sepolia has `uniswap-ur` (`0xB7aC…CFde`); HyperEVM testnet has `hyperswap` (`0x8C2b…D119`). Robinhood testnet and Elysium testnet have none (no official DEX). The other soak ids have no FloorAmm.
+- Reads per pot on a `Book`: `cMoney`, `kMoney`, `cHeld`, `kHeld`, `kHolds` (K holds tokens) and `kSeg` (K's segment
+  index, or null).
+- `Book.kpot` (true once the book runs two pots), `Book.kAtF` and `Book.kFloorTokens` (K's part of the money and tokens
+  parked at `f`; C's part is `ckAtF − kAtF`, `ckFloorTokens − kFloorTokens`).
+- The split's per-pot amounts: `Split.cAdd`, `kAdd`, `cTake`, `kTake` (their sums are `ckAdd`, `ckTake`, as before), and
+  `Relay.kAtF`.
+- `Pots`, `relayPots`, `kpotUpgrade` (the first-trade move of a pre-upgrade book; `buy` / `sell` run it themselves on a
+  book whose `kpot` is false), `shareSplit` and `potsSplit`.
 
-Changed:
+Changed (breaking for code that builds these types itself):
 
-- The Sepolia and HyperEVM testnet FloorRouters are deployed (2026-11-17) and read back: each instance has code, its `router()` is the official testnet DEX (Sepolia Uniswap Universal Router 2.1.1 `0x7DfD…1468`, HyperEVM testnet HyperSwap V3 SwapRouter02 `0x51c5…e14A`) and its `floorAmm()` is `FLOOR_AMM_ADDRESS`. Mainnet `FLOOR_ROUTER_ADDRESSES`, `FLOOR_ROUTER_FROM_BLOCK` and `floorRouterAddress` are unchanged.
+- `Book` has the three new required fields above. A `Book` built by hand needs them (`kpot: true`, `kAtF: 0n`,
+  `kFloorTokens: 0n` for a new launch); the SDK's decoders fill them.
+- `SplitIn.ck0` is replaced by `c0` and `k0` (C's and K's money before the buy).
+- Solana `LaunchV2` (`v2Layouts`, `LaunchV2` type): the last 32 bytes, `book_hash` (never written; zero on every launch),
+  are now `k_at_f` (u64, offset 5984), `k_floor_tokens` (u64, 5992), `kpot` (u8, 6000) and `pad_end` (15 bytes). The
+  account's size (6,016 bytes) and every other offset are unchanged; no instruction's account list changes. The type
+  loses `bookHash` and gains `kAtF`, `kFloorTokens`, `kpot`, `padEnd`. `kpot` 0 is a launch not yet moved to two pots.
+- EVM `launchBook` (`v2Evm`): the returned struct gains `uint128 kAtF`, `uint64 kFloorTokens` and `bool kpot`, appended
+  after its last field (the selector is unchanged). Storage only appends.
 
-No export removed or renamed, no signature changed.
+TON: the `@floorlaunchpad/sdk/ton` module (from the 0.5.0 entries) is in this package and its math runs the two pots, but
+no TON program is deployed: the TON chain row has `v2DayOne` false and `tonFactoryAddress` null, `dayOneChains()` leaves
+it out, `TON_MAINNET.placeholder` is true and `ton.tonChainOf()` with no book throws `TonBookError` ("placeholder (no
+deploy yet)"), so no TON address or quote can be built from the built-in constants. `CHAINS` and `CHAIN_SLUGS` still
+list the TON row as data: a caller that shows chains filters on `v2DayOne` (or uses `dayOneChains()`). TON is wired and
+switched off until its factory is deployed and the constants are regenerated.
 
-## 0.4.2
+Which version to use:
 
-Added:
+- Against an upgraded program use 0.6.0. A book read before its first trade after the upgrade (`kpot` false) is quoted as
+  that trade will run it: the SDK moves it to two pots first, as the program does.
+- 0.6.0 against a program NOT yet upgraded: on Solana the bytes it reads as `kpot` are zero, so it quotes the two-pot move
+  the old program never makes, and its quotes do not match the trade; on EVM the `launchBook` view returns the shorter
+  struct and the decode fails. Do not use it there.
+- 0.4.3 or older against an upgraded program reads `book_hash` / the shorter struct and quotes the one-pot bid: buys
+  that reach the split and sells below the price are mis-quoted. Move to 0.6.0 when the program on your chain is upgraded.
 
-- `FLOOR_ROUTER_FROM_BLOCK` (`evm/chains.ts`): the block `FLOOR_ROUTER_DEPLOYER` (`0x3e70158e54E91d2984c0F3B66ce2cE730d1E0e11`) was created in on each EVM chain, read back from its CREATE2 receipt: Ethereum 26436550, Base 58748267, BNB Chain 134167426, Arbitrum 525110992, Arc 31754413, Robinhood 116788942, HyperEVM 51527477, Elysium 7600804. Every FloorRouter on a chain was deployed at or after it, so an indexer of FloorRouter events (`Bought`, `Sold`) starts there.
-
-Changed:
-
-- The 15 FloorRouters in `FLOOR_ROUTER_ADDRESSES` are deployed (2026-11-17) and read back on all eight EVM chains: each instance has code, its `router()` is its zap row's DEX router and its `floorAmm()` is `FLOOR_AMM_ADDRESS`. The addresses and `floorRouterAddress` are unchanged; `floorRouterLive` / `assertFloorRouterLive` stay the check for a slot added later.
-
-No export removed or renamed, no signature changed.
-
-## 0.4.1
+## 0.5.0
 
 Fixed:
 
-- `zapSwapData` appends `SWEEP(address(0), MSG_SENDER, 0)` to a native-input Universal Router swap (Uniswap, Aerodrome, Pancake and Ramses forks, V2 / V3 and v4). A Squid hook forwards the whole bridged amount as the zap's value, the plan spent only `amountIn`, and the surplus stayed on the router for anyone to sweep; it now returns to the zap, which refunds it. Token-in and native-out routes, and every non-Universal-Router family, encode the same bytes as before.
+- `zapSwapData` appends `SWEEP(address(0), MSG_SENDER, 0)` to a native-input Universal Router swap (Uniswap, Aerodrome, Pancake and Ramses forks, V2 / V3 and v4). A Squid hook forwards the whole bridged amount as the zap's value, the plan spent only `amountIn`, and the surplus stayed on the router for anyone to sweep (ZR-2); it now returns to the zap, which refunds it. Token-in and native-out routes, and every non-Universal-Router family, encode the same bytes as before.
+- `buyHookNative` (the Squid hook) passes the zap's quote refund on to the user. The zap refunds what the buy did not spend in the native coin and, for a launch quoted in an ERC-20, in that quote; the hook passed on only the native refund, so the quote refund stayed on the multicall. It now takes `quote` (the launch's quote coin, required; address(0) for a native quote) and, for an ERC-20 quote, adds a `transfer` of the multicall's whole quote balance to the user.
+- `devBuyFromTrade` credits a buy through FloorZap or FloorRouter to the person that contract's own event names. Such a trade's `trader` is the contract; the new optional `ctx.buyer` (the sender a known zap's `Zapped` or router's `Bought` event proves in the same transaction, with sender = recipient) is the person matched against the creator and the Team Slot. The trade's recipient alone never counts.
+- The EVM error table (`EVM_ERRORS`, and so `decodeEvmProgramError`) names the errors a v2 contract reverts with from its math libraries: `PriceOrder()`, `ZeroLiquidity()`, `SqrtRange()`, `Zero()` and `VaultShareOutOfRange()`. The contracts' ABI omits them, so such a revert decoded to no name.
 - `zapSwapData` encodes a zap whose input is an ERC-20 (`buyWithToken`) and whose output is the native coin (a launch quoted in the native coin). Before, every route began with `WRAP_ETH` (or a native-only call) and paid the router's output in its wrapped form, so an ERC-20 → native-coin zap through a Universal Router, a V3 SwapRouter, SwapRouter02 or Algebra router reverted (`QuoteShort`; measured on forks of every zap row). New optional params: `input` ("native", the default, or "token"), `output` ("token", the default, or "native": the router unwraps and pays the zap, which accepts the native coin only from its router), and `router` (a SwapRouter v1 native output is paid to the router, then unwrapped). The defaults encode the same bytes as before.
 - The Universal Router forks' swap input: `urFork` ("uniswap", the default, "aerodrome", "pancake" or "ramses"; each fork row in `EVM_CHAINS` names its own as `urFork`). Aerodrome's router reads a sixth `bool isUni` (sent false: its Slipstream pools, each key `0x100000 | tickSpacing`, `AERODROME_SLIPSTREAM_KEY`); PancakeSwap's and Ramses' read five fields. Before, every fork got Uniswap's sixth `uint256[]`, which Aerodrome's router reads as `isUni = true` and routes through Uniswap's pools instead of its own. A V2 leg through a fork's router is refused (its input is its own).
-- `buyHookNative` (the Squid postHook that buys through the zap with a bridged native coin) takes the launch's `quote` and, when it is an ERC-20, adds a third call that passes the zap's quote refund on to `user` (`FullTokenBalance quote.transfer(user, FULL)`). Before, the unspent quote the program paid back stayed on the multicall, where anyone could sweep it. `quote` is optional: absent or address(0) (a launch quoted in the native coin), the hook is the same two calls as 0.4.0, byte for byte, so a 0.4.0 call still compiles and encodes as before; pass the ERC-20 quote to get the refund call.
-- `devBuyFromTrade` takes an optional `ctx.buyer`: the person a known zap's or router's own event proves for a buy through it. A buy through the zap or the router has the contract as the trade's `trader`, so a creator's or team member's buy through either was not named a dev buy; with `ctx.buyer` it is, and the returned `trader` is that person. The trade's recipient alone never names one (anyone can buy with the creator as recipient).
-- `EVM_ERRORS` and `decodeEvmProgramError` now know five errors the v2 contracts revert with from their math libraries, which the contracts' ABI does not list: `PriceOrder()`, `ZeroLiquidity()`, `SqrtRange()`, `Zero()` and `VaultShareOutOfRange()`. Before, a revert with one of them decoded as unknown; now it decodes by its selector like any other EVM error.
-- `zapSwapData` now refuses a route that names address(0) (the wrapped native stands for the native coin) or swaps a coin into itself (neither names a pool a router can trade).
 
 Added:
 
-- `FLOOR_ZAP_ADDRESSES`: the deployed FloorZap instance address per chain and zap slot (15 instances on 8 chains, Elysium's `uniswap-ur` included; one address per slot on every chain that has it), and `zap` on each `EVM_CHAINS` zap row (the instance to call, or `null` where that slot is not deployed). A wallet or an integrator no longer needs its own copy of the zap addresses.
-- Elysium's zap: `EVM_CHAINS.elysium.zapRouters` holds Uniswap's Universal Router 2.1.2 (`0xA13f7611115752DEB2B13813BDDE16A5073e4b45`, slot `uniswap-ur`) with its deployed zap booked (`FLOOR_ZAP_ADDRESSES.elysium`, the same `uniswap-ur` address as every other chain: 15 zaps in all), and `wrappedNative` is WHYPE (`0xbA876237B0F021A6c6D852d6c26E107997cC5E81`, 18 decimals). Elysium's depth is in Uniswap v4 only (native HYPE / USDC pools), so its zap routes through the v4 route below, never through WRAP_ETH.
+- TON: the `@floorlaunchpad/sdk/ton` module is in the published package (the `./ton` export): message builders for a wallet, the program's `get` methods as quotes (`simBuy`, `simSell`), the launch's jetton content (`src/ton/content.ts`: what `get_jetton_data` publishes, the uri / image derived from the factory's `metadata_base`, and the token data JSON body), the generated TON constants (`src/ton/consts.generated.ts`) and `docs/ton.md`. TON is not deployed yet, so its chain row stays off until the factory is live.
+- Indexer (TON): a launch's developer buys are walked by the TON follower and served through the v2 routes and views (the TON fix of the unbounded-routes batch).
+- Indexer: the launch rows gain `newHolders1h` and `newHolders24h` (`LISTED_FIELDS`: the `launches`, `launches/<id>` and `search` rows; not `launches/<id>/state` or the stream's frames): the current holders that first held within the hour / the 24 h to the indexed head, null with no head. `newHolders24h` is the number `sort=newHolders24h` ranks by. Both are optional in the decoder, so an indexer without them still decodes.
+- HyperEVM stock quotes (EQX): the config now lists the stock quotes of HyperEVM, in `deploy/config/quotes/hyperevm.json` and the generated config, as it lists Elysium's.
+- Elysium's zap row: `EVM_CHAINS.elysium.zapRouters` holds Uniswap's Universal Router 2.1.2 (`0xA13f7611115752DEB2B13813BDDE16A5073e4b45`, slot `uniswap-ur`, as the contracts' zap config lists it), and `wrappedNative` is WHYPE (`0xbA876237B0F021A6c6D852d6c26E107997cC5E81`, 18 decimals). Elysium's depth is in Uniswap v4 only (native HYPE / USDC pools), so its zap routes through the v4 route below, never through WRAP_ETH.
 - `zapSwapData` encodes Uniswap v4 through the Universal Router: one pool, exact in, given as `route.v4` (`ZapV4Pool`: fee, tick spacing, hooks, hook data) with `route.tokens` = [currency in, currency out] and `V4_NATIVE` (address(0)) for the native coin. The calldata is `V4_SWAP` with `SWAP_EXACT_IN_SINGLE`, `SETTLE` (paid by the router: the zap pays an ERC-20 input to it first; a native input rides as the call's value) and `TAKE`; a native output is taken to the router and then swept to the zap (`SWEEP`, at the same minimum), since the zap accepts the native coin only from its router. New beside it: `v4PoolKey` (the sorted pool key and the swap's direction), the type `V4PoolKey`, and the constants `UR_V4_SWAP`, `V4_SWAP_EXACT_IN_SINGLE`, `V4_SETTLE`, `V4_TAKE`, `V4_OPEN_DELTA` and `V4_NATIVE`. A route without `v4` encodes as before.
-- Indexer batched reads: `floor-amm/launch-lists` (`indexerPath.launchLists`, `readLaunchLists`, body `LAUNCH_LISTS`) returns one `launches?quote=` page per asked quote in one request, each list resumed with its own cursor (`LAUNCH_LISTS_FIRST` asks a first page; at most `LAUNCH_LISTS_QUOTES_MAX` quotes and `LAUNCH_LISTS_ROWS_MAX` rows); `floor-amm/candles/many` (`indexerPath.candlesMany`, `readCandlesMany`, body `CANDLES_MANY`) returns many launches' newest candles at one interval in one request (at most `CANDLES_MANY_IDS_MAX` launches, `missing` names the unknown ones). Both are in `INDEXER_CONTRACT` and the client; against an indexer that does not serve them the readers throw `IndexerError`.
-- `readPresetMenuEvmV2` reads the preset rows through one Multicall3 `aggregate3` per 100 ids (1 + ⌈K ÷ 100⌉ calls instead of 1 + K); a failed row throws, never a gap in the menu. New optional third argument `{ multicall }`: another Multicall3 address, or `null` to send one `presetRow` call per id on a chain without Multicall3.
-- The Solana client's `claim` reads its launches side by side instead of one after another: the round trips no longer grow with the number of launches (5 launches: 15 round trips to 3). Same transaction, same refusals; the quote's fields still come from the last launch asked.
-- FloorRouter addresses: `FLOOR_ROUTER_ADDRESSES` (per chain and zap slot), `floorRouter` on each `EVM_CHAINS` zap row, `FLOOR_ROUTER_DEPLOYER` and `floorRouterAddress(slot)`. One address per slot, the same on every chain that has it (7 routers over the 15 zap rows). The addresses are derived ahead of the routers' deploy, not read back from chain: each is usable only once it has code on that chain. A call to one with no code still succeeds and buys nothing, and a native-in buy's coin sent to it stays at that empty address and is lost. `floorRouterLive` and `assertFloorRouterLive` (`evm/router`) check the code through your `getCode` ("0x" or `undefined` is no code); check before you build a call to one, as `evmRouteCallV2` itself reads no chain.
-
-Changed:
-
-- Elysium is switched on: its chain registry row is no longer `v2DayOne: false`, so `v2DayOneChains()` now includes Elysium (eight EVM chains). Elysium is live at the same address as the other EVM chains.
-
-Added (to carry the fixes; nothing removed or renamed): the type `ZapUrFork`, the constant `AERODROME_SLIPSTREAM_KEY`, the optional `ZapSwapParams` keys `input`, `output`, `router` and `urFork`, and the optional `urFork` on each `EVM_CHAINS` zap row.
+- The deployed FloorZap instances: `FLOOR_ZAP_ADDRESSES` (per chain, per zap slot) and a `zap` field on each `EVM_CHAINS` zap row (the instance, or null where that slot is not deployed). 14 instances on Ethereum, Base, BNB Chain, Arbitrum, HyperEVM, Robinhood Chain and Arc, each read back on chain, and Elysium's `uniswap-ur` instance (`0x56F22be922Ffc9e955169E0673D3Ae42B1151995`).
+- Batched reads. The indexer client gains `launchLists` (`/floor-amm/launch-lists`: one list per quote coin, each with its own cursor, in one request) and `candlesMany` (`/floor-amm/candles/many`: many launches' newest candles at one interval in one request). `readPresetMenuEvmV2` reads the preset rows through one Multicall3 `aggregate3` call per 100 ids (`PRESET_MENU_BATCH`), was one call per id; `opts.multicall: null` keeps one call per id for a chain without Multicall3, and a failed row throws.
 
 ## 0.4.0
 

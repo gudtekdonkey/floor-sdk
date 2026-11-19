@@ -115,7 +115,10 @@ export interface LaunchV2Account {
   backingCredited: bigint;
   incinerated: bigint;
   lastTs: bigint;
-  bookHash: Uint8Array;
+  kAtF: bigint;
+  kFloorTokens: bigint;
+  kpot: number;
+  padEnd: Uint8Array;
 }
 
 export interface HolderPositionAccount {

@@ -135,6 +135,10 @@ const LISTED_FIELDS = {
   volume24hGross: nullable(big),
   holders: int,
 
+  newHolders1h: optional(nullable(int)),
+
+  newHolders24h: optional(nullable(int)),
+
   maxLossPpm: optional(nullable(int)),
 
   backedPpm: nullable(int),

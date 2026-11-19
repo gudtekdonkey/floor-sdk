@@ -8,9 +8,9 @@ export function carriesNoRefund(gross        , refund        , budgetHit        
   return refund === 0n || isDustRefund(gross, refund, budgetHit);
 }
 
-export const GAS_FLAT = { buy: 700_000, sell: 750_000 }         ;
+export const GAS_FLAT = { buy: 1_100_000, sell: 850_000 }         ;
 
-export const GAS_PER_STEP = { buy: 40_000, sell: 40_000 }         ;
+export const GAS_PER_STEP = { buy: 45_000, sell: 40_000 }         ;
 
 export const GAS_FLAT_STEPS = 4;
 

@@ -87,6 +87,7 @@ export * as abi from "./abi/index.ts";
 export * as v2Press from "./v2/press.ts";
 export * as v2ReceiptTx from "./v2/receipt-tx.ts";
 export * as config from "./config/index.ts";
+export * as ton from "./ton/index.ts";
 export * as fixtures from "./fixtures.ts";
 export * as client from "./client/index.ts";
 export * as errors from "./errors.ts";

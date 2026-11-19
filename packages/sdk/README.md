@@ -39,8 +39,6 @@ A launch's floor is the price the program's own money stands behind. Drawing it 
 
 The version follows semver. While the major number is 0, a minor bump (0.2 to 0.3) may rename or remove an export and a patch bump never does. The plan and the history are in [CHANGELOG.md](CHANGELOG.md).
 
-0.4.1 adds, without renaming or removing anything: the deployed zap addresses (`FLOOR_ZAP_ADDRESSES`, `zap` on each zap row) and more `zapSwapData` routes ([aggregator.md](docs/aggregator.md)), batched indexer reads (`readLaunchLists`, `readCandlesMany`, [bot.md](docs/bot.md)), a batched EVM preset menu ([frontend.md](docs/frontend.md)), five more decoded EVM errors ([wallet.md](docs/wallet.md)) and an optional `ctx.buyer` for `devBuyFromTrade`.
-
 **Fees in a quote.** A quote's `fees` has the five fee legs, each added on top of the trade, buys and sells alike: the
 Backing Fee (`backing`), the Team Fee (`team`), the Platform fee (`platform`), the $FLOOR fee (`floor`) and the Holder Fee
 (`holder`), with their `total`. Any leg can be 0. Before graduation a preset launch pays only the Platform fee and the

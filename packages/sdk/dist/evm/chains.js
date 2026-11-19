@@ -60,28 +60,9 @@ export const FLOOR_ZAP_ADDRESSES                                                
   elysium: { "uniswap-ur": strict("0x56F22be922Ffc9e955169E0673D3Ae42B1151995") },
 };
 
-export const FLOOR_ROUTER_DEPLOYER = strict("0x3e70158e54E91d2984c0F3B66ce2cE730d1E0e11");
-
-const ROUTER_PROXY_INITCODE = "0x67363d3d37363d34f03d5260086018f3";
-
-function slotWord(slot        )             {
-  const b = new TextEncoder().encode(slot);
-  if (b.length === 0 || b.length > 32) throw new RangeError(`a router slot is 1..32 bytes: ${JSON.stringify(slot)}`);
-  const w = new Uint8Array(32);
-  w.set(b);
-  return w;
-}
-
-export function floorRouterAddress(slot        , deployer         = FLOOR_ROUTER_DEPLOYER)         {
-  const s = keccak256(encodeAbi(["string", "bytes32"], ["floor-router.v1.FloorRouter", bytesToHex(slotWord(slot))]));
-  const proxy = create2Address({ deployer, salt: s, initCode: ROUTER_PROXY_INITCODE });
-
-  return checksumAddress(bytesToHex(keccak256(hexToBytes("0xd694" + proxy.slice(2) + "01")).slice(12)));
-}
-
 function withBookedZaps(key          , rows                          )              {
   const book = FLOOR_ZAP_ADDRESSES[key];
-  return rows.map((row) => ({ ...row, zap: book[row.slot] ?? null, floorRouter: floorRouterAddress(row.slot) }));
+  return rows.map((row) => ({ ...row, zap: book[row.slot] ?? null }));
 }
 
 const UNISWAP_UR = "uniswap-ur";
@@ -157,10 +138,6 @@ export const EVM_CHAINS                             = Object.fromEntries(
   CHAIN_REGISTRY.flatMap((c) => (c.family === "evm" ? [[c.slug, { key: c.slug, chainId: c.chainId, name: c.label, nativeSymbol: c.native.symbol, ...ROUTES[c.slug], ...((c.v2DayOne           ) === false ? { v2DayOne: false          } : {}) }]] : [])),
 )                              ;
 
-export const FLOOR_ROUTER_ADDRESSES                                                               = Object.freeze(
-  Object.fromEntries(Object.values(EVM_CHAINS).map((c) => [c.key, Object.freeze(Object.fromEntries(c.zapRouters.map((r) => [r.slot, r.floorRouter])))])),
-)                                                                ;
-
 export const v2DayOneChains = ()             => Object.values(EVM_CHAINS).filter((c) => c.v2DayOne !== false);
 export const chainById = (chainId        )                  => Object.values(EVM_CHAINS).find((c) => c.chainId === chainId) ?? null;
 
@@ -180,14 +157,6 @@ export const FLOOR_AMM_ADDRESS                = "0xF10000bd05c2C01793C6d55F02734
 
 export const FLOOR_AMM_FROM_BLOCK                                            = {
   ethereum: 26327910, base: 53421827, bsc: 131270813, arbitrum: 520655168, arc: 29205598, robinhood: 104455459, hyperevm: 50398055, elysium: 6058368,
-};
-
-export const FLOOR_ROUTER_FROM_BLOCK = {
-  ethereum: 26436550, base: 58748267, bsc: 134167426, arbitrum: 525110992, arc: 31754413, robinhood: 116788942, hyperevm: 51527477, elysium: 7600804,
-};
-
-export const FLOOR_ROUTER_FROM_BLOCK_SOAK = {
-  ethereum: 12157629, base: null, bsc: null, arbitrum: null, arc: null, robinhood: null, hyperevm: 69903031, elysium: null,
 };
 
 const cat = (...h          )         => "0x" + h.map((x) => bytesToHex(hexToBytes(x)).slice(2)).join("");

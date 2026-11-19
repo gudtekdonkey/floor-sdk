@@ -31,6 +31,10 @@ export const KIND_TAIL = 5;
 
                                                            
 
+                                               
+
+                                                       
+
 const ov =    (x          )    => (x === null ? fail("Overflow") : x);
 const u64 = (x        )         => (x < 0n || x > U64_MAX ? fail("Overflow") : x);
 const u128 = (x        )         => (x < 0n || x > U128_MAX ? fail("Overflow") : x);
@@ -72,7 +76,7 @@ export function emptyBook(sqrtP      , feePpm                   )       {
   return {
     sqrtP, sqrtF: 0n, sqrtLMax: 0n, floor: 0n, floorTokens: 0n, nBands: 0, nC: 0,
     bandEdge: new Array(BIDS_MAX + 1).fill(0n), bandMoney: new Array(BIDS_MAX).fill(0n), bandTokens: new Array(BIDS_MAX).fill(0n),
-    bandF: new Array(BIDS_MAX).fill(0n), bandFClaim: new Array(BIDS_MAX).fill(0n), ckAtF: 0n, ckFloorTokens: 0n, feePpm: [...feePpm], feeStartPpm: [0, 0, 0, 0, 0], sqrtFeeA: 0n, sqrtFeeB: 0n, graduated: false, nRanges: 0, ranges: Array.from({ length: RANGES_MAX }, emptyRange),
+    bandF: new Array(BIDS_MAX).fill(0n), bandFClaim: new Array(BIDS_MAX).fill(0n), ckAtF: 0n, ckFloorTokens: 0n, kpot: true, kAtF: 0n, kFloorTokens: 0n, feePpm: [...feePpm], feeStartPpm: [0, 0, 0, 0, 0], sqrtFeeA: 0n, sqrtFeeB: 0n, graduated: false, nRanges: 0, ranges: Array.from({ length: RANGES_MAX }, emptyRange),
   };
 }
 
@@ -196,6 +200,21 @@ export const ckMoney = (b      )         => sum(b.bandMoney, b.nBands) - sum(b.b
 
 export const ckHeld = (b      )         => sum(b.bandTokens, b.nBands) + b.ckFloorTokens;
 
+export const kSeg = (b      )                => (b.kpot && b.nBands === b.nC + 1 ? b.nC : null);
+
+export const cMoney = (b      )         => sum(b.bandMoney, b.nC) - sum(b.bandF, b.nC) + (b.ckAtF - b.kAtF);
+
+export const kMoney = (b      )         => ckMoney(b) - cMoney(b);
+
+export const cHeld = (b      )         => sum(b.bandTokens, b.nC) + (b.ckFloorTokens - b.kFloorTokens);
+
+export const kHeld = (b      )         => ckHeld(b) - cHeld(b);
+
+export function kHolds(b      )          {
+  const k = kSeg(b);
+  return k !== null && (b.bandTokens[k] > 0n || b.bandFClaim[k] > 0n);
+}
+
 const bidMoneySum = (b      )         => b.floor + sum(b.bandMoney, b.nBands);
 
 export const placeMoney = (b      )         => {
@@ -259,6 +278,8 @@ export function checkBook(b      )       {
     }
   }
   if (b.ckAtF > b.floor || b.ckFloorTokens > b.floorTokens) fail("Overflow");
+  if (b.kAtF > b.ckAtF || b.kFloorTokens > b.ckFloorTokens) fail("Overflow");
+  if (b.kpot && b.nBands > b.nC + 1) fail("SqrtRange");
 }
 
 function flatUp(b      )                  {
@@ -343,6 +364,14 @@ function floorRebuy(b      , take        , cost        )       {
   if (xe > 0n) {
     const back = (cost * xe) / x0;
     const gone = min((take * xe + x0 - 1n) / x0, xe);
+
+    const xk = b.kFloorTokens;
+    if (xk > 0n) {
+      const backK = (back * xk) / xe;
+      const goneK = min(min((gone * xk + xe - 1n) / xe, xk), gone);
+      b.kAtF = u128(b.kAtF + backK);
+      b.kFloorTokens -= goneK;
+    }
     b.ckAtF = u128(b.ckAtF + back);
     b.ckFloorTokens -= gone;
   }
@@ -534,12 +563,14 @@ export function walkDownAcc(b      , tokens        , acc        , u       = new 
       charge(b, acc, q);
       if (fp.t === "floor") {
 
-        const ce = min(q, b.ckAtF);
-        if (ce > 0n) {
-          const xe = min(ov(flatTokensForMoney(s, ce, DOWN)), take);
-          b.ckAtF -= ce;
-          b.ckFloorTokens = u64(b.ckFloorTokens + xe);
-        }
+        const ce = min(q, b.ckAtF - b.kAtF);
+        const ke = min(q - ce, b.kAtF);
+        const xc = ce > 0n ? min(ov(flatTokensForMoney(s, ce, DOWN)), take) : 0n;
+        const xk = ke > 0n ? min(ov(flatTokensForMoney(s, ke, DOWN)), take - xc) : 0n;
+        b.ckAtF -= ce + ke;
+        b.kAtF -= ke;
+        b.ckFloorTokens = u64(b.ckFloorTokens + xc + xk);
+        b.kFloorTokens = u64(b.kFloorTokens + xk);
         b.floor -= q;
         b.floorTokens = u64(b.floorTokens + take);
         w.fromF += q;
@@ -585,6 +616,8 @@ export function walkDownAcc(b      , tokens        , acc        , u       = new 
 
         b.floor = u128(b.floor + b.bandMoney[j]);
         b.ckAtF = u128(b.ckAtF + b.bandMoney[j] - b.bandF[j]);
+
+        if (kSeg(b) === j) b.kAtF = u128(b.kAtF + b.bandMoney[j] - b.bandF[j]);
         b.bandMoney[j] = 0n;
         b.bandF[j] = 0n;
       }
