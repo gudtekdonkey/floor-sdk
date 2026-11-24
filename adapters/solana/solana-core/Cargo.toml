@@ -1,0 +1,19 @@
+
+[package]
+name = "floor-amm-solana"
+version = "0.1.0"
+edition = "2021"
+description = "Shared Solana code for the FLOOR Program integrations: keys, LaunchV2 layout, hook and metas, quote"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+doctest = false
+
+[dependencies]
+floor-math = { path = "../floor-math" }
+solana-pubkey = { version = "=4.2.0", features = ["curve25519"] }
+solana-instruction = "=3.4.0"
+
+[dev-dependencies]
+solana-sha256-hasher = { version = "=3.1.0", features = ["sha2"] }

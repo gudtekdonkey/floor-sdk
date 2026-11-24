@@ -1,0 +1,25 @@
+{
+  "name": "@floorlaunchpad/sdk-solana",
+  "version": "0.7.0",
+  "description": "The FLOOR Program on Solana: PDAs, account and event decoders, instruction and transaction builders, over @floorlaunchpad/sdk",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22.18"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ],
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    }
+  },
+  "dependencies": {
+    "@floorlaunchpad/sdk": "0.7.0"
+  }
+}

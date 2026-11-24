@@ -1,0 +1,12 @@
+[package]
+name = "floor-math"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "The FLOOR Program's math (v2: the rows, the book, trades, settle, fees); chain-agnostic, no dependencies"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
+
+[dependencies]
+

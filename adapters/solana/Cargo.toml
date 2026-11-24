@@ -1,0 +1,4 @@
+[workspace]
+resolver = "2"
+members = ["floor-math", "solana-core", "jupiter"]
+default-members = ["solana-core", "jupiter"]
